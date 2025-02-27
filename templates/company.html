@@ -1,0 +1,61 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>{{ company_name }} ({{ company_code }}) - 分析</title>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+        <style>
+            body { padding-top: 20px; }
+            .chart-container { margin-bottom: 30px; }
+            .competitor-badge { margin-right: 5px; margin-bottom: 5px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ company_name }}</li>
+                </ol>
+            </nav>
+            
+            <h1 class="mb-3">{{ company_name }} <small class="text-muted">({{ company_code }})</small></h1>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">競合企業</h5>
+                </div>
+                <div class="card-body">
+                    {% if competitors %}
+                        {% for competitor in competitors %}
+                        <span class="badge bg-secondary competitor-badge">{{ competitor.name }} ({{ competitor.code }})</span>
+                        {% endfor %}
+                    {% else %}
+                        <div class="alert alert-info">
+                            この企業の競合企業情報はまだ登録されていません。以下のグラフでは、この企業の財務指標のみを表示しています。
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <h2 class="mb-4">財務指標の比較</h2>
+            
+            {% if charts %}
+                {% for chart in charts %}
+                <div class="chart-container">
+                    <h3>{{ chart.title }}</h3>
+                    <img src="data:image/png;base64,{{ chart.image }}" class="img-fluid" alt="{{ chart.title }}">
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-warning">
+                    グラフを生成するためのデータが不足しています。
+                </div>
+            {% endif %}
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
+    </html>
+    
