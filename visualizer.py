@@ -523,48 +523,31 @@ def index():
         if os.path.exists(all_companies_path):
             df = pd.read_csv(all_companies_path, sep='\t')
             
-            # 必要な列が存在するか確認
-            required_columns = ['企業名', '現在何倍株', 'コード']
-            additional_columns = ['最大何倍株', '社長_株%', '想定時価総額']
-            
+            # 必要な列だけを抽出
+            required_columns = ['企業名', '現在何倍株', '最大何倍株', '社長_株%', '想定時価総額', 'コード']
             if all(col in df.columns for col in required_columns):
-                # 必須列のNaNを除外し、現在何倍株で降順にソート
-                df = df[['企業名', '現在何倍株', 'コード'] + [col for col in additional_columns if col in df.columns]]
-                df = df.dropna(subset=['現在何倍株', 'コード'])
+                # NaNを除外し、現在何倍株で降順にソート
+                df = df[required_columns].dropna(subset=['現在何倍株', 'コード'])
                 df = df.sort_values('現在何倍株', ascending=False)
                 
                 # 企業リストを作成
                 companies = []
                 for _, row in df.iterrows():
                     code = str(row['コード']).split('.')[0]  # 小数点以下を削除
-                    company_data = {
+                    companies.append({
                         'code': code,
                         'name': row['企業名'],
-                        'multiple': row['現在何倍株']
-                    }
-                    
-                    # 追加情報を含める
-                    if '最大何倍株' in df.columns and pd.notna(row['最大何倍株']):
-                        company_data['max_multiple'] = row['最大何倍株']
-                    
-                    if '社長_株%' in df.columns and pd.notna(row['社長_株%']):
-                        company_data['president_share'] = row['社長_株%']
-                    
-                    if '想定時価総額' in df.columns and pd.notna(row['想定時価総額']):
-                        # 想定時価総額を億円または兆円単位に変換
-                        market_cap = float(row['想定時価総額'])
-                        if market_cap >= 10000000000:  # 1兆円以上
-                            company_data['market_cap'] = f"{market_cap / 10000000000:.1f}兆円"
-                        else:  # 億円単位
-                            company_data['market_cap'] = f"{market_cap / 100000000:.1f}億円"
-                    
-                    companies.append(company_data)
+                        'current_multiple': row['現在何倍株'],
+                        'max_multiple': row['最大何倍株'] if pd.notna(row['最大何倍株']) else None,
+                        'president_share': row['社長_株%'] if pd.notna(row['社長_株%']) else None,
+                        'market_cap': row['想定時価総額'] if pd.notna(row['想定時価総額']) else None
+                    })
                 
                 logger.info(f"企業を現在何倍株で並べ替えました。企業数: {len(companies)}")
                 return render_template('index.html', companies=companies)
             else:
-                missing_cols = [col for col in required_columns if col not in df.columns]
-                logger.warning(f"all_companies.tsvに必要な列がありません: {missing_cols}")
+                missing_columns = [col for col in required_columns if col not in df.columns]
+                logger.warning(f"all_companies.tsvに必要な列がありません: {missing_columns}")
         else:
             logger.warning(f"ファイルが見つかりません: {all_companies_path}")
     except Exception as e:

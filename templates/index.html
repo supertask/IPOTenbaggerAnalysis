@@ -41,7 +41,6 @@
         }
         .info-label {
             font-weight: 600;
-            margin-right: 0.25rem;
         }
         .info-value {
             font-weight: normal;
@@ -59,25 +58,35 @@
                     <div class="card-header">
                         <h5 class="card-title">
                             {{ company.name }}
-                            {% if company.multiple is defined %}
-                            <span class="multiple-badge bg-success text-white">{{ company.multiple }}倍</span>
+                            {% if company.current_multiple is defined %}
+                            <span class="multiple-badge bg-success text-white">{{ company.current_multiple }}倍</span>
                             {% endif %}
                         </h5>
                     </div>
                     <div class="card-body">
-                        <h6 class="card-subtitle mb-2 text-muted">コード: {{ company.code }}</h6>
+                        <h6 class="card-subtitle mb-3 text-muted">コード: {{ company.code }}</h6>
                         
                         <div class="company-info">
-                            {% if company.max_multiple is defined %}
-                            <div><span class="info-label">最大何倍株:</span><span class="info-value">{{ company.max_multiple }}倍</span></div>
+                            {% if company.current_multiple is defined %}
+                            <div><span class="info-label">現在何倍株:</span> <span class="info-value">{{ company.current_multiple }}倍</span></div>
                             {% endif %}
                             
-                            {% if company.president_share is defined %}
-                            <div><span class="info-label">社長株式保有率:</span><span class="info-value">{{ company.president_share }}%</span></div>
+                            {% if company.max_multiple is defined and company.max_multiple is not none %}
+                            <div><span class="info-label">最大何倍株:</span> <span class="info-value">{{ company.max_multiple }}倍</span></div>
                             {% endif %}
                             
-                            {% if company.market_cap is defined %}
-                            <div><span class="info-label">想定時価総額:</span><span class="info-value">{{ company.market_cap }}</span></div>
+                            {% if company.president_share is defined and company.president_share is not none %}
+                            <div><span class="info-label">社長株式保有率:</span> <span class="info-value">{{ company.president_share }}%</span></div>
+                            {% endif %}
+                            
+                            {% if company.market_cap is defined and company.market_cap is not none %}
+                            <div><span class="info-label">想定時価総額:</span> <span class="info-value">
+                                {% if company.market_cap >= 10000000000000 %}
+                                    {{ "{:,.0f}".format(company.market_cap / 1000000000000) }}兆円
+                                {% else %}
+                                    {{ "{:,.0f}".format(company.market_cap / 100000000) }}億円
+                                {% endif %}
+                            </span></div>
                             {% endif %}
                         </div>
                         
