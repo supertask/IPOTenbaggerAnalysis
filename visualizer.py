@@ -1,6 +1,9 @@
 import os
 import json
 import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.utils
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')  # バックエンドをAggに設定
@@ -110,9 +113,17 @@ def get_competitors(company_code):
     if not comparison_files:
         return []
     
-    # 最新のファイルを読み込む
-    latest_file = comparison_files[0]
-    df = pd.read_csv(latest_file, sep='\t')
+    # 全てのファイルを読み込んで統合
+    dfs = []
+    for file in comparison_files:
+        temp_df = pd.read_csv(file, sep='\t')
+        dfs.append(temp_df)
+    
+    # データフレームを結合
+    df = pd.concat(dfs, ignore_index=True)
+    
+    # 重複を削除（同じコードの企業は最新のデータを保持）
+    df = df.drop_duplicates(subset=['コード'], keep='first')
     
     # 企業コードに一致する行を探す
     company_row = df[df['コード'].astype(str) == str(company_code)]
@@ -429,41 +440,74 @@ def generate_comparison_charts(company_code):
         if not metric_data:
             continue
         
-        plt.figure(figsize=(10, 6))
+        # Plotlyのグラフオブジェクトを作成
+        fig = go.Figure()
         
-        # フォントサイズを大きくする
-        plt.rcParams['font.size'] = 14
+        # 全ての年度を収集
+        all_years = set(metric_data.keys())
+        for comp_metrics in competitors_data.values():
+            if metric_name in comp_metrics:
+                all_years.update(comp_metrics[metric_name].keys())
+        
+        # 年度を昇順にソート
+        sorted_years = sorted(all_years)
         
         # メイン企業のデータをプロット
-        years = sorted(metric_data.keys())
-        values = [metric_data[year] for year in years]
-        plt.plot(years, values, marker='o', linewidth=2, label=f"{company_name} ({company_code})")
+        values = [metric_data.get(year, None) for year in sorted_years]
+        fig.add_trace(
+            go.Scatter(
+                x=sorted_years,
+                y=values,
+                mode='lines+markers',
+                name=f"{company_name} ({company_code})",
+                line=dict(width=3),
+                connectgaps=True  # 欠損値をスキップして線を接続
+            )
+        )
         
         # 競合企業のデータをプロット
         for comp_code, comp_metrics in competitors_data.items():
             if metric_name in comp_metrics and comp_metrics[metric_name]:
-                comp_years = sorted(comp_metrics[metric_name].keys())
-                comp_values = [comp_metrics[metric_name][year] for year in comp_years]
+                comp_values = [comp_metrics[metric_name].get(year, None) for year in sorted_years]
                 comp_name = next((c['name'] for c in competitors if c['code'] == comp_code), comp_code)
-                plt.plot(comp_years, comp_values, marker='x', linewidth=1.5, label=f"{comp_name} ({comp_code})")
+                fig.add_trace(
+                    go.Scatter(
+                        x=sorted_years,
+                        y=comp_values,
+                        mode='lines+markers',
+                        name=f"{comp_name} ({comp_code})",
+                        line=dict(width=2, dash='dot'),
+                        connectgaps=True  # 欠損値をスキップして線を接続
+                    )
+                )
         
-        plt.title(f"{metric_name}の比較")
-        plt.xlabel('年度')
-        plt.ylabel('値 (円)')
-        plt.grid(True, linestyle='--', alpha=0.7)
-        plt.legend()
-        plt.tight_layout()
+        # グラフのレイアウトを設定
+        fig.update_layout(
+            title=f"{metric_name}の比較",
+            xaxis_title="年度",
+            yaxis_title="値 (円)",
+            hovermode='x unified',
+            template='plotly_white',
+            showlegend=True,
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01
+            ),
+            xaxis=dict(
+                type='category',  # カテゴリとして扱う
+                categoryorder='array',  # 配列順で表示
+                categoryarray=sorted_years  # ソートされた年度を指定
+            )
+        )
         
-        # 画像をBase64エンコード
-        buffer = io.BytesIO()
-        plt.savefig(buffer, format='png', dpi=100)
-        buffer.seek(0)
-        img_str = base64.b64encode(buffer.read()).decode('utf-8')
-        plt.close()
+        # グラフをJSONに変換
+        chart_json = fig.to_json()
         
         charts.append({
             'title': metric_name,
-            'image': img_str
+            'plotly_data': chart_json
         })
     
     return charts, None
@@ -490,7 +534,6 @@ def company_view(company_code):
     if error:
         return error, 500
     
-    # 競合企業が見つからない場合でも、企業の財務データを表示
     return render_template('company.html', 
                           company_code=company_code,
                           company_name=company_name,
@@ -547,9 +590,10 @@ def create_templates():
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
         <style>
             body { padding-top: 20px; }
-            .chart-container { margin-bottom: 30px; }
+            .chart-container { margin-bottom: 30px; height: 500px; }
             .competitor-badge { margin-right: 5px; margin-bottom: 5px; }
         </style>
     </head>
@@ -586,9 +630,12 @@ def create_templates():
             {% if charts %}
                 {% for chart in charts %}
                 <div class="chart-container">
-                    <h3>{{ chart.title }}</h3>
-                    <img src="data:image/png;base64,{{ chart.image }}" class="img-fluid" alt="{{ chart.title }}">
+                    <div id="chart-{{ loop.index }}" style="width: 100%; height: 100%;"></div>
                 </div>
+                <script>
+                    var chartData = JSON.parse('{{ chart.plotly_data | safe }}');
+                    Plotly.newPlot('chart-{{ loop.index }}', chartData.data, chartData.layout);
+                </script>
                 {% endfor %}
             {% else %}
                 <div class="alert alert-warning">
