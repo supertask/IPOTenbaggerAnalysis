@@ -55,6 +55,7 @@ os.makedirs('templates', exist_ok=True)
 
 # 重要な財務指標のリスト
 IMPORTANT_METRICS = [
+    '従業員数',
     '売上高',
     '経常利益',
     '当期純利益',
@@ -66,23 +67,28 @@ IMPORTANT_METRICS = [
     '営業活動によるキャッシュ・フロー',
     '投資活動によるキャッシュ・フロー',
     '財務活動によるキャッシュ・フロー',
-    '現金及び現金同等物の期末残高'
+    '現金及び現金同等物の期末残高',
+    '営業利益',
+    '営業利益率'
 ]
 
 # 指標の代替名マッピング
 METRIC_ALIASES = {
-    '売上高': ['売上高', 'NetSales', '営業収益', '経営成績', '営業収入'],
-    '経常利益': ['経常利益', 'OrdinaryIncome', '経常損益', '経常利益又は経常損失'],
-    '当期純利益': ['当期純利益', '親会社株主に帰属する当期純利益', 'ProfitLoss', '当期利益', '当期損益', '親会社株主に帰属する当期純損益'],
-    '総資産': ['総資産', 'TotalAssets', '資産合計'],
-    '純資産額': ['純資産額', '純資産', 'NetAssets', '純資産合計'],
-    '自己資本比率': ['自己資本比率', 'EquityToAssetRatio', '株主資本比率'],
-    '自己資本利益率': ['自己資本利益率', 'ReturnOnEquity', 'ROE'],
-    '株価収益率': ['株価収益率', 'PriceEarningsRatio', 'PER'],
-    '営業活動によるキャッシュ・フロー': ['営業活動によるキャッシュ・フロー', 'CashFlowsFromOperatingActivities', '営業活動によるCF'],
-    '投資活動によるキャッシュ・フロー': ['投資活動によるキャッシュ・フロー', 'CashFlowsFromInvestingActivities', '投資活動によるCF'],
-    '財務活動によるキャッシュ・フロー': ['財務活動によるキャッシュ・フロー', 'CashFlowsFromFinancingActivities', '財務活動によるCF'],
-    '現金及び現金同等物の期末残高': ['現金及び現金同等物の期末残高', 'CashAndCashEquivalents', '現金及び現金同等物', '現金及び預金']
+    '売上高': ['jpcrp_cor:NetSalesSummaryOfBusinessResults', 'jpcrp_cor:RevenueIFRSSummaryOfBusinessResults', 'jpcrp_cor:RevenuesUSGAAPSummaryOfBusinessResults'],
+    '営業利益': ['jppfs_cor:OperatingIncome'],
+    '経常利益': ['jppfs_cor:OrdinaryIncome', 'jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults'],
+    '当期純利益': ['jppfs_cor:ProfitLoss', 'jpcrp_cor:NetIncomeLossSummaryOfBusinessResults'],
+
+    '総資産': ['jpcrp_cor:Assets', 'jpcrp_cor:TotalAssets'],
+    '純資産額': ['jpcrp_cor:NetAssets', 'jpcrp_cor:TotalNetAssets'],
+    '自己資本比率': ['jpcrp_cor:EquityToAssetRatio', 'jpcrp_cor:ShareholdersEquityRatio'],
+    '自己資本利益率': ['jpcrp_cor:ReturnOnEquity', 'jpcrp_cor:ROE'],
+    '株価収益率': ['jpcrp_cor:PriceEarningsRatio', 'jpcrp_cor:PER'],
+    '営業活動によるキャッシュ・フロー': ['jpcrp_cor:CashFlowsFromOperatingActivities', 'jpcrp_cor:NetCashProvidedByUsedInOperatingActivities'],
+    '投資活動によるキャッシュ・フロー': ['jpcrp_cor:CashFlowsFromInvestingActivities', 'jpcrp_cor:NetCashProvidedByUsedInInvestingActivities'],
+    '財務活動によるキャッシュ・フロー': ['jpcrp_cor:CashFlowsFromFinancingActivities', 'jpcrp_cor:NetCashProvidedByUsedInFinancingActivities'],
+    '現金及び現金同等物の期末残高': ['jpcrp_cor:CashAndCashEquivalents', 'jpcrp_cor:CashAndDeposits'],
+    '従業員数': ['jpcrp_cor:NumberOfEmployees'],
 }
 
 def get_company_code_name_map():
@@ -218,9 +224,9 @@ def get_company_data(company_code):
             
             # EDINETのTSVファイルの構造に合わせて処理
             # カラム名が文字化けしている場合や想定と異なる場合の対応
-            if len(df.columns) >= 8:  # 最低限必要なカラム数
+            if len(df.columns) >= 9:  # 最低限必要なカラム数
                 # カラム名を再設定
-                new_columns = ['要素ID', '項目名', '期間', '時点', '詳細', '値タイプ', '単位', '値']
+                new_columns = ['要素ID', '項目名', 'コンテキストID', '相対年度', '連結・個別', '期間・時点', 'ユニットID', '単位', '値']
                 if len(df.columns) >= len(new_columns):
                     df.columns = new_columns + list(df.columns[len(new_columns):])
                 else:
@@ -266,24 +272,24 @@ def extract_metrics(data, metrics_list=IMPORTANT_METRICS):
     metrics_data = {}
     try:
         # EDINETのデータ構造に合わせて指標を抽出
-        # 項目名カラムが存在するか確認
-        if '項目名' not in data.columns:
-            logger.warning("データに '項目名' カラムがありません")
-            # 代替方法: 2番目のカラムを項目名として使用
-            if len(data.columns) >= 2:
-                item_column = data.columns[1]
-                logger.info(f"代替カラムを使用: {item_column}")
+        # 要素IDカラムが存在するか確認
+        if '要素ID' not in data.columns:
+            logger.warning("データに '要素ID' カラムがありません")
+            # 代替方法: 1番目のカラムを要素IDとして使用
+            if len(data.columns) >= 1:
+                element_id_column = data.columns[0]
+                logger.info(f"代替カラムを使用: {element_id_column}")
                 
-                # 売上高などの指標を含む行を探す
+                # 指標を含む行を探す
                 for metric in metrics_list:
                     try:
                         # 代替名を含めて検索
-                        aliases = METRIC_ALIASES.get(metric, [metric])
+                        aliases = METRIC_ALIASES.get(metric, [])
                         metric_rows = pd.DataFrame()
                         
                         for alias in aliases:
                             # 部分一致で検索
-                            alias_rows = data[data[item_column].str.contains(alias, na=False, regex=True)]
+                            alias_rows = data[data[element_id_column].str.contains(alias, na=False, regex=False)]
                             if not alias_rows.empty:
                                 metric_rows = pd.concat([metric_rows, alias_rows])
                         
@@ -343,22 +349,22 @@ def extract_metrics(data, metrics_list=IMPORTANT_METRICS):
                         logger.error(traceback.format_exc())
             return metrics_data
         
-        # 通常の処理（項目名カラムが存在する場合）
+        # 通常の処理（要素IDカラムが存在する場合）
         for metric in metrics_list:
             try:
                 # 代替名を含めて検索
-                aliases = METRIC_ALIASES.get(metric, [metric])
+                aliases = METRIC_ALIASES.get(metric, [])
                 metric_rows = pd.DataFrame()
                 
                 for alias in aliases:
                     # 完全一致で検索
-                    exact_rows = data[data['項目名'] == alias]
+                    exact_rows = data[data['要素ID'] == alias]
                     if not exact_rows.empty:
                         metric_rows = pd.concat([metric_rows, exact_rows])
                         continue
                     
                     # 部分一致で検索
-                    alias_rows = data[data['項目名'].str.contains(alias, na=False, regex=True)]
+                    alias_rows = data[data['要素ID'].str.contains(alias, na=False, regex=False)]
                     if not alias_rows.empty:
                         metric_rows = pd.concat([metric_rows, alias_rows])
                 
@@ -406,7 +412,48 @@ def extract_metrics(data, metrics_list=IMPORTANT_METRICS):
         logger.error(f"指標抽出中に予期しないエラー: {e}")
         logger.error(traceback.format_exc())
     
+    # 営業利益率を計算（データに含まれていない場合）
+    if '営業利益率' not in metrics_data and '営業利益' in metrics_data and '売上高' in metrics_data:
+        try:
+            operating_profit = metrics_data['営業利益']
+            sales = metrics_data['売上高']
+            
+            # 共通する年度で営業利益率を計算
+            operating_profit_ratio = {}
+            for year in set(operating_profit.keys()) & set(sales.keys()):
+                if sales[year] != 0:  # ゼロ除算を防ぐ
+                    operating_profit_ratio[year] = (operating_profit[year] / sales[year]) * 100
+            
+            if operating_profit_ratio:
+                metrics_data['営業利益率'] = operating_profit_ratio
+                logger.info(f"営業利益率を計算しました。{len(operating_profit_ratio)} 年分のデータがあります。")
+        except Exception as e:
+            logger.error(f"営業利益率の計算中にエラー: {e}")
+            logger.error(traceback.format_exc())
+    
     return metrics_data
+
+def calculate_growth_rate(data):
+    """年度ごとのデータから成長率を計算する"""
+    if not data or len(data) < 2:
+        return {}
+    
+    # 年度を昇順にソート
+    sorted_years = sorted(data.keys())
+    growth_rates = {}
+    
+    for i in range(1, len(sorted_years)):
+        current_year = sorted_years[i]
+        prev_year = sorted_years[i-1]
+        
+        current_value = data.get(current_year)
+        prev_value = data.get(prev_year)
+        
+        if current_value is not None and prev_value is not None and prev_value != 0:
+            growth_rate = ((current_value - prev_value) / abs(prev_value)) * 100
+            growth_rates[current_year] = growth_rate
+    
+    return growth_rates
 
 def generate_comparison_charts(company_code):
     """企業と競合他社の比較チャートを生成"""
@@ -436,9 +483,231 @@ def generate_comparison_charts(company_code):
     
     # チャートを生成
     charts = []
+    
+    
+    # 売上高と売上高成長率の複合グラフを生成
+    if '売上高' in main_metrics and main_metrics['売上高']:
+        # 複合グラフ用のFigureを作成
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # 全ての年度を収集
+        all_years = set(main_metrics['売上高'].keys())
+        for comp_metrics in competitors_data.values():
+            if '売上高' in comp_metrics:
+                all_years.update(comp_metrics['売上高'].keys())
+        
+        # 年度を昇順にソート
+        sorted_years = sorted(all_years)
+        
+        # メイン企業の売上高データをプロット（棒グラフ）
+        sales_values = [main_metrics['売上高'].get(year, None) for year in sorted_years]
+        fig.add_trace(
+            go.Bar(
+                x=sorted_years,
+                y=sales_values,
+                name=f"{company_name} 売上高",
+                marker_color='rgba(58, 71, 80, 0.6)'
+            ),
+            secondary_y=False
+        )
+        
+        # メイン企業の売上高成長率を計算してプロット（折れ線グラフ）
+        growth_rates = calculate_growth_rate(main_metrics['売上高'])
+        if growth_rates:
+            growth_values = [growth_rates.get(year, None) for year in sorted_years]
+            fig.add_trace(
+                go.Scatter(
+                    x=sorted_years,
+                    y=growth_values,
+                    mode='lines+markers',
+                    name=f"{company_name} 売上高成長率",
+                    line=dict(color='rgb(25, 25, 112)', width=3),
+                    connectgaps=True
+                ),
+                secondary_y=True
+            )
+        
+        # 競合企業のデータをプロット
+        for comp_code, comp_metrics in competitors_data.items():
+            if '売上高' in comp_metrics and comp_metrics['売上高']:
+                comp_name = next((c['name'] for c in competitors if c['code'] == comp_code), comp_code)
+                
+                # 競合企業の売上高（棒グラフ）
+                comp_sales_values = [comp_metrics['売上高'].get(year, None) for year in sorted_years]
+                fig.add_trace(
+                    go.Bar(
+                        x=sorted_years,
+                        y=comp_sales_values,
+                        name=f"{comp_name} 売上高",
+                        marker_color='rgba(58, 71, 80, 0.3)',
+                        opacity=0.7
+                    ),
+                    secondary_y=False
+                )
+                
+                # 競合企業の売上高成長率（折れ線グラフ）
+                comp_growth_rates = calculate_growth_rate(comp_metrics['売上高'])
+                if comp_growth_rates:
+                    comp_growth_values = [comp_growth_rates.get(year, None) for year in sorted_years]
+                    fig.add_trace(
+                        go.Scatter(
+                            x=sorted_years,
+                            y=comp_growth_values,
+                            mode='lines+markers',
+                            name=f"{comp_name} 売上高成長率",
+                            line=dict(color='rgba(25, 25, 112, 0.5)', width=2, dash='dot'),
+                            connectgaps=True
+                        ),
+                        secondary_y=True
+                    )
+        
+        # グラフのレイアウトを設定
+        fig.update_layout(
+            title="売上高と売上高成長率の比較",
+            xaxis_title="年度",
+            hovermode='x unified',
+            template='plotly_white',
+            showlegend=True,
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01
+            ),
+            barmode='group',
+            xaxis=dict(
+                type='category',
+                categoryorder='array',
+                categoryarray=sorted_years
+            )
+        )
+        
+        # Y軸のタイトルを設定
+        fig.update_yaxes(title_text="売上高", secondary_y=False)
+        fig.update_yaxes(title_text="成長率 (%)", secondary_y=True)
+        
+        # グラフをJSONに変換
+        chart_json = fig.to_json()
+        
+        charts.append({
+            'title': '売上高と売上高成長率',
+            'plotly_data': chart_json
+        })
+    
+    # 営業利益と営業利益成長率の複合グラフを生成
+    if '営業利益' in main_metrics and main_metrics['営業利益']:
+        # 複合グラフ用のFigureを作成
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # 全ての年度を収集
+        all_years = set(main_metrics['営業利益'].keys())
+        for comp_metrics in competitors_data.values():
+            if '営業利益' in comp_metrics:
+                all_years.update(comp_metrics['営業利益'].keys())
+        
+        # 年度を昇順にソート
+        sorted_years = sorted(all_years)
+        
+        # メイン企業の営業利益データをプロット（棒グラフ）
+        profit_values = [main_metrics['営業利益'].get(year, None) for year in sorted_years]
+        fig.add_trace(
+            go.Bar(
+                x=sorted_years,
+                y=profit_values,
+                name=f"{company_name} 営業利益",
+                marker_color='rgba(76, 175, 80, 0.6)'
+            ),
+            secondary_y=False
+        )
+        
+        # メイン企業の営業利益成長率を計算してプロット（折れ線グラフ）
+        growth_rates = calculate_growth_rate(main_metrics['営業利益'])
+        if growth_rates:
+            growth_values = [growth_rates.get(year, None) for year in sorted_years]
+            fig.add_trace(
+                go.Scatter(
+                    x=sorted_years,
+                    y=growth_values,
+                    mode='lines+markers',
+                    name=f"{company_name} 営業利益成長率",
+                    line=dict(color='rgb(220, 20, 60)', width=3),
+                    connectgaps=True
+                ),
+                secondary_y=True
+            )
+        
+        # 競合企業のデータをプロット
+        for comp_code, comp_metrics in competitors_data.items():
+            if '営業利益' in comp_metrics and comp_metrics['営業利益']:
+                comp_name = next((c['name'] for c in competitors if c['code'] == comp_code), comp_code)
+                
+                # 競合企業の営業利益（棒グラフ）
+                comp_profit_values = [comp_metrics['営業利益'].get(year, None) for year in sorted_years]
+                fig.add_trace(
+                    go.Bar(
+                        x=sorted_years,
+                        y=comp_profit_values,
+                        name=f"{comp_name} 営業利益",
+                        marker_color='rgba(76, 175, 80, 0.3)',
+                        opacity=0.7
+                    ),
+                    secondary_y=False
+                )
+                
+                # 競合企業の営業利益成長率（折れ線グラフ）
+                comp_growth_rates = calculate_growth_rate(comp_metrics['営業利益'])
+                if comp_growth_rates:
+                    comp_growth_values = [comp_growth_rates.get(year, None) for year in sorted_years]
+                    fig.add_trace(
+                        go.Scatter(
+                            x=sorted_years,
+                            y=comp_growth_values,
+                            mode='lines+markers',
+                            name=f"{comp_name} 営業利益成長率",
+                            line=dict(color='rgba(220, 20, 60, 0.5)', width=2, dash='dot'),
+                            connectgaps=True
+                        ),
+                        secondary_y=True
+                    )
+        
+        # グラフのレイアウトを設定
+        fig.update_layout(
+            title="営業利益と営業利益成長率の比較",
+            xaxis_title="年度",
+            hovermode='x unified',
+            template='plotly_white',
+            showlegend=True,
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01
+            ),
+            barmode='group',
+            xaxis=dict(
+                type='category',
+                categoryorder='array',
+                categoryarray=sorted_years
+            )
+        )
+        
+        # Y軸のタイトルを設定
+        fig.update_yaxes(title_text="営業利益", secondary_y=False)
+        fig.update_yaxes(title_text="成長率 (%)", secondary_y=True)
+        
+        # グラフをJSONに変換
+        chart_json = fig.to_json()
+        
+        charts.append({
+            'title': '営業利益と営業利益成長率',
+            'plotly_data': chart_json
+        })
+
+    
+    # 通常の指標のチャートを生成
     for metric_name, metric_data in main_metrics.items():
-        if not metric_data:
-            continue
+        if not metric_data or metric_name in ['売上高', '営業利益']:
+            continue  # 売上高、営業利益、従業員数は複合グラフで別途処理
         
         # Plotlyのグラフオブジェクトを作成
         fig = go.Figure()
@@ -485,7 +754,7 @@ def generate_comparison_charts(company_code):
         fig.update_layout(
             title=f"{metric_name}の比較",
             xaxis_title="年度",
-            yaxis_title="値 (円)",
+            yaxis_title="値",
             hovermode='x unified',
             template='plotly_white',
             showlegend=True,
@@ -579,130 +848,9 @@ def company_view(company_code):
                           competitors=competitors,
                           charts=charts)
 
-# HTMLテンプレートを作成
-@app.route('/create_templates')
-def create_templates():
-    """HTMLテンプレートを作成"""
-    # index.html
-    index_html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>IPO企業分析ツール</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-        <style>
-            body { padding-top: 20px; }
-            .company-card { margin-bottom: 20px; transition: transform 0.3s; }
-            .company-card:hover { transform: translateY(-5px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1 class="mb-4 text-center">IPO企業分析ツール</h1>
-            <div class="row">
-                {% for company in companies %}
-                <div class="col-md-4">
-                    <div class="card company-card">
-                        <div class="card-body">
-                            <h5 class="card-title">{{ company.name }}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">コード: {{ company.code }}</h6>
-                            <a href="/{{ company.code }}" class="btn btn-primary">詳細を見る</a>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
-    </html>
-    """
-    
-    # company.html
-    company_html = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>{{ company_name }} ({{ company_code }}) - 分析</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-        <style>
-            body { padding-top: 20px; }
-            .chart-container { margin-bottom: 30px; height: 500px; }
-            .competitor-badge { margin-right: 5px; margin-bottom: 5px; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="/">ホーム</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">{{ company_name }}</li>
-                </ol>
-            </nav>
-            
-            <h1 class="mb-3">{{ company_name }} <small class="text-muted">({{ company_code }})</small></h1>
-            
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">競合企業</h5>
-                </div>
-                <div class="card-body">
-                    {% if competitors %}
-                        {% for competitor in competitors %}
-                        <span class="badge bg-secondary competitor-badge">{{ competitor.name }} ({{ competitor.code }})</span>
-                        {% endfor %}
-                    {% else %}
-                        <div class="alert alert-info">
-                            この企業の競合企業情報はまだ登録されていません。以下のグラフでは、この企業の財務指標のみを表示しています。
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <h2 class="mb-4">財務指標の比較</h2>
-            
-            {% if charts %}
-                {% for chart in charts %}
-                <div class="chart-container">
-                    <div id="chart-{{ loop.index }}" style="width: 100%; height: 100%;"></div>
-                </div>
-                <script>
-                    var chartData = JSON.parse('{{ chart.plotly_data | safe }}');
-                    Plotly.newPlot('chart-{{ loop.index }}', chartData.data, chartData.layout);
-                </script>
-                {% endfor %}
-            {% else %}
-                <div class="alert alert-warning">
-                    グラフを生成するためのデータが不足しています。
-                </div>
-            {% endif %}
-        </div>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
-    </body>
-    </html>
-    """
-    
-    # テンプレートを保存
-    with open('templates/index.html', 'w', encoding='utf-8') as f:
-        f.write(index_html)
-    
-    with open('templates/company.html', 'w', encoding='utf-8') as f:
-        f.write(company_html)
-    
-    return "テンプレートを作成しました"
-
 if __name__ == '__main__':
     try:
-        # テンプレートを作成
-        with app.test_request_context():
-            create_templates()
-        
-        logger.info("Flaskアプリケーションを起動します...")
+        logger.info("Flaskアプリケーションを起動します（ポート: 8080）...")
         # アプリケーションを実行
         app.run(debug=True, host='0.0.0.0', port=8080)
     except Exception as e:

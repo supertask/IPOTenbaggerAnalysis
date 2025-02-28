@@ -1,7 +1,7 @@
-# IPO Predictor
+# IPO Tenbagar Analysis
 
-IPOの株のCSVを作成
-
+1. 過去にテンバガーになった上場会社の特徴分析
+2. これからテンバガーになりそうな上場企業の可視化
 
 ## 実行方法
 
