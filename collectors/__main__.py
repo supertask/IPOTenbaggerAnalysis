@@ -1,17 +1,17 @@
 import sys
-from collectors.ipo_kiso_details_collector import IPOKisoDetailsCollector
-from collectors.ipo_kiso_list_collector import IPOKisoListCollector
-from collectors.ipo_traders_collector import IPOTradersAnalyzer
-from collectors.ipo_yfinance_collector import IPOYFinanceAnalyzer
-from collectors.ipo_edinet_collector import IPOEdinetCollector
-from collectors.ipo_combiner import IPOCombiner
-from collectors.ipo_ai_summary import AISummaryGenerator
-from collectors.comparision_collector import ComparisonCollector
-from collectors.edinet_report_downloader import EdinetReportDownloader
+from .ipo_kiso_details_collector import IPOKisoDetailsCollector
+from .ipo_kiso_list_collector import IPOKisoListCollector
+from .ipo_traders_collector import IPOTradersAnalyzer
+from .ipo_yfinance_collector import IPOYFinanceAnalyzer
+from .ipo_edinet_collector import IPOEdinetCollector
+from .ipo_combiner import IPOCombiner
+from .ipo_ai_summary import AISummaryGenerator
+from .comparision_collector import ComparisonCollector
+from .edinet_report_downloader import EdinetReportDownloader
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python collectors.py <collector_name>")
+        print("Usage: python -m collectors <collector_name>")
         sys.exit(1)
 
     collector_name = sys.argv[1]
@@ -64,6 +64,5 @@ def main():
         print(f"Unknown collector: {collector_name}")
         sys.exit(1)
 
-
 if __name__ == "__main__":
-    main()
+    main() 

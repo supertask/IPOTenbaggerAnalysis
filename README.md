@@ -1,7 +1,95 @@
 # IPO Tenbagar Analysis
 
+IPO関連の各種データを収集・分析し、可視化するツール群です。
+
 1. 過去にテンバガーになった上場会社の特徴分析
 2. これからテンバガーになりそうな上場企業の可視化
+
+
+## セットアップ
+
+```bash
+# 必要なパッケージをインストール
+pip install -r requirements.txt
+```
+
+## データ収集の実行方法
+
+データ収集は以下のコマンドで実行できます：
+
+```bash
+python -m collectors <collector_name>
+```
+
+利用可能なコレクター:
+- `list`: IPO基礎情報リストの収集
+- `details`: IPO詳細情報の収集
+- `traders`: トレーダー情報の分析
+- `yfinance`: Yahoo Financeからのデータ収集
+- `edinet_download`: EDINETからの有価証券報告書ダウンロード
+- `edinet`: EDINET情報の解析
+- `combiner`: 各種データの統合
+- `ai_annotation`: AI要約の生成
+- `comparison`: 競合他社の分析
+- `all`: すべてのデータ収集を実行
+
+例：
+```bash
+# 特定のコレクターを実行
+python -m collectors list
+python -m collectors details
+
+# すべてのコレクターを実行
+python -m collectors all
+
+# AI要約を特定の数だけ生成
+python -m collectors ai_annotation 10
+```
+
+## データの可視化
+
+可視化ツールは以下のコマンドで起動できます：
+
+```bash
+# 直接実行
+python -m visualizer.app
+
+# または、Flask CLIを使用
+export FLASK_APP=visualizer.app
+export FLASK_ENV=development
+flask run --host=0.0.0.0 --port=8080
+```
+
+ブラウザで以下のURLにアクセスできます：
+- トップページ: `http://localhost:8080/`
+- 企業詳細ページ: `http://localhost:8080/<企業コード>`
+
+## ディレクトリ構造
+
+```
+IPODataCollectors/
+├── collectors/          # データ収集モジュール
+│   ├── __init__.py
+│   ├── __main__.py
+│   ├── ipo_kiso_details_collector.py
+│   ├── ipo_kiso_list_collector.py
+│   └── ...
+├── visualizer/          # データ可視化モジュール
+│   ├── __init__.py
+│   ├── app.py
+│   ├── config.py
+│   ├── data_service.py
+│   └── chart_service.py
+├── data/               # 収集したデータの保存先
+│   └── output/
+├── requirements.txt    # 依存パッケージ
+└── README.md
+```
+
+## 注意事項
+
+- データ収集には各種APIキーが必要な場合があります
+- データ収集には時間がかかる場合があります
 
 ## 実行方法
 
@@ -20,47 +108,6 @@
         python collectors.py compare_compititors
         
         python collectors.py combiner2
-
-## 可視化ツールの使用方法
-
-IPO企業と競合企業の財務指標を可視化するためのウェブアプリケーションを提供しています。
-
-### 実行方法
-
-1. 必要なパッケージをインストール
-```
-pip install -r requirements.txt
-```
-
-2. 可視化ツールを起動
-```
-python visualizer.py
-```
-
-3. ブラウザで以下のURLにアクセス
-```
-http://localhost:8080/
-```
-
-4. 特定の企業の詳細を見るには、以下のURLにアクセス
-```
-http://localhost:8080/<銘柄コード>
-```
-
-### 機能
-
-- トップページでは、すべての企業の一覧を表示
-- 企業詳細ページでは、選択した企業と競合企業の財務指標を比較したグラフを表示
-- 表示される主な指標：
-  - 売上高
-  - 経常利益
-  - 当期純利益
-  - 総資産
-  - 純資産額
-  - 自己資本比率
-  - 自己資本利益率
-  - 株価収益率
-  - キャッシュフロー関連指標
 
 ## Memo
 
