@@ -233,4 +233,4 @@ class DataService:
                 growth_rate = ((current_value - prev_value) / abs(prev_value)) * 100
                 growth_rates[current_year] = growth_rate
         
-        return growth_rates 
+        return growth_rates
