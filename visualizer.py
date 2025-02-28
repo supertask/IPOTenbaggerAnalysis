@@ -489,28 +489,25 @@ def generate_comparison_charts(company_code):
     main_bar_color = 'rgba(255, 0, 0, 1.0)'  # 鮮やかな赤
     main_line_color = 'rgba(255, 0, 0, 1.0)'  # 鮮やかな赤（実線）
     
-    # 競合企業用の色パレット（鮮やかな色に変更）
-    comp_bar_colors = [
-        'rgba(0, 128, 255, 0.3)',   # 鮮やかな青
-        'rgba(0, 180, 0, 0.3)',     # 鮮やかな緑
-        'rgba(255, 128, 0, 0.3)',   # オレンジ
-        'rgba(128, 0, 255, 0.3)',   # 紫
-        'rgba(0, 180, 180, 0.3)',   # ターコイズ
-        'rgba(180, 0, 180, 0.3)',   # マゼンタ
-        'rgba(180, 180, 0, 0.3)',   # 黄色
-        'rgba(90, 90, 90, 0.3)',    # グレー
+    # 透明度の共通パラメータ
+    comp_bar_alpha = 0.3  # 棒グラフの透明度
+    comp_line_alpha = 0.4  # 線グラフの透明度
+    
+    # 競合企業の基本色（RGB値のみ）
+    comp_base_colors = [
+        [0, 128, 255],    # 鮮やかな青
+        [0, 180, 0],      # 鮮やかな緑
+        [255, 128, 0],    # オレンジ
+        [128, 0, 255],    # 紫
+        [0, 180, 180],    # ターコイズ
+        [180, 0, 180],    # マゼンタ
+        [180, 180, 0],    # 黄色
+        [90, 90, 90],     # グレー
     ]
     
-    comp_line_colors = [
-        'rgba(0, 128, 255, 0.4)',   # 鮮やかな青
-        'rgba(0, 180, 0, 0.4)',     # 鮮やかな緑
-        'rgba(255, 128, 0, 0.4)',   # オレンジ
-        'rgba(128, 0, 255, 0.4)',   # 紫
-        'rgba(0, 180, 180, 0.4)',   # ターコイズ
-        'rgba(180, 0, 180, 0.4)',   # マゼンタ
-        'rgba(180, 180, 0, 0.4)',   # 黄色
-        'rgba(90, 90, 90, 0.4)',    # グレー
-    ]
+    # 透明度を適用した色配列を生成
+    comp_bar_colors = [f'rgba({r}, {g}, {b}, {comp_bar_alpha})' for r, g, b in comp_base_colors]
+    comp_line_colors = [f'rgba({r}, {g}, {b}, {comp_line_alpha})' for r, g, b in comp_base_colors]
     
     def generate_metric_growth_chart(metric_name, metric_label):
         """指標と成長率の複合グラフを生成する共通関数"""
