@@ -484,230 +484,164 @@ def generate_comparison_charts(company_code):
     # チャートを生成
     charts = []
     
+    # 企業ごとの色を定義（メイン企業と競合企業で一貫した色を使用）
+    # メイン企業用の色
+    main_bar_color = 'rgba(255, 0, 0, 1.0)'  # 鮮やかな赤
+    main_line_color = 'rgba(255, 0, 0, 1.0)'  # 鮮やかな赤（実線）
+    
+    # 競合企業用の色パレット（鮮やかな色に変更）
+    comp_bar_colors = [
+        'rgba(0, 128, 255, 0.3)',   # 鮮やかな青
+        'rgba(0, 180, 0, 0.3)',     # 鮮やかな緑
+        'rgba(255, 128, 0, 0.3)',   # オレンジ
+        'rgba(128, 0, 255, 0.3)',   # 紫
+        'rgba(0, 180, 180, 0.3)',   # ターコイズ
+        'rgba(180, 0, 180, 0.3)',   # マゼンタ
+        'rgba(180, 180, 0, 0.3)',   # 黄色
+        'rgba(90, 90, 90, 0.3)',    # グレー
+    ]
+    
+    comp_line_colors = [
+        'rgba(0, 128, 255, 0.4)',   # 鮮やかな青
+        'rgba(0, 180, 0, 0.4)',     # 鮮やかな緑
+        'rgba(255, 128, 0, 0.4)',   # オレンジ
+        'rgba(128, 0, 255, 0.4)',   # 紫
+        'rgba(0, 180, 180, 0.4)',   # ターコイズ
+        'rgba(180, 0, 180, 0.4)',   # マゼンタ
+        'rgba(180, 180, 0, 0.4)',   # 黄色
+        'rgba(90, 90, 90, 0.4)',    # グレー
+    ]
+    
+    def generate_metric_growth_chart(metric_name, metric_label):
+        """指標と成長率の複合グラフを生成する共通関数"""
+        if metric_name not in main_metrics or not main_metrics[metric_name]:
+            return None
+            
+        # 複合グラフ用のFigureを作成
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # 全ての年度を収集
+        all_years = set(main_metrics[metric_name].keys())
+        for comp_metrics in competitors_data.values():
+            if metric_name in comp_metrics:
+                all_years.update(comp_metrics[metric_name].keys())
+        
+        # 年度を昇順にソート
+        sorted_years = sorted(all_years)
+        
+        # 競合企業のデータを先にプロット（メイン企業を前面に表示するため）
+        for i, (comp_code, comp_metrics) in enumerate(competitors_data.items()):
+            if metric_name in comp_metrics and comp_metrics[metric_name]:
+                comp_name = next((c['name'] for c in competitors if c['code'] == comp_code), comp_code)
+                
+                # 競合企業ごとに色を変える（色パレットの範囲内でループ）
+                color_index = i % len(comp_bar_colors)
+                comp_bar_color = comp_bar_colors[color_index]
+                comp_line_color = comp_line_colors[color_index]
+                
+                # 競合企業の指標（棒グラフ）
+                comp_values = [comp_metrics[metric_name].get(year, None) for year in sorted_years]
+                fig.add_trace(
+                    go.Bar(
+                        x=sorted_years,
+                        y=comp_values,
+                        name=f"{comp_name} {metric_label}",
+                        marker_color=comp_bar_color
+                    ),
+                    secondary_y=False
+                )
+                
+                # 競合企業の成長率（折れ線グラフ）
+                comp_growth_rates = calculate_growth_rate(comp_metrics[metric_name])
+                if comp_growth_rates:
+                    comp_growth_values = [comp_growth_rates.get(year, None) for year in sorted_years]
+                    fig.add_trace(
+                        go.Scatter(
+                            x=sorted_years,
+                            y=comp_growth_values,
+                            mode='lines+markers',
+                            name=f"{comp_name} {metric_label}成長率",
+                            line=dict(color=comp_line_color, width=2),  # 点線から実線に変更、太さも調整
+                            marker=dict(size=6),  # マーカーサイズを調整
+                            connectgaps=True
+                        ),
+                        secondary_y=True
+                    )
+        
+        # メイン企業のデータをプロット（棒グラフ）- 最後にプロットして前面に表示
+        values = [main_metrics[metric_name].get(year, None) for year in sorted_years]
+        fig.add_trace(
+            go.Bar(
+                x=sorted_years,
+                y=values,
+                name=f"{company_name} {metric_label}",
+                marker_color=main_bar_color,  # メイン企業の色
+                opacity=0.8,  # 透明度を調整
+            ),
+            secondary_y=False
+        )
+        
+        # メイン企業の成長率を計算してプロット（折れ線グラフ）
+        growth_rates = calculate_growth_rate(main_metrics[metric_name])
+        if growth_rates:
+            growth_values = [growth_rates.get(year, None) for year in sorted_years]
+            fig.add_trace(
+                go.Scatter(
+                    x=sorted_years,
+                    y=growth_values,
+                    mode='lines+markers',
+                    name=f"{company_name} {metric_label}成長率",
+                    line=dict(color=main_line_color, width=3),
+                    marker=dict(size=8),  # マーカーを大きく
+                    connectgaps=True
+                ),
+                secondary_y=True
+            )
+        
+        # グラフのレイアウトを設定
+        fig.update_layout(
+            title=f"{metric_label}と{metric_label}成長率の比較",
+            xaxis_title="年度",
+            hovermode='x unified',
+            template='plotly_white',
+            showlegend=True,
+            legend=dict(
+                yanchor="top",
+                y=0.99,
+                xanchor="left",
+                x=0.01
+            ),
+            barmode='group',
+            xaxis=dict(
+                type='category',
+                categoryorder='array',
+                categoryarray=sorted_years
+            )
+        )
+        
+        # Y軸のタイトルを設定
+        fig.update_yaxes(title_text=metric_label, secondary_y=False)
+        fig.update_yaxes(title_text="成長率 (%)", secondary_y=True)
+        
+        return {
+            'title': f'{metric_label}と{metric_label}成長率',
+            'plotly_data': fig.to_json()
+        }
     
     # 売上高と売上高成長率の複合グラフを生成
-    if '売上高' in main_metrics and main_metrics['売上高']:
-        # 複合グラフ用のFigureを作成
-        fig = make_subplots(specs=[[{"secondary_y": True}]])
-        
-        # 全ての年度を収集
-        all_years = set(main_metrics['売上高'].keys())
-        for comp_metrics in competitors_data.values():
-            if '売上高' in comp_metrics:
-                all_years.update(comp_metrics['売上高'].keys())
-        
-        # 年度を昇順にソート
-        sorted_years = sorted(all_years)
-        
-        # メイン企業の売上高データをプロット（棒グラフ）
-        sales_values = [main_metrics['売上高'].get(year, None) for year in sorted_years]
-        fig.add_trace(
-            go.Bar(
-                x=sorted_years,
-                y=sales_values,
-                name=f"{company_name} 売上高",
-                marker_color='rgba(58, 71, 80, 0.6)'
-            ),
-            secondary_y=False
-        )
-        
-        # メイン企業の売上高成長率を計算してプロット（折れ線グラフ）
-        growth_rates = calculate_growth_rate(main_metrics['売上高'])
-        if growth_rates:
-            growth_values = [growth_rates.get(year, None) for year in sorted_years]
-            fig.add_trace(
-                go.Scatter(
-                    x=sorted_years,
-                    y=growth_values,
-                    mode='lines+markers',
-                    name=f"{company_name} 売上高成長率",
-                    line=dict(color='rgb(25, 25, 112)', width=3),
-                    connectgaps=True
-                ),
-                secondary_y=True
-            )
-        
-        # 競合企業のデータをプロット
-        for comp_code, comp_metrics in competitors_data.items():
-            if '売上高' in comp_metrics and comp_metrics['売上高']:
-                comp_name = next((c['name'] for c in competitors if c['code'] == comp_code), comp_code)
-                
-                # 競合企業の売上高（棒グラフ）
-                comp_sales_values = [comp_metrics['売上高'].get(year, None) for year in sorted_years]
-                fig.add_trace(
-                    go.Bar(
-                        x=sorted_years,
-                        y=comp_sales_values,
-                        name=f"{comp_name} 売上高",
-                        marker_color='rgba(58, 71, 80, 0.3)',
-                        opacity=0.7
-                    ),
-                    secondary_y=False
-                )
-                
-                # 競合企業の売上高成長率（折れ線グラフ）
-                comp_growth_rates = calculate_growth_rate(comp_metrics['売上高'])
-                if comp_growth_rates:
-                    comp_growth_values = [comp_growth_rates.get(year, None) for year in sorted_years]
-                    fig.add_trace(
-                        go.Scatter(
-                            x=sorted_years,
-                            y=comp_growth_values,
-                            mode='lines+markers',
-                            name=f"{comp_name} 売上高成長率",
-                            line=dict(color='rgba(25, 25, 112, 0.5)', width=2, dash='dot'),
-                            connectgaps=True
-                        ),
-                        secondary_y=True
-                    )
-        
-        # グラフのレイアウトを設定
-        fig.update_layout(
-            title="売上高と売上高成長率の比較",
-            xaxis_title="年度",
-            hovermode='x unified',
-            template='plotly_white',
-            showlegend=True,
-            legend=dict(
-                yanchor="top",
-                y=0.99,
-                xanchor="left",
-                x=0.01
-            ),
-            barmode='group',
-            xaxis=dict(
-                type='category',
-                categoryorder='array',
-                categoryarray=sorted_years
-            )
-        )
-        
-        # Y軸のタイトルを設定
-        fig.update_yaxes(title_text="売上高", secondary_y=False)
-        fig.update_yaxes(title_text="成長率 (%)", secondary_y=True)
-        
-        # グラフをJSONに変換
-        chart_json = fig.to_json()
-        
-        charts.append({
-            'title': '売上高と売上高成長率',
-            'plotly_data': chart_json
-        })
+    sales_chart = generate_metric_growth_chart('売上高', '売上高')
+    if sales_chart:
+        charts.append(sales_chart)
     
     # 営業利益と営業利益成長率の複合グラフを生成
-    if '営業利益' in main_metrics and main_metrics['営業利益']:
-        # 複合グラフ用のFigureを作成
-        fig = make_subplots(specs=[[{"secondary_y": True}]])
-        
-        # 全ての年度を収集
-        all_years = set(main_metrics['営業利益'].keys())
-        for comp_metrics in competitors_data.values():
-            if '営業利益' in comp_metrics:
-                all_years.update(comp_metrics['営業利益'].keys())
-        
-        # 年度を昇順にソート
-        sorted_years = sorted(all_years)
-        
-        # メイン企業の営業利益データをプロット（棒グラフ）
-        profit_values = [main_metrics['営業利益'].get(year, None) for year in sorted_years]
-        fig.add_trace(
-            go.Bar(
-                x=sorted_years,
-                y=profit_values,
-                name=f"{company_name} 営業利益",
-                marker_color='rgba(76, 175, 80, 0.6)'
-            ),
-            secondary_y=False
-        )
-        
-        # メイン企業の営業利益成長率を計算してプロット（折れ線グラフ）
-        growth_rates = calculate_growth_rate(main_metrics['営業利益'])
-        if growth_rates:
-            growth_values = [growth_rates.get(year, None) for year in sorted_years]
-            fig.add_trace(
-                go.Scatter(
-                    x=sorted_years,
-                    y=growth_values,
-                    mode='lines+markers',
-                    name=f"{company_name} 営業利益成長率",
-                    line=dict(color='rgb(220, 20, 60)', width=3),
-                    connectgaps=True
-                ),
-                secondary_y=True
-            )
-        
-        # 競合企業のデータをプロット
-        for comp_code, comp_metrics in competitors_data.items():
-            if '営業利益' in comp_metrics and comp_metrics['営業利益']:
-                comp_name = next((c['name'] for c in competitors if c['code'] == comp_code), comp_code)
-                
-                # 競合企業の営業利益（棒グラフ）
-                comp_profit_values = [comp_metrics['営業利益'].get(year, None) for year in sorted_years]
-                fig.add_trace(
-                    go.Bar(
-                        x=sorted_years,
-                        y=comp_profit_values,
-                        name=f"{comp_name} 営業利益",
-                        marker_color='rgba(76, 175, 80, 0.3)',
-                        opacity=0.7
-                    ),
-                    secondary_y=False
-                )
-                
-                # 競合企業の営業利益成長率（折れ線グラフ）
-                comp_growth_rates = calculate_growth_rate(comp_metrics['営業利益'])
-                if comp_growth_rates:
-                    comp_growth_values = [comp_growth_rates.get(year, None) for year in sorted_years]
-                    fig.add_trace(
-                        go.Scatter(
-                            x=sorted_years,
-                            y=comp_growth_values,
-                            mode='lines+markers',
-                            name=f"{comp_name} 営業利益成長率",
-                            line=dict(color='rgba(220, 20, 60, 0.5)', width=2, dash='dot'),
-                            connectgaps=True
-                        ),
-                        secondary_y=True
-                    )
-        
-        # グラフのレイアウトを設定
-        fig.update_layout(
-            title="営業利益と営業利益成長率の比較",
-            xaxis_title="年度",
-            hovermode='x unified',
-            template='plotly_white',
-            showlegend=True,
-            legend=dict(
-                yanchor="top",
-                y=0.99,
-                xanchor="left",
-                x=0.01
-            ),
-            barmode='group',
-            xaxis=dict(
-                type='category',
-                categoryorder='array',
-                categoryarray=sorted_years
-            )
-        )
-        
-        # Y軸のタイトルを設定
-        fig.update_yaxes(title_text="営業利益", secondary_y=False)
-        fig.update_yaxes(title_text="成長率 (%)", secondary_y=True)
-        
-        # グラフをJSONに変換
-        chart_json = fig.to_json()
-        
-        charts.append({
-            'title': '営業利益と営業利益成長率',
-            'plotly_data': chart_json
-        })
-
+    profit_chart = generate_metric_growth_chart('営業利益', '営業利益')
+    if profit_chart:
+        charts.append(profit_chart)
     
     # 通常の指標のチャートを生成
     for metric_name, metric_data in main_metrics.items():
         if not metric_data or metric_name in ['売上高', '営業利益']:
-            continue  # 売上高、営業利益、従業員数は複合グラフで別途処理
+            continue  # 売上高、営業利益は複合グラフで別途処理
         
         # Plotlyのグラフオブジェクトを作成
         fig = go.Figure()
@@ -721,7 +655,30 @@ def generate_comparison_charts(company_code):
         # 年度を昇順にソート
         sorted_years = sorted(all_years)
         
-        # メイン企業のデータをプロット
+        # 競合企業のデータを先にプロット
+        for i, (comp_code, comp_metrics) in enumerate(competitors_data.items()):
+            if metric_name in comp_metrics and comp_metrics[metric_name]:
+                comp_values = [comp_metrics[metric_name].get(year, None) for year in sorted_years]
+                comp_name = next((c['name'] for c in competitors if c['code'] == comp_code), comp_code)
+                
+                # 競合企業ごとに色を変える（色パレットの範囲内でループ）
+                color_index = i % len(comp_line_colors)
+                comp_line_color = comp_line_colors[color_index]
+                
+                fig.add_trace(
+                    go.Scatter(
+                        x=sorted_years,
+                        y=comp_values,
+                        mode='lines+markers',
+                        name=f"{comp_name} ({comp_code})",
+                        line=dict(color=comp_line_color, width=2),  # 点線から実線に変更
+                        marker=dict(size=6),  # マーカーサイズを調整
+                        connectgaps=True,  # 欠損値をスキップして線を接続
+                        opacity=0.8  # 透明度を下げて目立たせる
+                    )
+                )
+        
+        # メイン企業のデータを最後にプロット（前面に表示）
         values = [metric_data.get(year, None) for year in sorted_years]
         fig.add_trace(
             go.Scatter(
@@ -729,26 +686,11 @@ def generate_comparison_charts(company_code):
                 y=values,
                 mode='lines+markers',
                 name=f"{company_name} ({company_code})",
-                line=dict(width=3),
+                line=dict(color=main_line_color, width=3),  # メイン企業の色
+                marker=dict(size=8),  # マーカーを大きく
                 connectgaps=True  # 欠損値をスキップして線を接続
             )
         )
-        
-        # 競合企業のデータをプロット
-        for comp_code, comp_metrics in competitors_data.items():
-            if metric_name in comp_metrics and comp_metrics[metric_name]:
-                comp_values = [comp_metrics[metric_name].get(year, None) for year in sorted_years]
-                comp_name = next((c['name'] for c in competitors if c['code'] == comp_code), comp_code)
-                fig.add_trace(
-                    go.Scatter(
-                        x=sorted_years,
-                        y=comp_values,
-                        mode='lines+markers',
-                        name=f"{comp_name} ({comp_code})",
-                        line=dict(width=2, dash='dot'),
-                        connectgaps=True  # 欠損値をスキップして線を接続
-                    )
-                )
         
         # グラフのレイアウトを設定
         fig.update_layout(
