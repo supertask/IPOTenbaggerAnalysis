@@ -3,7 +3,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import logging
 
-from .config import CHART_COLORS
+from .config import CHART_COLORS, CHART_DISPLAY_ORDER
 from .data_service import DataService
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,10 @@ class ChartService:
                 if chart:
                     charts.append(chart)
             
-            return charts, None
+            # 設定に基づいてグラフを並べ替え
+            sorted_charts = sorted(charts, key=lambda x: CHART_DISPLAY_ORDER.get(x['title'], 999))
+            
+            return sorted_charts, None
         except Exception as e:
             logger.error(f"チャート生成中にエラー: {e}", exc_info=True)
             return [], "チャートの生成に失敗しました"

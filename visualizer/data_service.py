@@ -10,7 +10,7 @@ from pathlib import Path
 from .config import (
     IPO_REPORTS_DIR,
     COMPARISON_DIR,
-    IMPORTANT_METRICS,
+    METRICS_IN_DOCS,
     METRIC_ALIASES
 )
 
@@ -131,7 +131,7 @@ class DataService:
             return None
 
     @staticmethod
-    def extract_metrics(data: Optional[pd.DataFrame], metrics_list: List[str] = IMPORTANT_METRICS) -> Dict[str, Dict[str, float]]:
+    def extract_metrics(data: Optional[pd.DataFrame], metrics_list: List[str] = METRICS_IN_DOCS) -> Dict[str, Dict[str, float]]:
         """指定された指標のデータを抽出"""
         if data is None:
             logger.warning("データがNoneのため、指標を抽出できません")
