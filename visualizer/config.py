@@ -17,9 +17,12 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
     ('売上高', ['jpcrp_cor:NetSalesSummaryOfBusinessResults', 'jpcrp_cor:RevenueIFRSSummaryOfBusinessResults', 'jpcrp_cor:RevenuesUSGAAPSummaryOfBusinessResults']),
     ('営業利益', ['jppfs_cor:OperatingIncome']),
     ('経常利益', ['jppfs_cor:OrdinaryIncome', 'jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults']),
-    ('当期純利益', ['jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults', 'jppfs_cor:ProfitLossAttributableToOwnersOfParent']),
+    ('当期純利益', ['jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults',
+        'jppfs_cor:ProfitLossAttributableToOwnersOfParent',
+        'jpcrp_cor:NetIncomeLossSummaryOfBusinessResults']),
     ('ROE（自己資本利益率）', ['jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults']),
-    ('純資産額', ['jpcrp_cor:NetAssetsSummaryOfBusinessResults']),
+    ('純資産', ['jpcrp_cor:NetAssetsSummaryOfBusinessResults']),
+    ('総資産', ['jpcrp_cor:TotalAssetsSummaryOfBusinessResults']),
     ('自己資本比率', ['jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResult']),
     ('PER（株価収益率）', ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults']),
     ('従業員数', ['jpcrp_cor:NumberOfEmployees']),
@@ -37,6 +40,7 @@ CHART_DISPLAY_ORDER = [
     'PEGレシオ（PER / EPS成長率）', #ピーター・リンチ
     'PER（株価収益率）',
     'ROE（自己資本利益率）', #ウォーレン・バフェット
+    'ROA（総資産利益率）',
     '１株当たり当期純利益（EPS）と１株当たり当期純利益（EPS）成長率',
     '営業利益率',
     '売上高と売上高成長率',
@@ -45,7 +49,8 @@ CHART_DISPLAY_ORDER = [
     '自己資本比率',
     '当期純利益',
     '従業員数',
-    '純資産額',
+    '純資産',
+    '総資産',
     '経常利益',
 ]
 

@@ -13,7 +13,33 @@ from .config import (
     METRIC_ALIASES
 )
 
+# カラーフォーマッターの設定
+class ColoredFormatter(logging.Formatter):
+    """ログメッセージに色を付けるフォーマッター"""
+    
+    COLORS = {
+        'WARNING': '\033[0;33m',  # 黄色
+        'ERROR': '\033[0;31m',    # 赤
+        'CRITICAL': '\033[0;35m', # マゼンタ
+    }
+
+    def format(self, record):
+        # ログレベルに応じた色を選択（DEBUGとINFOは色なし）
+        color = self.COLORS.get(record.levelname, '')
+        # 元のメッセージをフォーマット
+        message = super().format(record)
+        # 色を適用（色が設定されている場合のみリセット）
+        if color:
+            return f"{color}{message}\033[0m"
+        return message
+
+# ロガーの設定
 logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+formatter = ColoredFormatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 class DataService:
     @staticmethod
@@ -153,6 +179,9 @@ class DataService:
             # PEGレシオを計算
             DataService._calculate_peg_ratio(metrics_data)
             
+            # ROAを計算（有価証券報告書から直接取得できない場合のバックアップ）
+            DataService._calculate_roa(metrics_data)
+            
         except Exception as e:
             logger.error(f"指標抽出中に予期しないエラー: {e}", exc_info=True)
         
@@ -262,3 +291,22 @@ class DataService:
                 growth_rates[current_year] = growth_rate
         
         return growth_rates
+
+    @staticmethod
+    def _calculate_roa(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """ROA（総資産利益率）を計算（当期純利益 / 総資産）"""
+        if 'ROA（総資産利益率）' not in metrics_data and '当期純利益' in metrics_data and '総資産' in metrics_data:
+            try:
+                net_income = metrics_data['当期純利益']
+                total_assets = metrics_data['総資産']
+                
+                roa = {}
+                for year in set(net_income.keys()) & set(total_assets.keys()):
+                    if total_assets[year] != 0:
+                        roa[year] = (net_income[year] / total_assets[year]) * 100
+                
+                if roa:
+                    metrics_data['ROA（総資産利益率）'] = roa
+                    logger.info(f"ROA（総資産利益率）を計算しました。{len(roa)} 年分のデータがあります。")
+            except Exception as e:
+                logger.error(f"ROA（総資産利益率）の計算中にエラー: {e}", exc_info=True)
