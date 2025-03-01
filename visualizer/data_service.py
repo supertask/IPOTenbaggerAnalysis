@@ -10,7 +10,6 @@ from pathlib import Path
 from .config import (
     IPO_REPORTS_DIR,
     COMPARISON_DIR,
-    METRICS_IN_DOCS,
     METRIC_ALIASES
 )
 
@@ -131,11 +130,15 @@ class DataService:
             return None
 
     @staticmethod
-    def extract_metrics(data: Optional[pd.DataFrame], metrics_list: List[str] = METRICS_IN_DOCS) -> Dict[str, Dict[str, float]]:
+    def extract_metrics(data: Optional[pd.DataFrame], metrics_list: List[str] = None) -> Dict[str, Dict[str, float]]:
         """指定された指標のデータを抽出"""
         if data is None:
             logger.warning("データがNoneのため、指標を抽出できません")
             return {}
+        
+        # デフォルトではMETRIC_ALIASESのキーを使用
+        if metrics_list is None:
+            metrics_list = list(METRIC_ALIASES.keys())
         
         metrics_data = {}
         try:
@@ -219,9 +222,9 @@ class DataService:
     @staticmethod
     def _calculate_peg_ratio(metrics_data: Dict[str, Dict[str, float]]) -> None:
         """PEGレシオを計算（PER / EPSの成長率）"""
-        if 'PEGレシオ（PER / EPS成長率）' not in metrics_data and 'PER' in metrics_data and '１株当たり当期純利益（EPS）' in metrics_data:
+        if 'PEGレシオ（PER / EPS成長率）' not in metrics_data and 'PER（株価収益率）' in metrics_data and '１株当たり当期純利益（EPS）' in metrics_data:
             try:
-                per = metrics_data['PER']
+                per = metrics_data['PER（株価収益率）']
                 eps = metrics_data['１株当たり当期純利益（EPS）']
                 
                 # EPSの成長率を計算

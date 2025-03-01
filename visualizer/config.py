@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import List, Dict
+from collections import OrderedDict
 
 # ディレクトリパス設定
 BASE_DIR = Path(__file__).parent.parent
@@ -8,48 +9,33 @@ IPO_REPORTS_DIR = BASE_DIR / 'data/output/edinet/edinet_database/ipo_reports'
 COMPARISON_DIR = BASE_DIR / 'data/output/comparison'
 ALL_COMPANIES_PATH = BASE_DIR / 'data/output/combiner/all_companies.tsv'
 
-# 重要な財務指標のリスト
-METRICS_IN_DOCS: List[str] = [
-    '売上高',
-    '営業利益',
-    '経常利益',
-    '当期純利益',
-    'ROE（自己資本利益率）',
-    '純資産額',
-    '自己資本比率',
-    'PER',
-    '従業員数',
-    '１株当たり当期純利益（EPS）',
-    #'営業活動によるキャッシュ・フロー',
-    #'投資活動によるキャッシュ・フロー',
-    #'財務活動によるキャッシュ・フロー',
-    #'現金及び現金同等物の期末残高',
-]
 
-# 指標の代替名マッピング
-# TODO: 連結と個別のマッピングを追加する
-METRIC_ALIASES: Dict[str, List[str]] = {
-    '売上高': ['jpcrp_cor:NetSalesSummaryOfBusinessResults', 'jpcrp_cor:RevenueIFRSSummaryOfBusinessResults', 'jpcrp_cor:RevenuesUSGAAPSummaryOfBusinessResults'],
-    '営業利益': ['jppfs_cor:OperatingIncome'],
-    '経常利益': ['jppfs_cor:OrdinaryIncome', 'jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults'],
-    '当期純利益': ['jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults', 'jppfs_cor:ProfitLossAttributableToOwnersOfParent'],
-    'ROE（自己資本利益率）': ['jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults'],
-    'PER': ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults'],
-    '自己資本比率': ['jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResult'],
-    '純資産額': ['jpcrp_cor:NetAssetsSummaryOfBusinessResults'],
-    '１株当たり当期純利益（EPS）': ['jpcrp_cor:DilutedEarningsPerShareSummaryOfBusinessResults', 'jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults'],
-    #'営業活動によるキャッシュ・フロー': ['jpcrp_cor:CashFlowsFromOperatingActivities', 'jpcrp_cor:NetCashProvidedByUsedInOperatingActivities'],
-    #'投資活動によるキャッシュ・フロー': ['jpcrp_cor:CashFlowsFromInvestingActivities', 'jpcrp_cor:NetCashProvidedByUsedInInvestingActivities'],
-    #'財務活動によるキャッシュ・フロー': ['jpcrp_cor:CashFlowsFromFinancingActivities', 'jpcrp_cor:NetCashProvidedByUsedInFinancingActivities'],
-    #'現金及び現金同等物の期末残高': ['jpcrp_cor:CashAndCashEquivalents', 'jpcrp_cor:CashAndDeposits'],
-    '従業員数': ['jpcrp_cor:NumberOfEmployees'],
-}
+
+# 指標の代替名マッピング（順序付き）
+# 辞書のキーの順序が指標の処理順序を決定します
+METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
+    ('売上高', ['jpcrp_cor:NetSalesSummaryOfBusinessResults', 'jpcrp_cor:RevenueIFRSSummaryOfBusinessResults', 'jpcrp_cor:RevenuesUSGAAPSummaryOfBusinessResults']),
+    ('営業利益', ['jppfs_cor:OperatingIncome']),
+    ('経常利益', ['jppfs_cor:OrdinaryIncome', 'jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults']),
+    ('当期純利益', ['jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults', 'jppfs_cor:ProfitLossAttributableToOwnersOfParent']),
+    ('ROE（自己資本利益率）', ['jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults']),
+    ('純資産額', ['jpcrp_cor:NetAssetsSummaryOfBusinessResults']),
+    ('自己資本比率', ['jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResult']),
+    ('PER（株価収益率）', ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults']),
+    ('従業員数', ['jpcrp_cor:NumberOfEmployees']),
+    ('１株当たり当期純利益（EPS）', ['jpcrp_cor:DilutedEarningsPerShareSummaryOfBusinessResults', 'jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults']),
+    # 以下はコメントアウトされていますが、順序を保持するために含めています
+    #('営業活動によるキャッシュ・フロー', ['jpcrp_cor:CashFlowsFromOperatingActivities', 'jpcrp_cor:NetCashProvidedByUsedInOperatingActivities']),
+    #('投資活動によるキャッシュ・フロー', ['jpcrp_cor:CashFlowsFromInvestingActivities', 'jpcrp_cor:NetCashProvidedByUsedInInvestingActivities']),
+    #('財務活動によるキャッシュ・フロー', ['jpcrp_cor:CashFlowsFromFinancingActivities', 'jpcrp_cor:NetCashProvidedByUsedInFinancingActivities']),
+    #('現金及び現金同等物の期末残高', ['jpcrp_cor:CashAndCashEquivalents', 'jpcrp_cor:CashAndDeposits']),
+])
 
 # グラフの表示順序設定
 # リスト内の位置が表示順序を決定します（先頭が最初に表示）
 CHART_DISPLAY_ORDER = [
     'PEGレシオ（PER / EPS成長率）', #ピーター・リンチ
-    'PER',
+    'PER（株価収益率）',
     'ROE（自己資本利益率）', #ウォーレン・バフェット
     '１株当たり当期純利益（EPS）と１株当たり当期純利益（EPS）成長率',
     '営業利益率',
@@ -57,10 +43,10 @@ CHART_DISPLAY_ORDER = [
     '営業利益と営業利益成長率',
 
     '自己資本比率',
-    '経常利益',
     '当期純利益',
     '従業員数',
     '純資産額',
+    '経常利益',
 ]
 
 # グラフ設定
