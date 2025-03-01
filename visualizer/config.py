@@ -19,6 +19,7 @@ METRICS_IN_DOCS: List[str] = [
     '自己資本比率',
     '株価収益率',
     '従業員数',
+    '１株当たり当期純利益（EPS）',
     #'営業活動によるキャッシュ・フロー',
     #'投資活動によるキャッシュ・フロー',
     #'財務活動によるキャッシュ・フロー',
@@ -36,6 +37,7 @@ METRIC_ALIASES: Dict[str, List[str]] = {
     '株価収益率': ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults'],
     '自己資本比率': ['jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResult'],
     '純資産額': ['jpcrp_cor:NetAssetsSummaryOfBusinessResults'],
+    '１株当たり当期純利益（EPS）': ['jpcrp_cor:DilutedEarningsPerShareSummaryOfBusinessResults', 'jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults'],
     #'営業活動によるキャッシュ・フロー': ['jpcrp_cor:CashFlowsFromOperatingActivities', 'jpcrp_cor:NetCashProvidedByUsedInOperatingActivities'],
     #'投資活動によるキャッシュ・フロー': ['jpcrp_cor:CashFlowsFromInvestingActivities', 'jpcrp_cor:NetCashProvidedByUsedInInvestingActivities'],
     #'財務活動によるキャッシュ・フロー': ['jpcrp_cor:CashFlowsFromFinancingActivities', 'jpcrp_cor:NetCashProvidedByUsedInFinancingActivities'],
@@ -46,6 +48,7 @@ METRIC_ALIASES: Dict[str, List[str]] = {
 # グラフの表示順序設定
 # 数値が小さいほど先頭に表示される。指定されていない指標は後ろに表示される
 CHART_DISPLAY_ORDER: Dict[str, int] = {
+    '１株当たり当期純利益（EPS）と１株当たり当期純利益（EPS）成長率': 1,
     '自己資本利益率': 2,
     '営業利益率': 3,
     '売上高と売上高成長率': 4,

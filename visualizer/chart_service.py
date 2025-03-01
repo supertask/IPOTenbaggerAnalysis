@@ -57,9 +57,14 @@ class ChartService:
             if profit_chart:
                 charts.append(profit_chart)
             
+            # １株当たり利益と１株当たり利益成長率の複合グラフを生成
+            eps_chart = self._generate_metric_growth_chart('１株当たり当期純利益（EPS）', '１株当たり当期純利益（EPS）', main_metrics, competitors_data, competitors)
+            if eps_chart:
+                charts.append(eps_chart)
+            
             # その他の指標のチャートを生成
             for metric_name, metric_data in main_metrics.items():
-                if not metric_data or metric_name in ['売上高', '営業利益']:
+                if not metric_data or metric_name in ['売上高', '営業利益', '１株当たり当期純利益（EPS）']:
                     continue
                 
                 chart = self._generate_metric_chart(metric_name, metric_data, competitors_data, competitors)
