@@ -14,10 +14,10 @@ METRICS_IN_DOCS: List[str] = [
     '営業利益',
     '経常利益',
     '当期純利益',
-    '自己資本利益率',
+    'ROE（自己資本利益率）',
     '純資産額',
     '自己資本比率',
-    '株価収益率',
+    'PER',
     '従業員数',
     '１株当たり当期純利益（EPS）',
     #'営業活動によるキャッシュ・フロー',
@@ -33,8 +33,8 @@ METRIC_ALIASES: Dict[str, List[str]] = {
     '営業利益': ['jppfs_cor:OperatingIncome'],
     '経常利益': ['jppfs_cor:OrdinaryIncome', 'jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults'],
     '当期純利益': ['jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults', 'jppfs_cor:ProfitLossAttributableToOwnersOfParent'],
-    '自己資本利益率': ['jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults'],
-    '株価収益率': ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults'],
+    'ROE（自己資本利益率）': ['jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults'],
+    'PER': ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults'],
     '自己資本比率': ['jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResult'],
     '純資産額': ['jpcrp_cor:NetAssetsSummaryOfBusinessResults'],
     '１株当たり当期純利益（EPS）': ['jpcrp_cor:DilutedEarningsPerShareSummaryOfBusinessResults', 'jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults'],
@@ -46,22 +46,22 @@ METRIC_ALIASES: Dict[str, List[str]] = {
 }
 
 # グラフの表示順序設定
-# 数値が小さいほど先頭に表示される。指定されていない指標は後ろに表示される
-CHART_DISPLAY_ORDER: Dict[str, int] = {
-    '１株当たり当期純利益（EPS）と１株当たり当期純利益（EPS）成長率': 1,
-    '自己資本利益率': 2,
-    '営業利益率': 3,
-    '売上高と売上高成長率': 4,
-    '営業利益と営業利益成長率': 5,
+# リスト内の位置が表示順序を決定します（先頭が最初に表示）
+CHART_DISPLAY_ORDER = [
+    'PEGレシオ（PER / EPS成長率）', #ピーター・リンチ
+    'PER',
+    'ROE（自己資本利益率）', #ウォーレン・バフェット
+    '１株当たり当期純利益（EPS）と１株当たり当期純利益（EPS）成長率',
+    '営業利益率',
+    '売上高と売上高成長率',
+    '営業利益と営業利益成長率',
 
-    '自己資本比率': 6,
-    '経常利益': 7,
-    '当期純利益': 8,
-    '総資産': 9,
-    '純資産額': 10,
-    '株価収益率': 11,
-    '従業員数': 12,
-}
+    '自己資本比率',
+    '経常利益',
+    '当期純利益',
+    '従業員数',
+    '純資産額',
+]
 
 # グラフ設定
 CHART_COLORS = {

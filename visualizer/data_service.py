@@ -147,6 +147,9 @@ class DataService:
             # 営業利益率を計算
             DataService._calculate_operating_margin(metrics_data)
             
+            # PEGレシオを計算
+            DataService._calculate_peg_ratio(metrics_data)
+            
         except Exception as e:
             logger.error(f"指標抽出中に予期しないエラー: {e}", exc_info=True)
         
@@ -212,6 +215,28 @@ class DataService:
                     logger.info(f"営業利益率を計算しました。{len(operating_profit_ratio)} 年分のデータがあります。")
             except Exception as e:
                 logger.error(f"営業利益率の計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_peg_ratio(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """PEGレシオを計算（PER / EPSの成長率）"""
+        if 'PEGレシオ（PER / EPS成長率）' not in metrics_data and 'PER' in metrics_data and '１株当たり当期純利益（EPS）' in metrics_data:
+            try:
+                per = metrics_data['PER']
+                eps = metrics_data['１株当たり当期純利益（EPS）']
+                
+                # EPSの成長率を計算
+                eps_growth_rates = DataService.calculate_growth_rate(eps)
+                
+                peg_ratio = {}
+                for year in set(per.keys()) & set(eps_growth_rates.keys()):
+                    if eps_growth_rates[year] > 0:  # 成長率がプラスの場合のみ計算
+                        peg_ratio[year] = per[year] / eps_growth_rates[year]
+                
+                if peg_ratio:
+                    metrics_data['PEGレシオ（PER / EPS成長率）'] = peg_ratio
+                    logger.info(f"PEGレシオを計算しました。{len(peg_ratio)} 年分のデータがあります。")
+            except Exception as e:
+                logger.error(f"PEGレシオの計算中にエラー: {e}", exc_info=True)
 
     @staticmethod
     def calculate_growth_rate(data: Dict[str, float]) -> Dict[str, float]:

@@ -72,7 +72,15 @@ class ChartService:
                     charts.append(chart)
             
             # 設定に基づいてグラフを並べ替え
-            sorted_charts = sorted(charts, key=lambda x: CHART_DISPLAY_ORDER.get(x['title'], 999))
+            def get_chart_order(chart):
+                title = chart['title']
+                try:
+                    return CHART_DISPLAY_ORDER.index(title)
+                except ValueError:
+                    # リストに含まれていない場合は最後に表示
+                    return len(CHART_DISPLAY_ORDER)
+            
+            sorted_charts = sorted(charts, key=get_chart_order)
             
             return sorted_charts, None
         except Exception as e:
