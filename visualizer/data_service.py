@@ -181,6 +181,9 @@ class DataService:
             
             # ROAを計算（有価証券報告書から直接取得できない場合のバックアップ）
             DataService._calculate_roa(metrics_data)
+
+            # 従業員一人当たりの営業利益を計算
+            DataService._calculate_operating_profit_per_employee(metrics_data)
             
         except Exception as e:
             logger.error(f"指標抽出中に予期しないエラー: {e}", exc_info=True)
@@ -310,3 +313,76 @@ class DataService:
                     logger.info(f"ROA（総資産利益率）を計算しました。{len(roa)} 年分のデータがあります。")
             except Exception as e:
                 logger.error(f"ROA（総資産利益率）の計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_operating_profit_per_employee(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """従業員一人当たりの営業利益を計算"""
+        if '営業利益' in metrics_data and '従業員数' in metrics_data:
+            operating_profit = metrics_data['営業利益']
+            employees = metrics_data['従業員数']
+            
+            result = {}
+            for year in operating_profit:
+                if year in employees and employees[year] > 0:
+                    result[year] = operating_profit[year] / employees[year]
+            
+            if result:
+                metrics_data['従業員一人当たり営業利益'] = result
+                logger.info("従業員一人当たり営業利益を計算しました")
+
+    @staticmethod
+    def get_officers_info(company_code: str) -> Optional[str]:
+        """指定された企業コードの役員情報を取得"""
+        company_map = DataService.get_company_code_name_map()
+        
+        if company_code not in company_map:
+            logger.error(f"企業コード {company_code} が見つかりません")
+            return None
+        
+        company_name = company_map[company_code]
+        company_dir = f"{IPO_REPORTS_DIR}/{company_code}_{company_name}"
+        
+        # 年次報告書ディレクトリを確認
+        annual_reports_dir = f"{company_dir}/annual_securities_reports"
+        if not os.path.exists(annual_reports_dir):
+            logger.warning(f"年次報告書ディレクトリが見つかりません: {annual_reports_dir}")
+            return None
+        
+        # 最新の年次報告書を取得
+        report_files = sorted(glob.glob(f"{annual_reports_dir}/*.tsv"), reverse=True)
+        if not report_files:
+            logger.warning(f"年次報告書が見つかりません: {annual_reports_dir}")
+            return None
+        
+        latest_report = report_files[0]
+        
+        try:
+            # ファイルのエンコーディングを確認
+            result = subprocess.run(['file', latest_report], capture_output=True, text=True)
+            file_info = result.stdout
+            
+            encoding = 'utf-8'
+            if 'UTF-16' in file_info:
+                encoding = 'utf-16-le' if 'little-endian' in file_info else 'utf-16-be'
+            
+            # TSVファイルを読み込む
+            df = pd.read_csv(latest_report, sep='\t', encoding=encoding, on_bad_lines='skip')
+            
+            # 役員情報を検索
+            officers_row = df[df['要素ID'] == 'jpcrp_cor:InformationAboutOfficersTextBlock']
+            
+            if officers_row.empty:
+                logger.warning(f"役員情報が見つかりません: {latest_report}")
+                return None
+            
+            # 役員情報のテキストを取得
+            officers_text = officers_row['値'].values[0]
+            
+            # HTMLとして整形
+            officers_html = officers_text.replace('\n', '<br>')
+            
+            return officers_html
+            
+        except Exception as e:
+            logger.error(f"役員情報の取得中にエラー: {e}", exc_info=True)
+            return None

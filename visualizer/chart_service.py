@@ -5,6 +5,14 @@ import logging
 
 from .config import CHART_COLORS, CHART_DISPLAY_ORDER
 from .data_service import DataService
+from .utils import (
+    format_currency_unit,
+    format_per_person_unit,
+    determine_unit_from_max_value,
+    format_value_with_unit,
+    format_percentage,
+    format_percentage_raw
+)
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +117,23 @@ class ChartService:
                     all_years.update(comp_metrics[metric_name].keys())
             
             sorted_years = sorted(all_years)
+
+            # Y軸の単位を決定
+            y_unit = ""
+            formatter = None
+            force_unit = None
+            if metric_name == '従業員一人当たり営業利益':
+                formatter = format_per_person_unit
+                y_unit, _ = determine_unit_from_max_value(main_metrics[metric_name], competitors_data, metric_name, formatter)
+            elif metric_name in ['売上高', '営業利益', '当期純利益', '純資産', '総資産', '経常利益']:
+                formatter = format_currency_unit
+                y_unit, force_unit = determine_unit_from_max_value(main_metrics[metric_name], competitors_data, metric_name, formatter)
+            elif metric_name in ['ROE（自己資本利益率）', '自己資本比率']:
+                formatter = format_percentage
+                y_unit = " (%)"
+            elif metric_name in ['営業利益率', 'ROA（総資産利益率）']:
+                formatter = format_percentage_raw
+                y_unit = " (%)"
             
             # 競合企業のデータをプロット
             for i, (comp_code, comp_metrics) in enumerate(competitors_data.items()):
@@ -118,12 +143,35 @@ class ChartService:
                     
                     # 競合企業の指標（棒グラフ）
                     comp_values = [comp_metrics[metric_name].get(year, None) for year in sorted_years]
+                    comp_hover_texts = []
+                    converted_comp_values = []
+                    
+                    for v in comp_values:
+                        if v is None:
+                            comp_hover_texts.append("N/A")
+                            converted_comp_values.append(None)
+                        else:
+                            if formatter:
+                                if force_unit:
+                                    hover_text = format_value_with_unit(v, lambda x: format_currency_unit(x, force_unit))
+                                    converted_value = format_currency_unit(v, force_unit)[0]
+                                else:
+                                    hover_text = format_value_with_unit(v, formatter)
+                                    converted_value = formatter(v)[0]
+                            else:
+                                hover_text = f"{v:.1f}"
+                                converted_value = v
+                            comp_hover_texts.append(hover_text)
+                            converted_comp_values.append(converted_value)
+                    
                     fig.add_trace(
                         go.Bar(
                             x=sorted_years,
-                            y=comp_values,
+                            y=converted_comp_values,
                             name=f"{comp_name} {metric_label}",
-                            marker_color=self.competitor_bar_colors[color_index]
+                            marker_color=self.competitor_bar_colors[color_index],
+                            hovertemplate="%{text}<extra></extra>",
+                            text=comp_hover_texts
                         ),
                         secondary_y=False
                     )
@@ -132,6 +180,7 @@ class ChartService:
                     comp_growth_rates = self.data_service.calculate_growth_rate(comp_metrics[metric_name])
                     if comp_growth_rates:
                         comp_growth_values = [comp_growth_rates.get(year, None) for year in sorted_years]
+                        growth_hover_texts = [f"{v:.1f}%" if v is not None else "N/A" for v in comp_growth_values]
                         fig.add_trace(
                             go.Scatter(
                                 x=sorted_years,
@@ -140,20 +189,45 @@ class ChartService:
                                 name=f"{comp_name} {metric_label}成長率",
                                 line=dict(color=self.competitor_line_colors[color_index], width=2),
                                 marker=dict(size=6),
-                                connectgaps=True
+                                connectgaps=True,
+                                hovertemplate="%{text}<extra></extra>",
+                                text=growth_hover_texts
                             ),
                             secondary_y=True
                         )
             
             # メイン企業のデータをプロット
             values = [main_metrics[metric_name].get(year, None) for year in sorted_years]
+            hover_texts = []
+            converted_values = []
+            
+            for v in values:
+                if v is None:
+                    hover_texts.append("N/A")
+                    converted_values.append(None)
+                else:
+                    if formatter:
+                        if force_unit:
+                            hover_text = format_value_with_unit(v, lambda x: format_currency_unit(x, force_unit))
+                            converted_value = format_currency_unit(v, force_unit)[0]
+                        else:
+                            hover_text = format_value_with_unit(v, formatter)
+                            converted_value = formatter(v)[0]
+                    else:
+                        hover_text = f"{v:.1f}"
+                        converted_value = v
+                    hover_texts.append(hover_text)
+                    converted_values.append(converted_value)
+            
             fig.add_trace(
                 go.Bar(
                     x=sorted_years,
-                    y=values,
+                    y=converted_values,
                     name=f"{self.company_name} {metric_label}",
                     marker_color=CHART_COLORS['main']['bar'],
                     opacity=0.8,
+                    hovertemplate="%{text}<extra></extra>",
+                    text=hover_texts
                 ),
                 secondary_y=False
             )
@@ -162,6 +236,7 @@ class ChartService:
             growth_rates = self.data_service.calculate_growth_rate(main_metrics[metric_name])
             if growth_rates:
                 growth_values = [growth_rates.get(year, None) for year in sorted_years]
+                growth_hover_texts = [f"{v:.1f}%" if v is not None else "N/A" for v in growth_values]
                 fig.add_trace(
                     go.Scatter(
                         x=sorted_years,
@@ -170,7 +245,9 @@ class ChartService:
                         name=f"{self.company_name} {metric_label}成長率",
                         line=dict(color=CHART_COLORS['main']['line'], width=3),
                         marker=dict(size=8),
-                        connectgaps=True
+                        connectgaps=True,
+                        hovertemplate="%{text}<extra></extra>",
+                        text=growth_hover_texts
                     ),
                     secondary_y=True
                 )
@@ -179,7 +256,7 @@ class ChartService:
             fig.update_layout(
                 title=f"{metric_label}と{metric_label}成長率の比較",
                 xaxis_title="年度",
-                yaxis_title=metric_label,
+                yaxis_title=f"{metric_label}{y_unit}",
                 yaxis2_title="成長率 (%)",
                 hovermode='x unified',
                 template='plotly_white',
@@ -198,7 +275,7 @@ class ChartService:
             )
             
             # Y軸のタイトルを設定
-            fig.update_yaxes(title_text=metric_label, secondary_y=False)
+            fig.update_yaxes(title_text=f"{metric_label}{y_unit}", secondary_y=False)
             fig.update_yaxes(title_text="成長率 (%)", secondary_y=True)
             
             return {
@@ -227,38 +304,101 @@ class ChartService:
                     all_years.update(comp_metrics[metric_name].keys())
             
             sorted_years = sorted(all_years)
+
+            # Y軸の単位を決定
+            y_unit = ""
+            formatter = None
+            force_unit = None
+            if metric_name == '従業員一人当たり営業利益':
+                formatter = format_per_person_unit
+                y_unit, _ = determine_unit_from_max_value(metric_data, competitors_data, metric_name, formatter)
+            elif metric_name in ['売上高', '営業利益', '当期純利益', '純資産', '総資産', '経常利益']:
+                formatter = format_currency_unit
+                y_unit, force_unit = determine_unit_from_max_value(metric_data, competitors_data, metric_name, formatter)
+            elif metric_name in ['ROE（自己資本利益率）', '自己資本比率']:
+                formatter = format_percentage
+                y_unit = " (%)"
+            elif metric_name in ['営業利益率', 'ROA（総資産利益率）']:
+                formatter = format_percentage_raw
+                y_unit = " (%)"
             
             # 競合企業のデータをプロット
             for i, (comp_code, comp_metrics) in enumerate(competitors_data.items()):
                 if metric_name in comp_metrics and comp_metrics[metric_name]:
                     comp_values = [comp_metrics[metric_name].get(year, None) for year in sorted_years]
+                    comp_hover_texts = []
+                    converted_comp_values = []
+                    
+                    for v in comp_values:
+                        if v is None:
+                            comp_hover_texts.append("N/A")
+                            converted_comp_values.append(None)
+                        else:
+                            if formatter:
+                                if force_unit:
+                                    hover_text = format_value_with_unit(v, lambda x: format_currency_unit(x, force_unit))
+                                    converted_value = format_currency_unit(v, force_unit)[0]
+                                else:
+                                    hover_text = format_value_with_unit(v, formatter)
+                                    converted_value = formatter(v)[0]
+                            else:
+                                hover_text = f"{v:.1f}"
+                                converted_value = v
+                            comp_hover_texts.append(hover_text)
+                            converted_comp_values.append(converted_value)
+                    
                     comp_name = next((c['name'] for c in competitors if c['code'] == comp_code), comp_code)
                     color_index = i % len(self.competitor_line_colors)
                     
                     fig.add_trace(
                         go.Scatter(
                             x=sorted_years,
-                            y=comp_values,
+                            y=converted_comp_values,
                             mode='lines+markers',
                             name=f"{comp_name} ({comp_code})",
                             line=dict(color=self.competitor_line_colors[color_index], width=2),
                             marker=dict(size=6),
                             connectgaps=True,
-                            opacity=0.8
+                            opacity=0.8,
+                            hovertemplate="%{text}<extra></extra>",
+                            text=comp_hover_texts
                         )
                     )
             
             # メイン企業のデータをプロット
             values = [metric_data.get(year, None) for year in sorted_years]
+            hover_texts = []
+            converted_values = []
+            
+            for v in values:
+                if v is None:
+                    hover_texts.append("N/A")
+                    converted_values.append(None)
+                else:
+                    if formatter:
+                        if force_unit:
+                            hover_text = format_value_with_unit(v, lambda x: format_currency_unit(x, force_unit))
+                            converted_value = format_currency_unit(v, force_unit)[0]
+                        else:
+                            hover_text = format_value_with_unit(v, formatter)
+                            converted_value = formatter(v)[0]
+                    else:
+                        hover_text = f"{v:.1f}"
+                        converted_value = v
+                    hover_texts.append(hover_text)
+                    converted_values.append(converted_value)
+            
             fig.add_trace(
                 go.Scatter(
                     x=sorted_years,
-                    y=values,
+                    y=converted_values,
                     mode='lines+markers',
-                    name=f"{self.company_name} ({self.company_code})",
+                    name=self.company_name,
                     line=dict(color=CHART_COLORS['main']['line'], width=3),
                     marker=dict(size=8),
-                    connectgaps=True
+                    connectgaps=True,
+                    hovertemplate="%{text}<extra></extra>",
+                    text=hover_texts
                 )
             )
             
@@ -266,7 +406,7 @@ class ChartService:
             fig.update_layout(
                 title=f"{metric_name}の比較",
                 xaxis_title="年度",
-                yaxis_title=metric_name,
+                yaxis_title=f"{metric_name}{y_unit}",
                 hovermode='x unified',
                 template='plotly_white',
                 showlegend=True,
@@ -288,5 +428,5 @@ class ChartService:
                 'plotly_data': fig.to_json()
             }
         except Exception as e:
-            logger.error(f"指標チャート生成中にエラー: {e}", exc_info=True)
+            logger.error(f"チャート生成中にエラー: {e}", exc_info=True)
             return None 

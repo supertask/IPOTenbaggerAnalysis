@@ -98,6 +98,13 @@ def create_app():
         company_name = company_map[company_code]
         competitors = DataService.get_competitors(company_code)
         
+        # 役員情報を取得
+        officers_info = DataService.get_officers_info(company_code)
+        
+        # 競合企業の役員情報を取得
+        for competitor in competitors:
+            competitor['officers_info'] = DataService.get_officers_info(competitor['code'])
+        
         chart_service = ChartService(company_code, company_name)
         charts, error = chart_service.generate_comparison_charts()
         
@@ -108,7 +115,8 @@ def create_app():
                              company_code=company_code,
                              company_name=company_name,
                              competitors=competitors,
-                             charts=charts)
+                             charts=charts,
+                             officers_info=officers_info)
     
     return app
 
