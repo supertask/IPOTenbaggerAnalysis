@@ -348,17 +348,17 @@ class DataService:
             logger.warning(f"年次報告書ディレクトリが見つかりません: {annual_reports_dir}")
             return None
         
-        # 最新の年次報告書を取得
-        report_files = sorted(glob.glob(f"{annual_reports_dir}/*.tsv"), reverse=True)
+        # 最も古い年次報告書を取得（reversed=Falseで昇順ソート）
+        report_files = sorted(glob.glob(f"{annual_reports_dir}/*.tsv"), reverse=False)
         if not report_files:
             logger.warning(f"年次報告書が見つかりません: {annual_reports_dir}")
             return None
         
-        latest_report = report_files[0]
+        oldest_report = report_files[0]
         
         try:
             # ファイルのエンコーディングを確認
-            result = subprocess.run(['file', latest_report], capture_output=True, text=True)
+            result = subprocess.run(['file', oldest_report], capture_output=True, text=True)
             file_info = result.stdout
             
             encoding = 'utf-8'
@@ -366,13 +366,13 @@ class DataService:
                 encoding = 'utf-16-le' if 'little-endian' in file_info else 'utf-16-be'
             
             # TSVファイルを読み込む
-            df = pd.read_csv(latest_report, sep='\t', encoding=encoding, on_bad_lines='skip')
+            df = pd.read_csv(oldest_report, sep='\t', encoding=encoding, on_bad_lines='skip')
             
             # 役員情報を検索
             officers_row = df[df['要素ID'] == 'jpcrp_cor:InformationAboutOfficersTextBlock']
             
             if officers_row.empty:
-                logger.warning(f"役員情報が見つかりません: {latest_report}")
+                logger.warning(f"役員情報が見つかりません: {oldest_report}")
                 return None
             
             # 役員情報のテキストを取得
