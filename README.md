@@ -27,7 +27,6 @@ python -m collectors <collector_name>
 - `traders`: トレーダー情報の分析
 - `yfinance`: Yahoo Financeからのデータ収集
 - `edinet_download`: EDINETからの有価証券報告書ダウンロード
-- `edinet`: EDINET情報の解析
 - `combiner`: 各種データの統合
 - `ai_annotation`: AI要約の生成
 - `comparison`: 競合他社の分析
@@ -98,7 +97,7 @@ IPODataCollectors/
         python collectors.py kiso_details
         python collectors.py traders
         python collectors.py yfinance
-        # python collectors.py edinet #修正する
+        # python collectors.py edinet_download
         python collectors.py combiner
 
         # TODO: 上記の各企業の情報から、AIでストックビジネス, 競合リスト, 店舗数, 海外進出するか, を取得

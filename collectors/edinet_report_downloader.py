@@ -30,7 +30,7 @@ class EdinetReportDownloader:
         self.BASE_URL = "https://api.edinet-fsa.go.jp/api/v2/documents"
         self.edinet_url = "https://disclosure2dl.edinet-fsa.go.jp/searchdocument/codelist/Edinetcode.zip"
 
-        self.OUTPUT_DIR = os.path.join('data', 'output', 'edinet', 'edinet_database')
+        self.OUTPUT_DIR = os.path.join('data', 'output', 'edinet_db')
         self.REPORTS_DIR = os.path.join(self.OUTPUT_DIR, 'ipo_reports')
         self.EDINET_CODE_DIR = os.path.join(self.OUTPUT_DIR, 'edinet_codes')
         self.edinet_codes_csv_path = os.path.join(self.EDINET_CODE_DIR, "EdinetcodeDlInfo.csv")
@@ -44,27 +44,6 @@ class EdinetReportDownloader:
             os.mkdir(self.EDINET_CODE_DIR)
         if not os.path.exists(self.EDINET_CODE_DIR):
             os.makedirs(self.EDINET_CODE_DIR)
-
-        self.securities_items = {
-            "jpcrp_cor:DescriptionOfBusinessTextBlock": "事業の内容",
-            "jpcrp_cor:BusinessPolicyBusinessEnvironmentIssuesToAddressEtcTextBlock": "経営方針、経営環境及び対処すべき課題等",
-            "jpcrp_cor:BusinessRisksTextBlock": "事業等のリスク",
-            "jpcrp_cor:ManagementAnalysisOfFinancialPositionOperatingResultsAndCashFlowsTextBlock": "経営者による財政状態、経営成績及びキャッシュ・フローの状況の分析",
-            "jpcrp_cor:CriticalContractsForOperationTextBlock": "経営上の重要な契約等",
-            "jpcrp_cor:ResearchAndDevelopmentActivitiesTextBlock": "研究開発活動",
-            "jpcrp_cor:AnalysisOfFinancialPositionOperatingResultsAndCashFlowsTextBlock": "財政状態、経営成績及びキャッシュ・フローの状況の分析",
-            "jpcrp_cor:OverviewOfCapitalExpendituresEtcTextBlock": "設備投資等の概要",
-            "jpcrp_cor:MajorFacilitiesTextBlock": "主要な設備の状況",
-            "jpcrp_cor:TotalNumberOfSharesTextBlock": "株式の総数",
-            "jpcrp_cor:IssuedSharesTotalNumberOfSharesEtcTextBlock": "発行済株式、株式の総数等",
-            "jpcrp_cor:DividendPolicyTextBlock": "配当政策",
-            "jpcrp_cor:OverviewOfCorporateGovernanceTextBlock": "コーポレート・ガバナンスの概要",
-            "jpcrp_cor:InformationAboutOfficersTextBlock": "役員の状況",
-            "jpcrp_cor:BalanceSheetTextBlock": "貸借対照表",
-            "jpcrp_cor:StatementOfIncomeTextBlock": "損益計算書",
-            "jpcrp_cor:StatementOfCashFlowsTextBlock": "キャッシュ・フロー計算書"
-        }
-        self.report_headers = list(self.securities_items.values())
 
 
     def download_and_extract_edinet_zip(self):
@@ -345,24 +324,11 @@ class EdinetReportDownloader:
         return all_files[0] if all_files else None
 
 
-    def get_report_dict(self, code):
-        report_path = self.find_report_path(code)
-        if not report_path:
-            return None
-            
-        report_df = pd.read_csv(report_path, sep='\t')
-        report_dict = {}
-        #print("report_headers: ", self.report_headers)
-        for header_name in self.report_headers:
-            report_dict[header_name] = report_df.loc[report_df['項目'] == header_name, '値'].values[0]
-
-        return report_dict
 
 if __name__ == "__main__":
     tsv = EdinetReportDownloader()
     tsv.run()
 
-    #report_dict = tsv.get_report_dict('130A')
     #print(report_dict)
     #tsv.save_ipo_securities_reports(companies = {
     #    'E38948': {'company_code': '55880', 'company_name': 'ファーストアカウンティング'}
