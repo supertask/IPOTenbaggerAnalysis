@@ -386,3 +386,60 @@ class DataService:
         except Exception as e:
             logger.error(f"役員情報の取得中にエラー: {e}", exc_info=True)
             return None
+
+    @staticmethod
+    def get_business_description(company_code: str) -> Optional[str]:
+        """指定された企業コードの事業の内容を取得"""
+        company_map = DataService.get_company_code_name_map()
+        
+        if company_code not in company_map:
+            logger.error(f"企業コード {company_code} が見つかりません")
+            return None
+        
+        company_name = company_map[company_code]
+        company_dir = f"{IPO_REPORTS_DIR}/{company_code}_{company_name}"
+        
+        # 年次報告書ディレクトリを確認
+        annual_reports_dir = f"{company_dir}/annual_securities_reports"
+        if not os.path.exists(annual_reports_dir):
+            logger.warning(f"年次報告書ディレクトリが見つかりません: {annual_reports_dir}")
+            return None
+        
+        # 最も古い年次報告書を取得（reversed=Falseで昇順ソート）
+        report_files = sorted(glob.glob(f"{annual_reports_dir}/*.tsv"), reverse=False)
+        if not report_files:
+            logger.warning(f"年次報告書が見つかりません: {annual_reports_dir}")
+            return None
+        
+        oldest_report = report_files[0]
+        
+        try:
+            # ファイルのエンコーディングを確認
+            result = subprocess.run(['file', oldest_report], capture_output=True, text=True)
+            file_info = result.stdout
+            
+            encoding = 'utf-8'
+            if 'UTF-16' in file_info:
+                encoding = 'utf-16-le' if 'little-endian' in file_info else 'utf-16-be'
+            
+            # TSVファイルを読み込む
+            df = pd.read_csv(oldest_report, sep='\t', encoding=encoding, on_bad_lines='skip')
+            
+            # 事業の内容を検索
+            business_row = df[df['要素ID'] == 'jpcrp_cor:DescriptionOfBusinessTextBlock']
+            
+            if business_row.empty:
+                logger.warning(f"事業の内容が見つかりません: {oldest_report}")
+                return None
+            
+            # 事業の内容のテキストを取得
+            business_text = business_row['値'].values[0]
+            
+            # HTMLとして整形
+            business_html = business_text.replace('\n', '<br>')
+            
+            return business_html
+            
+        except Exception as e:
+            logger.error(f"事業の内容の取得中にエラー: {e}", exc_info=True)
+            return None

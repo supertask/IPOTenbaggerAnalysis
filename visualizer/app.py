@@ -190,6 +190,13 @@ def create_app():
         company_name = company_map[company_code]
         competitors = DataService.get_competitors(company_code)
         
+        # 事業の内容を取得
+        business_description = DataService.get_business_description(company_code)
+        
+        # 競合企業の事業の内容を取得
+        for competitor in competitors:
+            competitor['business_description'] = DataService.get_business_description(competitor['code'])
+        
         # 役員情報を取得
         officers_info = DataService.get_officers_info(company_code)
         
@@ -208,6 +215,7 @@ def create_app():
                              company_name=company_name,
                              competitors=competitors,
                              charts=charts,
+                             business_description=business_description,
                              officers_info=officers_info)
     
     @app.route('/api/securities_reports/<company_code>')

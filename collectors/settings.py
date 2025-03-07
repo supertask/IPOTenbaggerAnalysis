@@ -285,7 +285,7 @@ class AISummarySettings(ScraperSettings):
         self.templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
         self.basic_prompt_template = os.path.join(self.templates_dir, 'basic_prompt.txt')
         self.officers_prompt_template = os.path.join(self.templates_dir, 'officers_prompt.txt')
-        self.top_n_companies = 10  # 上位何件の企業を対象とするかの定数
+        self.top_n_companies = 15  # 上位何件の企業を対象とするかの定数
         self.stock_bussiness_knowledge = """\
 ## ビジネスモデル
 
