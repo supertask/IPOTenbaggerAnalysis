@@ -10,6 +10,7 @@ from collectors.ipo_analyzer_core import IPOAnalyzerCore
 
 class IPOYFinanceAnalyzer(IPOAnalyzerCore):
     def __init__(self):
+        super().__init__()
         self.general_settings = GeneralSettings()
         self.yfinance_settings = YFinanceScraperSettings()
         self.stock_volume_duration_month = 3
@@ -196,6 +197,10 @@ class IPOYFinanceAnalyzer(IPOAnalyzerCore):
 
             # 年ごとのデータを1つのTSVにまとめて保存
             self.save_to_tsv(company_data_list, output_file)
+
+        # すべての年のファイルを結合
+        self.combine_all_files(self.yfinance_settings.output_dir)
+        
 
 if __name__ == "__main__":
     analyzer = IPOYFinanceAnalyzer()

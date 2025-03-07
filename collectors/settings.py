@@ -263,18 +263,10 @@ class CombinerSettings(ScraperSettings):
         kiso = KisoScraperSettings()
         traders = TradersScraperSettings()
         yfinance = YFinanceScraperSettings()
-        edinet = EdinetCollectorSettings()
         self.kiso_output_dir = kiso.output_dir
         self.traders_output_dir = traders.output_dir
         self.yfinance_output_dir = yfinance.output_dir
-        self.edinet_output_dir = edinet.output_dir
         self.output_dir = os.path.join(self.out_dir_core, 'combiner')
-
-class EdinetCollectorSettings(ScraperSettings):
-    def __init__(self):
-        super().__init__()
-        self.input_dir = self.kiso_list_output_dir
-        self.output_dir = os.path.join(self.out_dir_core, 'edinet')
 
 class ComparisonCollectorSettings(ScraperSettings):
     def __init__(self):
@@ -287,7 +279,39 @@ class AISummarySettings(ScraperSettings):
     def __init__(self):
         super().__init__()
         self.combiner_input_dir = os.path.join(self.out_dir_core, 'combiner')
-        self.edinet_input_dir = os.path.join(self.out_dir_core, 'edinet')
+        self.edinet_input_dir = os.path.join(self.out_dir_core, 'edinet_db')
         self.output_dir = os.path.join(self.out_dir_core, 'ai_summary')
-        self.top_n_companies = 100  # 上位何件の企業を対象とするかの定数
+        self.comparison_dir = os.path.join(self.out_dir_core, 'comparison')
+        self.templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+        self.basic_prompt_template = os.path.join(self.templates_dir, 'basic_prompt.txt')
+        self.officers_prompt_template = os.path.join(self.templates_dir, 'officers_prompt.txt')
+        self.top_n_companies = 10  # 上位何件の企業を対象とするかの定数
+        self.stock_bussiness_knowledge = """\
+## ビジネスモデル
+
+### 多店舗展開ビジネス
+店舗や視点などの営業拠点がどんどん増えていくことで、売上や利益が伸びていくビジネスモデル。
+必ずしも物理的な店舗を従わないビジネスでも、営業エリアを拡大していれば構いません。
+アパレル、小売、飲食業はここから除外してください。
+
+### サブスクビジネス
+商品やサービスを売って終わりではなく、毎月あるいは毎年料金を払い続けてもらうことで、定期的かつ継続的に収益を得られるビジネスモデル
+業者を乗り換えるハードルが高いビジネスや解約率が低いビジネスであると良い
+
+### 営業人員依存型ビジネス
+人材を増やしていくことで収益を増やせるビジネスモデル。
+必要条件は、採用数と連動して業績を伸ばせていることと、人材は定期的に働き続けてくれる正社員であること、です。
+経験や実績よりもポテンシャルを見極めて採用する力と短期間で戦力化できる育成力があると良いです。
+
+### 保証ビジネス
+賃貸不動産の家賃保証ビジネス。賃貸不動産の家賃保証ビジネスであれば、入居者から保証料を受け取って、万一滞納が発生した場合はオーナーに立て替え払いをするようなビジネス。
+補償する物件が増えるほど補償料が積み上がる上、賃貸契約の更新や新しい入居者に入れ替わるたびに保証料収入が入り、売上と利益が伸びていくことになる。
+また、保証ビジネスは家賃だけでなく、医療や住居設備の保守運用など様々な分野が当てはまります。
+
+例：住宅・事業用家賃保証を主なビジネスとするジェイリース（7187）、住宅ローンの保証を行う全国保証（7164）など
+
+### その他
+その他のビジネス。上記のビジネスのような月ごとに継続的に収益が得られるビジネスモデルでない場合、これに該当する。
+商業、製造業、飲食、金融、建設、運輸、鉱業などのセクターは除外。
+"""
 
