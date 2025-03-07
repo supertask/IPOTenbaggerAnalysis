@@ -23,6 +23,11 @@ class EdinetReportDownloader:
         #self.begin_x_year_ago = 0.5 #過去13年分を辿る
         self.is_debug = True
         
+        # EDINETの書類種別コード
+        self.DOC_TYPE_CODE_SECURITIES_REGISTRATION = '030'  # 有価証券届出書
+        self.DOC_TYPE_CODE_SECURITIES_REPORT = '120'  # 有価証券報告書
+        self.DOC_TYPE_CODE_QUARTERLY_REPORT = '140'  # 四半期報告書
+        
         #self.current_dir = os.path.dirname(os.path.abspath(__file__))
         #print(self.current_dir)
 
@@ -187,14 +192,16 @@ class EdinetReportDownloader:
                 continue # 上場廃止である可能性があるのでスキップ
 
             if meta['csvFlag'] == '1' and (
-                meta['docTypeCode'] == '030' or meta['docTypeCode'] == '120'):
+                meta['docTypeCode'] == self.DOC_TYPE_CODE_SECURITIES_REPORT or 
+                meta['docTypeCode'] == self.DOC_TYPE_CODE_SECURITIES_REGISTRATION or
+                meta['docTypeCode'] == self.DOC_TYPE_CODE_QUARTERLY_REPORT):
                 if self.is_debug:
                     print(f"name = {meta['filerName']}, docDescription = {meta['docDescription']}, docId = {meta['docID']}")
                 tsv_rows.append([date_str, edinet_code, meta['docTypeCode'], meta['docID']])
         
         return tsv_rows
 
-    def save_sorted_document(self, company_doc_info, doc_type_code, folder, doc_name, company_code4, company_name):
+    def save_securities_docs(self, company_doc_info, doc_type_code, folder, doc_name, company_code4, company_name):
         sorted_documents = company_doc_info[company_doc_info['docTypeCode'] == doc_type_code].sort_values('date', ascending=True)
 
         if sorted_documents.empty:
@@ -206,7 +213,6 @@ class EdinetReportDownloader:
         start_date = datetime.strptime(oldest_date, '%Y-%m-%d')
         end_date = start_date + timedelta(days=(self.begin_x_year_ago - self.end_x_year_ago) * 365)
 
-        # 5年間のデータをフィルタ
         filtered_documents = sorted_documents[
             (sorted_documents['date'] >= start_date.strftime('%Y-%m-%d')) &
             (sorted_documents['date'] <= end_date.strftime('%Y-%m-%d'))
@@ -252,6 +258,7 @@ class EdinetReportDownloader:
         else:
             edinet_to_company_dict = self.get_company_dict()
 
+        # すでにX年前からY年前までのデータがあれば使用し、なければダウンロードして保存
         doc_meta_path = f"{self.EDINET_CODE_DIR}/{self.begin_x_year_ago}years_ago_to_{self.end_x_year_ago}years_ago__doc_indexes.tsv.gz"
         if os.path.exists(doc_meta_path):
             if not self.use_cache:
@@ -273,15 +280,14 @@ class EdinetReportDownloader:
             if self.is_debug:
                 print(f"DEBUG: code = {company_code4}, name = {company_name}")
 
-            # 最新の有価証券届出書を保存
-            #self.save_sorted_document(compan, '030', 'securities_registration_statement', '有価証券届出書', company_code4, company_name)
-            # 最新の有価証券報告書を保存
-            #self.save_sorted_document(company_doc_info, '120', 'annual_securities_reports', '有価証券報告書', company_code4, company_name)
+            # 有価証券届出書を保存（事業の内容が書かれてない場合が多いかも？？）
+            self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REGISTRATION, 'securities_registration_statement', '有価証券届出書', company_code4, company_name)
+            
+            # 四半期報告書を保存
+            self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_QUARTERLY_REPORT, 'quarterly_reports', '四半期報告書', company_code4, company_name)
 
-            # 最古の有価証券届出書を保存（事業の内容が書かれてない場合が多いかも？？）
-            #self.save_sorted_document(company_doc_info, '030', 'securities_registration_statement', '有価証券届出書', company_code4, company_name)
-            # 最古の有価証券報告書を保存
-            self.save_sorted_document(company_doc_info, '120', 'annual_securities_reports', '有価証券報告書', company_code4, company_name)
+            # 有価証券報告書を保存
+            #self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REPORT, 'annual_securities_reports', '有価証券報告書', company_code4, company_name)
 
     def run(self):
         self.save_securities_reports()
