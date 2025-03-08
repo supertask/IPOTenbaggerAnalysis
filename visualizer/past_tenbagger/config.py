@@ -3,8 +3,9 @@ from typing import List, Dict
 from collections import OrderedDict
 
 # ディレクトリパス設定
-BASE_DIR = Path(__file__).parent.parent
-print(BASE_DIR)
+# 修正: 正しいプロジェクトルートディレクトリを指すように変更
+BASE_DIR = Path(__file__).parent.parent.parent
+print(f"BASE_DIR: {BASE_DIR}")
 IPO_REPORTS_DIR = BASE_DIR / 'data/output/edinet_db/ipo_reports'
 COMPARISON_DIR = BASE_DIR / 'data/output/comparison'
 ALL_COMPANIES_PATH = BASE_DIR / 'data/output/combiner/all_companies.tsv'

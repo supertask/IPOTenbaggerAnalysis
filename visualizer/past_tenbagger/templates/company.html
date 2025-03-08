@@ -215,7 +215,7 @@
                 <div class="col-xl-10">
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="/">ホーム</a></li>
+                            <li class="breadcrumb-item"><a href="/past_tenbagger/">ホーム</a></li>
                             <li class="breadcrumb-item active" aria-current="page">{{ company_name }}</li>
                         </ol>
                     </nav>
@@ -731,7 +731,7 @@
                     // メイン企業の差分を取得
                     for (const pair of mainCompanyYearPairs) {
                         try {
-                            const response = await fetch(`/api/securities_report_diff/${mainCompanyCode}`, {
+                            const response = await fetch(`/past_tenbagger/api/securities_report_diff/${mainCompanyCode}`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -771,7 +771,7 @@
                         
                         try {
                             // 競合企業の有価証券報告書の一覧を取得
-                            const response = await fetch(`/api/securities_reports/${competitorCode}`);
+                            const response = await fetch(`/past_tenbagger/api/securities_reports/${competitorCode}`);
                             if (!response.ok) {
                                 throw new Error(`競合企業の有価証券報告書の一覧の取得に失敗しました`);
                             }
@@ -804,7 +804,7 @@
                                 
                                 try {
                                     // 差分を取得
-                                    const diffResponse = await fetch(`/api/securities_report_diff/${competitorCode}`, {
+                                    const diffResponse = await fetch(`/past_tenbagger/api/securities_report_diff/${competitorCode}`, {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
@@ -1018,7 +1018,7 @@
                 let diffPromises = [];
                 
                 yearPairs.forEach(pair => {
-                    const promise = fetch(`/api/securities_report_diff/${selectedCompanyCode}`, {
+                    const promise = fetch(`/past_tenbagger/api/securities_report_diff/${selectedCompanyCode}`, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -1133,7 +1133,7 @@
                 }
                 
                 // 有価証券報告書の差分を取得
-                fetch(`/api/securities_report_diff/${companyCode}`, {
+                fetch(`/past_tenbagger/api/securities_report_diff/${companyCode}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1239,7 +1239,7 @@
                 buttonContainer.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">読み込み中...</span></div>';
                 
                 // APIエンドポイントを呼び出して有価証券報告書の一覧を取得
-                fetch(`/api/securities_reports/${companyCode}`)
+                fetch(`/past_tenbagger/api/securities_reports/${companyCode}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('有価証券報告書の一覧の取得に失敗しました');
@@ -1304,7 +1304,7 @@
                 buttonContainer.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">読み込み中...</span></div>';
                 
                 // APIエンドポイントを呼び出して有価証券報告書の一覧を取得
-                fetch(`/api/securities_reports/${companyCode}`)
+                fetch(`/past_tenbagger/api/securities_reports/${companyCode}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('有価証券報告書の一覧の取得に失敗しました');
@@ -1390,7 +1390,7 @@
                 }
                 
                 // APIエンドポイントを呼び出して差分を取得
-                fetch(`/api/securities_report_diff/${companyCode}`, {
+                fetch(`/past_tenbagger/api/securities_report_diff/${companyCode}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1466,7 +1466,7 @@
                 const selectedCompanyCode = select.value;
                 
                 // APIエンドポイントを呼び出して有価証券報告書の一覧を取得
-                fetch(`/api/securities_reports/${selectedCompanyCode}`)
+                fetch(`/past_tenbagger/api/securities_reports/${selectedCompanyCode}`)
                     .then(response => {
                         if (!response.ok) {
                             throw new Error('有価証券報告書の一覧の取得に失敗しました');
@@ -1510,7 +1510,7 @@
                         let diffPromises = [];
                         
                         yearPairs.forEach(pair => {
-                            const promise = fetch(`/api/securities_report_diff/${selectedCompanyCode}`, {
+                            const promise = fetch(`/past_tenbagger/api/securities_report_diff/${selectedCompanyCode}`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
@@ -1608,7 +1608,7 @@
                     
                     // メイン企業の有価証券報告書の差分を取得
                     try {
-                        const response = await fetch(`/api/securities_reports/${mainCompanyCode}`);
+                        const response = await fetch(`/past_tenbagger/api/securities_reports/${mainCompanyCode}`);
                         if (!response.ok) {
                             throw new Error('有価証券報告書の一覧の取得に失敗しました');
                         }
@@ -1640,7 +1640,7 @@
                                 const newDate = reportsByYear[newYear][0].date;
                                 
                                 try {
-                                    const diffResponse = await fetch(`/api/securities_report_diff/${mainCompanyCode}`, {
+                                    const diffResponse = await fetch(`/past_tenbagger/api/securities_report_diff/${mainCompanyCode}`, {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
@@ -1684,7 +1684,7 @@
                         
                         try {
                             // 競合企業の有価証券報告書の一覧を取得
-                            const response = await fetch(`/api/securities_reports/${competitorCode}`);
+                            const response = await fetch(`/past_tenbagger/api/securities_reports/${competitorCode}`);
                             if (!response.ok) {
                                 throw new Error(`競合企業の有価証券報告書の一覧の取得に失敗しました`);
                             }
@@ -1718,7 +1718,7 @@
                                 
                                 try {
                                     // 差分を取得
-                                    const diffResponse = await fetch(`/api/securities_report_diff/${competitorCode}`, {
+                                    const diffResponse = await fetch(`/past_tenbagger/api/securities_report_diff/${competitorCode}`, {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
