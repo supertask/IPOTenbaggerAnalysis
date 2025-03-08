@@ -279,6 +279,7 @@ class EdinetReportDownloader:
 
         # すでにX年前からY年前までのデータがあれば使用し、なければダウンロードして保存
         doc_meta_path = f"{self.EDINET_CODE_DIR}/{self.meta_begin_x_year_ago}years_ago_to_{self.meta_end_x_year_ago}years_ago__doc_indexes.tsv.gz"
+        print(f"DEBUG: doc_meta_path: {doc_meta_path}")
         if os.path.exists(doc_meta_path):
             if not self.use_cache:
                 os.remove(doc_meta_path)
@@ -316,8 +317,8 @@ class EdinetReportDownloader:
             self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_QUARTERLY_REPORT, company_folder, '四半期報告書', company_code4, company_name, start_date_str, end_date_str)
 
             # 有価証券報告書を保存
-            company_folder = f"{self.REPORTS_DIR}/{company_code4}_{company_name}/annual_securities_reports"
-            self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REPORT, company_folder, '有価証券報告書', company_code4, company_name)
+            #company_folder = f"{self.REPORTS_DIR}/{company_code4}_{company_name}/annual_securities_reports"
+            #self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REPORT, company_folder, '有価証券報告書', company_code4, company_name)
 
     def run(self):
         self.save_securities_reports()
