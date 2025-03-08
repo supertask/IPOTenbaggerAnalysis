@@ -18,8 +18,16 @@ class EdinetReportDownloader:
 
     def __init__(self):
         self.use_cache = True
+
+        self.meta_begin_x_year_ago = 10
+        self.meta_end_x_year_ago = 0
+
         self.begin_x_year_ago = 10 #実際には過去10年しか取得できないが、10年だと一部抜ける書類があるかもしれないのでバッファーとして1年
         self.end_x_year_ago = 0
+        
+        # 有価証券届出書と四半期報告書の取得期間（年）
+        self.recent_docs_years = 3
+
         #self.begin_x_year_ago = 0.5 #過去13年分を辿る
         self.is_debug = True
         
@@ -37,6 +45,7 @@ class EdinetReportDownloader:
 
         self.OUTPUT_DIR = os.path.join('data', 'output', 'edinet_db')
         self.REPORTS_DIR = os.path.join(self.OUTPUT_DIR, 'ipo_reports')
+        self.NEW_REPORTS_DIR = os.path.join(self.OUTPUT_DIR, 'ipo_reports_new')
         self.EDINET_CODE_DIR = os.path.join(self.OUTPUT_DIR, 'edinet_codes')
         self.edinet_codes_csv_path = os.path.join(self.EDINET_CODE_DIR, "EdinetcodeDlInfo.csv")
         self.edinet_codes_zip_path = os.path.join(self.EDINET_CODE_DIR, "Edinetcode.zip")
@@ -201,24 +210,34 @@ class EdinetReportDownloader:
         
         return tsv_rows
 
-    def save_securities_docs(self, company_doc_info, doc_type_code, folder, doc_name, company_code4, company_name):
+    def save_securities_docs(self, company_doc_info, doc_type_code, company_folder, doc_name, company_code4, company_name, start_date=None, end_date=None):
         sorted_documents = company_doc_info[company_doc_info['docTypeCode'] == doc_type_code].sort_values('date', ascending=True)
 
         if sorted_documents.empty:
             print(f"\033[91mError: No documents found for {company_name} ({company_code4}) on doc_type_code = {doc_type_code}\033[0m")
             return
 
-        # 最も古いドキュメントの日付を取得
-        oldest_date = sorted_documents.iloc[0]['date']
-        start_date = datetime.strptime(oldest_date, '%Y-%m-%d')
-        end_date = start_date + timedelta(days=(self.begin_x_year_ago - self.end_x_year_ago) * 365)
+        # 日付フィルタリングの処理
+        if start_date is None or end_date is None:
+            # 従来のロジック：最も古いドキュメントの日付から計算
+            oldest_date = sorted_documents.iloc[0]['date']
+            calc_start_date = datetime.strptime(oldest_date, '%Y-%m-%d')
+            calc_end_date = calc_start_date + timedelta(days=(self.begin_x_year_ago - self.end_x_year_ago) * 365)
+            
+            # 文字列形式に変換
+            start_date_str = calc_start_date.strftime('%Y-%m-%d')
+            end_date_str = calc_end_date.strftime('%Y-%m-%d')
+        else:
+            # 引数で指定された日付を使用
+            start_date_str = start_date.strftime('%Y-%m-%d') if isinstance(start_date, datetime) else start_date
+            end_date_str = end_date.strftime('%Y-%m-%d') if isinstance(end_date, datetime) else end_date
 
+        # 日付でフィルタリング
         filtered_documents = sorted_documents[
-            (sorted_documents['date'] >= start_date.strftime('%Y-%m-%d')) &
-            (sorted_documents['date'] <= end_date.strftime('%Y-%m-%d'))
+            (start_date_str <= sorted_documents['date']) &
+            (sorted_documents['date'] <= end_date_str)
         ]
 
-        company_folder = f"{self.REPORTS_DIR}/{company_code4}_{company_name}/{folder}"
         os.makedirs(company_folder, exist_ok=True)
 
         for i in range(len(filtered_documents)):
@@ -235,8 +254,8 @@ class EdinetReportDownloader:
 
     def download_and_save_document_metadata(self, doc_meta_path, tracking_days, edinet_to_company_dict):
         all_data = []
-        end_datetime = datetime.today() - timedelta(days = self.end_x_year_ago * 365)
-        start_datetime = end_datetime - timedelta(days = self.begin_x_year_ago * 365)  # ここからデータが存在しない
+        end_datetime = datetime.today() - timedelta(days = self.meta_end_x_year_ago * 365)
+        start_datetime = end_datetime - timedelta(days = self.meta_begin_x_year_ago * 365)  # ここからデータが存在しない
         for d in range(tracking_days):
             current_date = end_datetime - timedelta(days=d)
             if current_date < start_datetime:
@@ -252,14 +271,14 @@ class EdinetReportDownloader:
 
 
     def save_securities_reports(self, companies_list = None, skip_json = True):
-        tracking_days = int(365 * self.begin_x_year_ago)
+        tracking_days = int(365 * self.meta_begin_x_year_ago)
         if companies_list:
             edinet_to_company_dict = self.get_ipo_company_dict(companies_list)
         else:
             edinet_to_company_dict = self.get_company_dict()
 
         # すでにX年前からY年前までのデータがあれば使用し、なければダウンロードして保存
-        doc_meta_path = f"{self.EDINET_CODE_DIR}/{self.begin_x_year_ago}years_ago_to_{self.end_x_year_ago}years_ago__doc_indexes.tsv.gz"
+        doc_meta_path = f"{self.EDINET_CODE_DIR}/{self.meta_begin_x_year_ago}years_ago_to_{self.meta_end_x_year_ago}years_ago__doc_indexes.tsv.gz"
         if os.path.exists(doc_meta_path):
             if not self.use_cache:
                 os.remove(doc_meta_path)
@@ -279,15 +298,26 @@ class EdinetReportDownloader:
             company_code4 = company_code5[:-1]
             if self.is_debug:
                 print(f"DEBUG: code = {company_code4}, name = {company_name}")
+            
+            # 有価証券届出書と四半期報告書は過去2年間のデータのみ取得
+            current_date = datetime.now()
+            two_years_ago = current_date - timedelta(days=self.recent_docs_years * 365)
+            
+            # 日付文字列に変換
+            start_date_str = two_years_ago.strftime('%Y-%m-%d')
+            end_date_str = current_date.strftime('%Y-%m-%d')
 
             # 有価証券届出書を保存（事業の内容が書かれてない場合が多いかも？？）
-            self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REGISTRATION, 'securities_registration_statement', '有価証券届出書', company_code4, company_name)
+            company_folder = f"{self.NEW_REPORTS_DIR}/{company_code4}_{company_name}/securities_registration_statement"
+            self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REGISTRATION, company_folder, '有価証券届出書', company_code4, company_name, start_date_str, end_date_str)
             
             # 四半期報告書を保存
-            self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_QUARTERLY_REPORT, 'quarterly_reports', '四半期報告書', company_code4, company_name)
+            company_folder = f"{self.NEW_REPORTS_DIR}/{company_code4}_{company_name}/quarterly_reports"
+            self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_QUARTERLY_REPORT, company_folder, '四半期報告書', company_code4, company_name, start_date_str, end_date_str)
 
             # 有価証券報告書を保存
-            #self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REPORT, 'annual_securities_reports', '有価証券報告書', company_code4, company_name)
+            company_folder = f"{self.REPORTS_DIR}/{company_code4}_{company_name}/annual_securities_reports"
+            self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REPORT, company_folder, '有価証券報告書', company_code4, company_name)
 
     def run(self):
         self.save_securities_reports()
