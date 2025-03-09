@@ -112,16 +112,16 @@ def create_next_tenbagger_app():
         index as next_tenbagger_index,
         company_view as next_tenbagger_company_view,
         get_securities_reports as next_tenbagger_get_securities_reports,
-        get_securities_report_diff as next_tenbagger_get_securities_report_diff
+        securities_report_diff as next_tenbagger_securities_report_diff
     )
     
     @app.route('/')
     def index():
         """トップページ - 直近3年でIPOした企業一覧"""
-        companies, error, status_code = next_tenbagger_index()
+        data, error, status_code = next_tenbagger_index()
         if error:
             return error, status_code
-        return render_template('index.html', companies=companies)
+        return render_template('index.html', **data)
     
     @app.route('/<company_code>')
     def company_view(company_code):
@@ -134,15 +134,18 @@ def create_next_tenbagger_app():
     @app.route('/api/securities_reports/<company_code>')
     def get_securities_reports(company_code):
         """四半期報告書の一覧を取得するAPI"""
-        response, status_code = next_tenbagger_get_securities_reports(company_code)
-        return jsonify(response), status_code
+        data, error, status_code = next_tenbagger_get_securities_reports(company_code)
+        if error:
+            return jsonify({"error": error}), status_code
+        return jsonify(data), status_code
     
     @app.route('/api/securities_report_diff/<company_code>', methods=['POST'])
     def get_securities_report_diff(company_code):
         """四半期報告書の差分を計算するAPI"""
-        data = request.json
-        response, status_code = next_tenbagger_get_securities_report_diff(company_code, data)
-        return jsonify(response), status_code
+        data, error, status_code = next_tenbagger_securities_report_diff(company_code)
+        if error:
+            return jsonify({"error": error}), status_code
+        return jsonify(data), status_code
     
     return app
 

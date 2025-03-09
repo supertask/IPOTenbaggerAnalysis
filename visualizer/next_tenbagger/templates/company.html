@@ -1,193 +1,373 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{{ company_name }} ({{ company_code }}) - 企業分析</title>
+    <title>{{ company_name }} ({{ company_code }}) - 四半期分析</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
         body { padding-top: 20px; }
-        .chart-container {
-            margin-bottom: 30px;
-            border: 1px solid #e0e0e0;
+        .chart-container { margin-bottom: 30px; }
+        .competitor-badge { margin-right: 5px; margin-bottom: 5px; }
+        
+        /* コピーボタンのスタイル */
+        .copy-button {
+            background-color: #ffffff;  /* 白色の背景 */
+            border: 2px solid #2ecc71;  /* 緑色の枠線 */
+            color: #2ecc71;  /* テキストは緑色 */
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            padding: 10px 20px;
             border-radius: 8px;
-            padding: 15px;
-            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
         }
-        .chart-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 15px;
-            color: #333;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 10px;
+        
+        .copy-button:hover {
+            background-color: #f8f9fa;  /* 薄いグレー */
+            border-color: #27ae60;
+            color: #27ae60;
+            box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
         }
-        .section-title {
-            margin-top: 30px;
-            margin-bottom: 20px;
-            font-weight: 600;
-            color: #0d6efd;
-            border-bottom: 2px solid #0d6efd;
-            padding-bottom: 5px;
-            display: inline-block;
+        
+        .copy-button:active {
+            background-color: #2ecc71;  /* 緑色の背景 */
+            border-color: #e9ecef;  /* 灰色の枠線 */
+            color: #ffffff;  /* 白色のテキスト */
+            box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
         }
-        .competitor-card {
-            margin-bottom: 20px;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
+        
+        /* クリック後のアニメーション用クラス */
+        .copy-button.clicked {
+            background-color: #2ecc71;  /* 緑色の背景 */
+            border-color: #e9ecef;  /* 灰色の枠線 */
+            color: #ffffff;  /* 白色のテキスト */
+            box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
         }
-        .competitor-header {
-            background-color: #f8f9fa;
-            padding: 10px 15px;
-            border-bottom: 1px solid #e0e0e0;
-            border-radius: 8px 8px 0 0;
+        
+        /* ローディング状態のスタイル */
+        .copy-button.loading {
+            background-color: #f8f9fa;  /* 薄いグレー */
+            border-color: #2ecc71;  /* 緑色の枠線 */
+            color: #2ecc71;  /* テキストは緑色 */
+            pointer-events: none;  /* クリックを無効化 */
+            opacity: 0.8;
         }
-        .competitor-body {
-            padding: 15px;
+        
+        .copy-button.loading .spinner-border {
+            width: 1rem;
+            height: 1rem;
+            margin-right: 8px;
+            vertical-align: middle;
         }
-        .competitor-title {
-            margin: 0;
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-        .competitor-subtitle {
-            color: #6c757d;
-            font-size: 0.9rem;
-            margin-top: 5px;
-        }
-        .business-description {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            border: 1px solid #e0e0e0;
-        }
-        .officers-info {
-            background-color: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            border: 1px solid #e0e0e0;
-            white-space: pre-wrap;
-            font-size: 0.9rem;
-        }
-        .report-diff-container {
-            margin-top: 20px;
+        
+        .copy-button.loading .original-text {
             display: none;
         }
-        .report-diff {
-            white-space: pre-wrap;
-            font-family: monospace;
-            font-size: 0.9rem;
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #e0e0e0;
-            max-height: 500px;
-            overflow-y: auto;
+        
+        .copy-button.loading .loading-text {
+            display: inline;
         }
-        .report-selector {
-            margin-bottom: 15px;
+        
+        .copy-button .loading-text {
+            display: none;
+        }
+        
+        /* クリック後の復帰アニメーション用クラス */
+        .copy-button.recovering {
+            animation: buttonRecoveryEffect 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes buttonRecoveryEffect {
+            0% {
+                background-color: #2ecc71;  /* 緑色の背景 */
+                border-color: #e9ecef;  /* 灰色の枠線 */
+                color: #ffffff;  /* 白色のテキスト */
+            }
+            100% {
+                background-color: #ffffff;  /* 白色の背景 */
+                border-color: #2ecc71;  /* 緑色の枠線 */
+                color: #2ecc71;  /* 緑色のテキスト */
+            }
+        }
+        
+        .copy-button i {
+            margin-right: 8px;
+            font-size: 1.1em;
+        }
+        
+        /* トースト通知のスタイル */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .toast {
+            background-color: #2ecc71;  /* ボタンと同じ緑色 */
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            opacity: 0;
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+            transform: translateY(-10px);
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* 年度比較ボタンのスタイル */
+        .metric-year-buttons {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding-right: 5px;
+        }
+        
+        /* スクロールバーのスタイル */
+        .metric-year-buttons::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .metric-year-buttons::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        .metric-year-buttons::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+        
+        .metric-year-buttons::-webkit-scrollbar-thumb:hover {
+            background: #aaa;
+        }
+        
+        /* 年度比較ボタンの文字サイズを小さく */
+        .metric-year-buttons .btn {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+            margin-bottom: 5px;
+        }
+        
+        /* 全年比較ボタンの文字サイズも小さく */
+        .all-years-btn {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        /* カードの高さを固定して、内容がはみ出さないようにする */
+        .chart-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chart-card .card-body {
+            flex: 1 1 auto;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            font-size: 0.85rem;
+        }
+        
+        /* チャート部分が縮まないようにする */
+        .chart-container {
+            flex: 0 0 auto;
+        }
+        
+        /* ボタン部分が必要に応じて縮むようにする */
+        .buttons-container {
+            flex: 1 1 auto;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* ヘルプアイコンのスタイル */
+        .help-icon {
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        /* ツールチップのカスタマイズ */
+        .tooltip {
+            font-size: 0.85rem;
+        }
+        
+        /* 比較プロンプト部分のスタイル */
+        .chart-card .form-select {
+            font-size: 0.85rem;
+            padding: 0.25rem 0.5rem;
         }
     </style>
 </head>
 <body>
     <div class="container-fluid">
-        <div class="row mb-4">
-            <div class="col-12">
-                <h1 class="text-center">{{ company_name }} ({{ company_code }})</h1>
-                <p class="text-center text-muted">四半期報告書に基づく財務分析</p>
-                <div class="text-center">
-                    <a href="/next_tenbagger/" class="btn btn-outline-primary">企業一覧に戻る</a>
+        <div class="row justify-content-center">
+            <div class="col-xl-10">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="/next_tenbagger/">ホーム</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">{{ company_name }}</li>
+                    </ol>
+                </nav>
+                
+                <h1 class="mb-3">{{ company_name }} <small class="text-muted">({{ company_code }})</small></h1>
+                <p class="text-muted">四半期報告書に基づく財務分析</p>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">競合企業</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if competitors %}
+                            {% for competitor in competitors %}
+                            <span class="badge bg-secondary competitor-badge">{{ competitor.name }} ({{ competitor.code }})</span>
+                            {% endfor %}
+                        {% else %}
+                            <div class="alert alert-info">
+                                この企業の競合企業情報はまだ登録されていません。以下のグラフでは、この企業の財務指標のみを表示しています。
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
-        </div>
-
-        <div class="row">
-            <div class="col-md-8">
-                <!-- 財務指標チャート -->
-                <h3 class="section-title">財務指標チャート（四半期）</h3>
-                {% for chart in charts %}
-                <div class="chart-container">
-                    <h4 class="chart-title">{{ chart.title }}</h4>
-                    {{ chart.html|safe }}
-                </div>
-                {% endfor %}
-            </div>
-
-            <div class="col-md-4">
-                <!-- 事業内容 -->
-                <h3 class="section-title">事業の内容</h3>
-                <div class="business-description">
-                    {% if business_description %}
-                    {{ business_description|safe }}
-                    {% else %}
-                    <p>事業内容の情報がありません。</p>
-                    {% endif %}
-                </div>
-
-                <!-- 役員情報 -->
-                <h3 class="section-title">役員情報</h3>
-                <div class="officers-info">
-                    {% if officers_info %}
-                    {{ officers_info|safe }}
-                    {% else %}
-                    <p>役員情報がありません。</p>
-                    {% endif %}
-                </div>
-
-                <!-- 四半期報告書の差分 -->
-                <h3 class="section-title">四半期報告書の差分</h3>
-                <div class="report-selector">
-                    <div class="row">
-                        <div class="col-md-5">
-                            <select id="old-report" class="form-select">
-                                <option value="">古い報告書を選択</option>
-                            </select>
+                
+                <!-- 事業の内容セクション -->
+                <h2 class="mb-4">事業の内容</h2>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">事業情報</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if business_description %}
+                                    {{ business_description|safe }}
+                                {% else %}
+                                    <p>事業内容の情報がありません。</p>
+                                {% endif %}
+                            </div>
                         </div>
-                        <div class="col-md-5">
-                            <select id="new-report" class="form-select">
-                                <option value="">新しい報告書を選択</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <button id="compare-btn" class="btn btn-primary w-100" disabled>比較</button>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">役員情報</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if officers_info %}
+                                    {{ officers_info|safe }}
+                                {% else %}
+                                    <p>役員情報がありません。</p>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div id="report-diff-container" class="report-diff-container">
-                    <div id="report-diff" class="report-diff"></div>
-                </div>
-
-                <!-- 競合他社 -->
-                <h3 class="section-title">競合他社</h3>
-                {% if competitors %}
-                    {% for competitor in competitors %}
-                    <div class="competitor-card">
-                        <div class="competitor-header">
-                            <h5 class="competitor-title">{{ competitor.name }}</h5>
-                            <p class="competitor-subtitle">コード: {{ competitor.code }}</p>
-                        </div>
-                        <div class="competitor-body">
-                            <h6>事業内容:</h6>
-                            <div class="mb-3">
-                                {% if competitor.business_description %}
-                                {{ competitor.business_description|truncate(200)|safe }}
-                                {% else %}
-                                <p>事業内容の情報がありません。</p>
-                                {% endif %}
+                
+                <!-- 四半期報告書の差分セクション -->
+                <h2 class="mb-4">四半期報告書の差分</h2>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">四半期報告書の比較</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-5">
+                                <select id="old-report" class="form-select">
+                                    <option value="">古い報告書を選択</option>
+                                </select>
                             </div>
-                            <a href="/next_tenbagger/{{ competitor.code }}" class="btn btn-sm btn-outline-primary w-100">詳細を見る</a>
+                            <div class="col-md-5">
+                                <select id="new-report" class="form-select">
+                                    <option value="">新しい報告書を選択</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button id="compare-btn" class="btn btn-primary w-100" disabled>比較</button>
+                            </div>
+                        </div>
+                        <div id="report-diff-container" style="display: none;">
+                            <div id="report-diff" style="white-space: pre-wrap; font-family: monospace; font-size: 0.9rem; background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; max-height: 500px; overflow-y: auto;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 財務指標チャートセクション -->
+                <h2 class="mb-4">財務指標チャート（四半期）</h2>
+                
+                <div class="row">
+                    {% for chart in charts %}
+                    <div class="col-lg-6 mb-4">
+                        <div class="card chart-card">
+                            <div class="card-header">
+                                <h5 class="mb-0">{{ chart.title }}</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="chart-container">
+                                    {{ chart.html|safe }}
+                                </div>
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
-                {% else %}
-                <p>競合他社の情報がありません。</p>
+                </div>
+                
+                <!-- 競合企業の詳細セクション -->
+                {% if competitors %}
+                <h2 class="mb-4">競合企業の詳細</h2>
+                
+                <div class="row">
+                    {% for competitor in competitors %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">{{ competitor.name }} ({{ competitor.code }})</h5>
+                            </div>
+                            <div class="card-body">
+                                <h6>事業内容:</h6>
+                                <div class="mb-3">
+                                    {% if competitor.business_description %}
+                                        {{ competitor.business_description|truncate(200)|safe }}
+                                    {% else %}
+                                        <p>事業内容の情報がありません。</p>
+                                    {% endif %}
+                                </div>
+                                
+                                <h6>役員情報:</h6>
+                                <div class="mb-3">
+                                    {% if competitor.officers_info %}
+                                        {{ competitor.officers_info|truncate(200)|safe }}
+                                    {% else %}
+                                        <p>役員情報がありません。</p>
+                                    {% endif %}
+                                </div>
+                                
+                                <a href="/next_tenbagger/{{ competitor.code }}" class="btn btn-outline-primary">詳細を見る</a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
                 {% endif %}
             </div>
         </div>
     </div>
-
+    
+    <!-- トースト通知用のコンテナ -->
+    <div class="toast-container"></div>
+    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -250,7 +430,7 @@
                             })
                             .catch(error => {
                                 console.error('Error:', error);
-                                alert('差分の取得中にエラーが発生しました。');
+                                alert('報告書の差分取得に失敗しました。');
                             });
                         });
                     }

@@ -9,12 +9,14 @@ from pathlib import Path
 import matplotlib
 import matplotlib.font_manager as fm
 from functools import wraps
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Optional, Any, Callable
+from flask import request
 
 from .config import (
     IPO_REPORTS_NEW_DIR,
     COMPARISON_DIR,
-    RECENT_IPO_COMPANIES_PATH
+    RECENT_IPO_COMPANIES_PATH,
+    ALL_COMPANIES_PATH
 )
 from .data_service import DataService
 from .chart_service import ChartService
@@ -35,129 +37,226 @@ def setup_japanese_font():
 # 日本語フォントの設定を適用
 setup_japanese_font()
 
-def handle_errors(func):
+def handle_errors(func: Callable) -> Callable:
     """エラーハンドリングを行うデコレータ"""
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args, **kwargs) -> Any:
         try:
             return func(*args, **kwargs)
         except Exception as e:
             logger.error(f"{func.__name__}の実行中にエラー: {e}", exc_info=True)
-            return str(e), 500
+            return None, str(e), 500
     return wrapper
 
 def extract_diff(file_old, file_new, date_old, date_new):
     """四半期報告書の差分を抽出する関数"""
     try:
-        # ファイルのエンコーディングを確認
-        encoding_old = 'utf-16' if 'UTF-16' in os.popen(f'file "{file_old}"').read() else 'utf-8'
-        encoding_new = 'utf-16' if 'UTF-16' in os.popen(f'file "{file_new}"').read() else 'utf-8'
+        # ファイルの内容を読み込む
+        with open(file_old, 'r', encoding='utf-8') as f:
+            old_content = f.readlines()
+        with open(file_new, 'r', encoding='utf-8') as f:
+            new_content = f.readlines()
         
-        # ファイルを読み込む
-        df_old = pd.read_csv(file_old, delimiter="\t", encoding=encoding_old, dtype=str, on_bad_lines='skip')
-        df_new = pd.read_csv(file_new, delimiter="\t", encoding=encoding_new, dtype=str, on_bad_lines='skip')
-
-        # 指定した要素ID以降のデータを取得
-        target_id = "jpcrp_qcor:BusinessResultsOfReportingCompanyTextBlock"
-        start_index_old = df_old[df_old["要素ID"] == target_id].index
-        start_index_new = df_new[df_new["要素ID"] == target_id].index
-
-        if len(start_index_old) == 0 or len(start_index_new) == 0:
-            logger.warning("指定した要素IDが見つかりませんでした。")
-            return "指定した要素IDが見つかりませんでした。"
-            
-        # 指定した要素ID以降のデータをフィルタリング
-        df_old_filtered = df_old.loc[start_index_old[0]:, ["要素ID", "項目名", "値"]].reset_index(drop=True)
-        df_new_filtered = df_new.loc[start_index_new[0]:, ["要素ID", "項目名", "値"]].reset_index(drop=True)
-
-        # 要素IDごとにグループ化し、最初の値を取得
-        dict_old = df_old_filtered.groupby("要素ID").first().to_dict(orient="index")
-        dict_new = df_new_filtered.groupby("要素ID").first().to_dict(orient="index")
-
-        # 両方に存在する要素IDだけ比較
-        common_keys = set(dict_old.keys()) & set(dict_new.keys())
+        # 差分を計算
+        diff = difflib.unified_diff(
+            old_content, 
+            new_content, 
+            fromfile=f'四半期報告書 {date_old}', 
+            tofile=f'四半期報告書 {date_new}',
+            n=3
+        )
         
-        added_texts = ""
-        removed_texts = ""
-
-        for key in common_keys:
-            item_name = dict_new[key]["項目名"] if key in dict_new else dict_old[key]["項目名"]
-            if item_name is not None:
-                item_name = str(item_name).replace(" [テキストブロック]", "")  # [テキストブロック] を削除
-            v_old = str(dict_old[key]["値"]) if dict_old[key]["値"] is not None else ""
-            v_new = str(dict_new[key]["値"]) if dict_new[key]["値"] is not None else ""
-            diff = difflib.ndiff(v_old, v_new)
-            added = [line[2:] for line in diff if line.startswith("+ ")]
-            removed = [line[2:] for line in diff if line.startswith("- ")]
-            
-            if added or removed:
-                if added:
-                    if item_name:
-                        added_texts += f"項目名: {item_name}\n"
-                    else:
-                        added_texts += f"要素ID: {key}\n"
-                    added_texts += "".join(added) + "\n"
-                    added_texts += "-\n"
-                if removed:
-                    if item_name:
-                        removed_texts += f"項目名: {item_name}\n"
-                    else:
-                        removed_texts += f"要素ID: {key}\n"
-                    removed_texts += "".join(removed) + "\n"
-                    removed_texts += "-\n"
+        # 差分テキストを結合
+        diff_text = ''.join(diff)
         
-        # 日付オブジェクトを作成
-        try:
-            date_old_obj = datetime.strptime(date_old, "%Y-%m-%d")
-            date_new_obj = datetime.strptime(date_new, "%Y-%m-%d")
-        except ValueError:
-            date_old_obj = datetime.strptime(date_old, "%Y%m%d")
-            date_new_obj = datetime.strptime(date_new, "%Y%m%d")
-
-        texts = ""
-        if added_texts or removed_texts:
-            if added_texts:
-                texts += f"「{date_old_obj.strftime('%Y年%m月%d日')} -> {date_new_obj.strftime('%Y年%m月%d日')} 」で追加された項目：\n"
-                texts += "-" * 3 + "\n"
-                texts += added_texts
-                texts += "-" * 3 + "\n"
-            if removed_texts:
-                texts += f"「{date_old_obj.strftime('%Y年%m月%d日')} -> {date_new_obj.strftime('%Y年%m月%d日')} 」で削除された項目：\n"
-                texts += "-" * 3 + "\n"
-                texts += removed_texts
-                texts += "-" * 3 + "\n"
-        else:
-            texts = "差分はありませんでした。"
-
-        return texts
+        # 差分がない場合のメッセージ
+        if not diff_text:
+            diff_text = "両方の四半期報告書に差分はありません。"
+        
+        return diff_text
     except Exception as e:
         logger.error(f"差分抽出中にエラー: {e}", exc_info=True)
-        return f"差分抽出中にエラーが発生しました: {str(e)}"
+        return f"差分の抽出に失敗しました: {str(e)}"
 
-# ビジネスロジック関数
+def load_companies_data() -> Tuple[list, bool]:
+    """企業データの読み込み"""
+    try:
+        # all_companies.tsvファイルを使用
+        if os.path.exists(ALL_COMPANIES_PATH):
+            try:
+                # ファイルのエンコーディングを自動検出
+                with open(ALL_COMPANIES_PATH, 'rb') as f:
+                    sample = f.read(1024)
+                    
+                # エンコーディングを推測
+                encodings = ['utf-8', 'shift-jis', 'euc-jp', 'iso-2022-jp']
+                encoding = 'utf-8'  # デフォルトはUTF-8
+                
+                for enc in encodings:
+                    try:
+                        sample.decode(enc)
+                        encoding = enc
+                        break
+                    except UnicodeDecodeError:
+                        continue
+                
+                # ファイルを読み込む
+                df = pd.read_csv(ALL_COMPANIES_PATH, sep='\t', encoding=encoding, dtype={'コード': str, '企業名': str})
+                
+                # 必須カラムの存在確認
+                required_columns = ['コード', '企業名']
+                missing_columns = [col for col in required_columns if col not in df.columns]
+                
+                if missing_columns:
+                    logger.error(f"必須カラムがありません: {missing_columns}")
+                    raise ValueError(f"必須カラムがありません: {missing_columns}")
+                
+                companies = []
+                
+                # 現在の年を取得
+                current_year = datetime.now().year
+                
+                # 上場年のカラム名を確認（'上場年'または'IPO年'など）
+                ipo_year_column = None
+                for column in ['上場年', 'IPO年', 'ipo_year', '上場日', 'IPO日', 'ipo_date']:
+                    if column in df.columns:
+                        ipo_year_column = column
+                        break
+                
+                if ipo_year_column is None:
+                    logger.warning("上場年のカラムが見つかりません。すべての企業を表示します。")
+                    # 上場年のカラムがない場合は、すべての企業を表示
+                    for _, row in df.iterrows():
+                        # 企業名が数値の場合は文字列に変換
+                        company_name = row['企業名']
+                        if isinstance(company_name, (int, float)):
+                            company_name = str(company_name)
+                            
+                        company = {
+                            'code': str(row['コード']),
+                            'name': company_name,
+                            'market': row.get('市場', '不明'),
+                            'industry': row.get('業種', '不明'),
+                            'ipo_year': None  # 上場年がない場合はNoneを設定
+                        }
+                        companies.append(company)
+                else:
+                    # 上場年のカラムがある場合は、3年以内の企業をフィルタリング
+                    for _, row in df.iterrows():
+                        # 上場年を取得
+                        ipo_year = None
+                        if pd.notna(row[ipo_year_column]):
+                            # 日付形式の場合は年だけを抽出
+                            if isinstance(row[ipo_year_column], str) and '/' in row[ipo_year_column]:
+                                ipo_year = int(row[ipo_year_column].split('/')[0])
+                            elif isinstance(row[ipo_year_column], str) and '-' in row[ipo_year_column]:
+                                ipo_year = int(row[ipo_year_column].split('-')[0])
+                            else:
+                                try:
+                                    ipo_year = int(row[ipo_year_column])
+                                except (ValueError, TypeError):
+                                    ipo_year = None
+                        
+                        # 上場年が3年以内の企業のみを追加
+                        if ipo_year is not None and current_year - ipo_year <= 3:
+                            # 企業名が数値の場合は文字列に変換
+                            company_name = row['企業名']
+                            if isinstance(company_name, (int, float)):
+                                company_name = str(company_name)
+                                
+                            company = {
+                                'code': str(row['コード']),
+                                'name': company_name,
+                                'market': row.get('市場', '不明'),
+                                'industry': row.get('業種', '不明'),
+                                'ipo_year': ipo_year
+                            }
+                            companies.append(company)
+                
+                if not companies:
+                    logger.warning("3年以内に上場した企業が見つかりません。ダミーデータを表示します。")
+                    # 企業が見つからない場合はダミーデータを作成
+                    dummy_companies = [
+                        {
+                            'code': '0000',
+                            'name': 'サンプル企業',
+                            'market': 'サンプル市場',
+                            'industry': 'サンプル業種',
+                            'ipo_year': current_year
+                        }
+                    ]
+                    return dummy_companies, True
+                
+                return companies, True
+            except Exception as e:
+                logger.error(f"企業データの読み込み中にエラー: {e}", exc_info=True)
+                return [], False
+        else:
+            logger.error(f"企業データファイルが見つかりません: {ALL_COMPANIES_PATH}")
+            # ダミーデータを作成
+            dummy_companies = [
+                {
+                    'code': '0000',
+                    'name': 'サンプル企業',
+                    'market': 'サンプル市場',
+                    'industry': 'サンプル業種'
+                }
+            ]
+            return dummy_companies, True
+    except Exception as e:
+        logger.error(f"企業データの読み込み中にエラー: {e}", exc_info=True)
+        return [], False
+
+@handle_errors
 def index():
-    """トップページ - 直近3年でIPOした企業一覧"""
-    companies = DataService.get_recent_ipo_companies()
+    """トップページ"""
+    companies, success = load_companies_data()
     
-    # テンプレートの絶対パスを使用
-    template_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates', 'index.html')
-    print(f"next_tenbagger: テンプレートパス = {template_path}")
-    print(f"next_tenbagger: テンプレートが存在するか = {os.path.exists(template_path)}")
+    if not success:
+        return "企業データの読み込みに失敗しました", 500
     
-    with open(template_path, 'r', encoding='utf-8') as f:
-        template_content = f.read()
-        print(f"next_tenbagger: テンプレートの先頭100文字 = {template_content[:100]}")
+    # 企業をフラットなリストとして返す（past_tenbaggerと同じ形式）
+    # 企業名が数値の場合は文字列に変換
+    for company in companies:
+        if isinstance(company['name'], (int, float)):
+            company['name'] = str(company['name'])
     
-    return companies, None, 200
+    # 企業を上場年が新しい順（降順）で並べる
+    try:
+        # 上場年がない企業は最後に表示
+        def sort_key(company):
+            ipo_year = company.get('ipo_year')
+            if ipo_year is None:
+                return -9999  # 上場年がない場合は最後に表示
+            return ipo_year
+        
+        companies = sorted(companies, key=sort_key, reverse=True)
+    except TypeError as e:
+        logger.warning(f"企業のソートに失敗しました: {e}")
+    
+    return {
+        'companies': companies
+    }, None, 200
 
+@handle_errors
 def company_view(company_code):
     """企業の詳細ページ"""
-    company_map = DataService.get_company_code_name_map()
+    companies, success = load_companies_data()
+    if not success:
+        return None, "企業データの読み込みに失敗しました", 500
     
-    if company_code not in company_map:
-        return None, "企業が見つかりません", 404
+    # 企業コードで検索
+    company = next((c for c in companies if c['code'] == company_code), None)
+    if not company:
+        # 企業コードマップから企業名を取得
+        company_map = DataService.get_company_code_name_map()
+        if company_code not in company_map:
+            return None, "企業が見つかりません", 404
+        company_name = company_map[company_code]
+    else:
+        company_name = company['name']
     
-    company_name = company_map[company_code]
+    # 競合企業を取得
     competitors = DataService.get_competitors(company_code)
     
     # 事業の内容を取得
@@ -174,6 +273,7 @@ def company_view(company_code):
     for competitor in competitors:
         competitor['officers_info'] = DataService.get_officers_info(competitor['code'])
     
+    # チャートを生成
     chart_service = ChartService(company_code, company_name)
     charts, error = chart_service.generate_comparison_charts()
     
@@ -183,6 +283,7 @@ def company_view(company_code):
     data = {
         'company_code': company_code,
         'company_name': company_name,
+        'company': company,
         'competitors': competitors,
         'charts': charts,
         'business_description': business_description,
@@ -191,58 +292,139 @@ def company_view(company_code):
     
     return data, None, 200
 
+@handle_errors
 def get_securities_reports(company_code):
     """四半期報告書の一覧を取得するAPI"""
-    company_map = DataService.get_company_code_name_map()
+    companies, success = load_companies_data()
+    if not success:
+        return None, "企業データの読み込みに失敗しました", 500
     
-    if company_code not in company_map:
-        return {"error": "企業が見つかりません"}, 404
+    # 企業コードで検索
+    company = next((c for c in companies if c['code'] == company_code), None)
+    company_name = None
     
-    company_name = company_map[company_code]
-    company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
+    if company:
+        company_name = company['name']
+        print(f"企業コード {company_code} の企業名: {company_name}")
+    else:
+        print(f"企業コード {company_code} が見つかりません。ディレクトリ検索を試みます。")
     
-    # 四半期報告書ディレクトリを確認
-    quarterly_reports_dir = f"{company_dir}/quarterly_securities_reports"
-    if not os.path.exists(quarterly_reports_dir):
-        return {"reports": []}, 200
+    # 最初から企業コードだけで検索（最も優先度高）
+    code_pattern = f"{IPO_REPORTS_NEW_DIR}/{company_code}_*/quarterly_reports"
+    matching_dirs = glob.glob(code_pattern)
+    
+    if matching_dirs:
+        quarterly_reports_dir = matching_dirs[0]
+        print(f"企業コードで一致するディレクトリが見つかりました: {quarterly_reports_dir}")
+        
+        # ディレクトリ名から企業名を抽出
+        if not company_name:
+            dir_name = os.path.basename(os.path.dirname(quarterly_reports_dir))
+            if '_' in dir_name:
+                company_name = dir_name.split('_', 1)[1]
+                print(f"ディレクトリ名から企業名を抽出しました: {company_name}")
+    else:
+        # quarterly_reportsが見つからない場合はsecurities_registration_statementを試す
+        code_pattern = f"{IPO_REPORTS_NEW_DIR}/{company_code}_*/securities_registration_statement"
+        matching_dirs = glob.glob(code_pattern)
+        
+        if matching_dirs:
+            securities_registration_statement_dir = matching_dirs[0]
+            print(f"企業コードで一致するsecurities_registration_statementディレクトリが見つかりました: {securities_registration_statement_dir}")
+            
+            # ディレクトリ名から企業名を抽出
+            if not company_name:
+                dir_name = os.path.basename(os.path.dirname(securities_registration_statement_dir))
+                if '_' in dir_name:
+                    company_name = dir_name.split('_', 1)[1]
+                    print(f"ディレクトリ名から企業名を抽出しました: {company_name}")
+        else:
+            # 会社名を使った検索（会社名がある場合のみ）
+            if company_name:
+                company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
+                quarterly_reports_dir = f"{company_dir}/quarterly_reports"
+                securities_registration_statement_dir = f"{company_dir}/securities_registration_statement"
+                
+                # quarterly_reportsディレクトリが見つからない場合
+                if not os.path.exists(quarterly_reports_dir):
+                    # securities_registration_statementディレクトリを試す
+                    if os.path.exists(securities_registration_statement_dir):
+                        quarterly_reports_dir = securities_registration_statement_dir
+                    else:
+                        # 会社名のパターンを変えて試す
+                        possible_dirs = [
+                            f"{IPO_REPORTS_NEW_DIR}/{company_code}_株式会社{company_name}/quarterly_reports",
+                            f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('株式会社', '')}/quarterly_reports",
+                            f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('・', '')}/quarterly_reports",
+                            f"{IPO_REPORTS_NEW_DIR}/{company_code}_株式会社{company_name}/securities_registration_statement",
+                            f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('株式会社', '')}/securities_registration_statement",
+                            f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('・', '')}/securities_registration_statement"
+                        ]
+                        
+                        # 可能性のあるディレクトリを試す
+                        for dir_path in possible_dirs:
+                            print(f"試行: {dir_path}")
+                            if os.path.exists(dir_path):
+                                quarterly_reports_dir = dir_path
+                                print(f"代替ディレクトリが見つかりました: {quarterly_reports_dir}")
+                                break
+                        else:
+                            # どのディレクトリも見つからなかった場合
+                            return {"reports": []}, "四半期報告書またはsecurities_registration_statementディレクトリが見つかりません", 404
+            else:
+                # 会社名がない場合
+                return {"reports": []}, "企業情報が見つかりません", 404
     
     # 四半期報告書ファイルを取得
-    report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.tsv"))
+    report_files = glob.glob(f"{quarterly_reports_dir}/*.html")
     
+    if not report_files:
+        # HTMLファイルがない場合はテキストファイルを試す
+        report_files = glob.glob(f"{quarterly_reports_dir}/*.txt")
+    
+    if not report_files:
+        # TSVファイルを試す
+        report_files = glob.glob(f"{quarterly_reports_dir}/*.tsv")
+    
+    if not report_files:
+        return {"reports": []}, "四半期報告書ファイルが見つかりません", 404
+    
+    # ファイル情報を整理
     reports = []
-    for file_path in report_files:
+    for file_path in sorted(report_files):
         file_name = os.path.basename(file_path)
-        # ファイル名から日付を抽出（例: 2019-05-30_四半期報告書.tsv）
-        date_part = file_name.split('_')[0]
+        # ファイル名から日付を抽出（例: 2023_Q1.html -> 2023 Q1）
+        date_parts = os.path.splitext(file_name)[0].split('_')
+        if len(date_parts) >= 2:
+            date = f"{date_parts[0]} {date_parts[1]}"
+        else:
+            date = file_name
+        
         reports.append({
-            "file": file_name,
-            "date": date_part,
-            "path": file_path
+            "file": file_path,
+            "date": date
         })
     
-    return {"reports": reports}, 200
+    return {"reports": reports}, None, 200
 
-def get_securities_report_diff(company_code, data):
-    """四半期報告書の差分を計算するAPI"""
-    if not data or 'old_report' not in data or 'new_report' not in data or 'old_date' not in data or 'new_date' not in data:
-        return {"error": "必要なパラメータが不足しています"}, 400
+@handle_errors
+def securities_report_diff(company_code):
+    """四半期報告書の差分を取得するAPI"""
+    data = request.get_json()
     
-    company_map = DataService.get_company_code_name_map()
+    if not data or 'old_report' not in data or 'new_report' not in data:
+        return None, "リクエストデータが不正です", 400
     
-    if company_code not in company_map:
-        return {"error": "企業が見つかりません"}, 404
+    old_report = data['old_report']
+    new_report = data['new_report']
+    old_date = data.get('old_date', '不明')
+    new_date = data.get('new_date', '不明')
     
-    company_name = company_map[company_code]
-    company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
-    quarterly_reports_dir = f"{company_dir}/quarterly_securities_reports"
+    # ファイルの存在確認
+    if not os.path.exists(old_report) or not os.path.exists(new_report):
+        return None, "指定されたファイルが見つかりません", 404
     
-    old_report_path = f"{quarterly_reports_dir}/{data['old_report']}"
-    new_report_path = f"{quarterly_reports_dir}/{data['new_report']}"
+    # 差分を抽出
+    diff_text = extract_diff(old_report, new_report, old_date, new_date)
     
-    if not os.path.exists(old_report_path) or not os.path.exists(new_report_path):
-        return {"error": "指定された四半期報告書が見つかりません"}, 404
-    
-    # 差分を計算
-    diff_text = extract_diff(old_report_path, new_report_path, data['old_date'], data['new_date'])
-    
-    return {"diff_text": diff_text}, 200 
+    return {"diff_text": diff_text}, None, 200 

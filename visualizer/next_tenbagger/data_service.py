@@ -155,12 +155,60 @@ class DataService:
             company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
             
             # 四半期報告書ディレクトリを確認
-            quarterly_reports_dir = f"{company_dir}/quarterly_securities_reports"
+            quarterly_reports_dir = f"{company_dir}/quarterly_reports"
+            securities_registration_statement_dir = f"{company_dir}/securities_registration_statement"
+            
+            # quarterly_reportsディレクトリが存在しない場合はsecurities_registration_statementディレクトリを試す
             if not os.path.exists(quarterly_reports_dir):
-                return None, f"四半期報告書ディレクトリが見つかりません: {quarterly_reports_dir}"
+                if os.path.exists(securities_registration_statement_dir):
+                    logger.info(f"四半期報告書ディレクトリが見つからないため、securities_registration_statementディレクトリを使用します: {securities_registration_statement_dir}")
+                    quarterly_reports_dir = securities_registration_statement_dir
+                else:
+                    # 会社名のパターンを変えて試す
+                    possible_dirs = [
+                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_株式会社{company_name}/quarterly_reports",
+                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('株式会社', '')}/quarterly_reports",
+                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('・', '')}/quarterly_reports",
+                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_株式会社{company_name}/securities_registration_statement",
+                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('株式会社', '')}/securities_registration_statement",
+                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('・', '')}/securities_registration_statement"
+                    ]
+                    
+                    # 可能性のあるディレクトリを試す
+                    for dir_path in possible_dirs:
+                        if os.path.exists(dir_path):
+                            quarterly_reports_dir = dir_path
+                            logger.info(f"代替ディレクトリが見つかりました: {quarterly_reports_dir}")
+                            break
+                    else:
+                        # 企業コードだけで検索
+                        code_pattern = f"{IPO_REPORTS_NEW_DIR}/{company_code}_*/quarterly_reports"
+                        matching_dirs = glob.glob(code_pattern)
+                        
+                        if matching_dirs:
+                            quarterly_reports_dir = matching_dirs[0]
+                            logger.info(f"企業コードで一致するディレクトリが見つかりました: {quarterly_reports_dir}")
+                        else:
+                            # securities_registration_statementを試す
+                            code_pattern = f"{IPO_REPORTS_NEW_DIR}/{company_code}_*/securities_registration_statement"
+                            matching_dirs = glob.glob(code_pattern)
+                            
+                            if matching_dirs:
+                                quarterly_reports_dir = matching_dirs[0]
+                                logger.info(f"企業コードで一致するsecurities_registration_statementディレクトリが見つかりました: {quarterly_reports_dir}")
+                            else:
+                                return None, f"四半期報告書またはsecurities_registration_statementディレクトリが見つかりません: {quarterly_reports_dir}"
             
             # 四半期報告書ファイルを取得
             report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.tsv"))
+            
+            # TSVファイルがない場合はHTMLファイルを試す
+            if not report_files:
+                report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.html"))
+            
+            # HTMLファイルもない場合はテキストファイルを試す
+            if not report_files:
+                report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.txt"))
             
             if not report_files:
                 return None, f"四半期報告書ファイルが見つかりません: {quarterly_reports_dir}"
@@ -413,7 +461,7 @@ class DataService:
             company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
             
             # 四半期報告書ディレクトリを確認
-            quarterly_reports_dir = f"{company_dir}/quarterly_securities_reports"
+            quarterly_reports_dir = f"{company_dir}/quarterly_reports"
             if not os.path.exists(quarterly_reports_dir):
                 return None
             
@@ -457,7 +505,7 @@ class DataService:
             company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
             
             # 四半期報告書ディレクトリを確認
-            quarterly_reports_dir = f"{company_dir}/quarterly_securities_reports"
+            quarterly_reports_dir = f"{company_dir}/quarterly_reports"
             if not os.path.exists(quarterly_reports_dir):
                 return None
             
