@@ -26,23 +26,27 @@ python -m collectors <collector_name>
 - `details`: IPO詳細情報の収集
 - `traders`: トレーダー情報の分析
 - `yfinance`: Yahoo Financeからのデータ収集
-- `edinet_download`: EDINETからの有価証券報告書ダウンロード
-- `combiner`: 各種データの統合
-- `ai_annotation`: AI要約の生成
+- `edinet`: EDINETからの有価証券報告書ダウンロード
+    - 注意点: 久しぶりに実行する際（1ヶ月ぶりなど）は `data/output/edinet_db/edinet_codes/<prefix>__doc_indexes.tsv.gz` を削除
 - `comparison`: 競合他社の分析
+- `ai`: AI要約の生成 -　Groqが安くなるまで待つ
+- `combiner`: 各種データの統合
 - `all`: すべてのデータ収集を実行
 
 例：
 ```bash
 # 特定のコレクターを実行
-python -m collectors list
-python -m collectors details
+python3 -m collectors list
+python3 -m collectors details
+python3 -m collectors traders
+python3 -m collectors yfinance
+python3 -m collectors edinet
+python3 -m collectors comparison 
+#python3 -m collectors ai
+python3 -m collectors combiner
 
 # すべてのコレクターを実行
-python -m collectors all
-
-# AI要約を特定の数だけ生成
-python -m collectors ai_annotation 10
+python3 -m collectors all
 ```
 
 ## データの可視化
@@ -90,23 +94,6 @@ IPODataCollectors/
 - データ収集には各種APIキーが必要な場合があります
 - データ収集には時間がかかる場合があります
 
-## 実行方法
-
-        # 各IPO企業のTSVを取得
-        python collectors.py kiso_list
-        python collectors.py kiso_details
-        python collectors.py traders
-        python collectors.py yfinance
-        # python collectors.py edinet_download
-        python collectors.py combiner
-
-        # TODO: 上記の各企業の情報から、AIでストックビジネス, 競合リスト, 店舗数, 海外進出するか, を取得
-        python collectors.py ai_annotation
-        
-        # TODO: 競合の役員, 競合の財務情報をAI使って比較
-        python collectors.py compare_compititors
-        
-        python collectors.py combiner2
 
 ## Memo
 

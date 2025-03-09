@@ -116,11 +116,9 @@ class IPOCombiner(IPOAnalyzerCore):
         kiso_df = self.load_tsv(self.combiner_settings.kiso_output_dir, kiso_file)
         traders_df = self.load_tsv(self.combiner_settings.traders_output_dir, traders_file)
         yfinance_df = self.load_tsv(self.combiner_settings.yfinance_output_dir, yfinance_file)
-        #edinet_df = self.load_tsv(self.combiner_settings.edinet_output_dir, yfinance_file)
 
         kiso_df = kiso_df.drop(columns=['企業名', '上場日', '想定時価総額（億円）', '会社設立'], errors='ignore')
         yfinance_df = yfinance_df.drop(columns=['企業名'], errors='ignore')
-        #edinet_df = edinet_df.drop(columns=['企業名'], errors='ignore')
         
         print(year)
         kiso_df["コード"] = kiso_df["コード"].astype(str)

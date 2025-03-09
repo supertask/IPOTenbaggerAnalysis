@@ -128,8 +128,8 @@ class ScraperSettings:
         # 年度設定
         self.this_year = datetime.now().year
         self.begin_year = 2011
-        self.end_year = 2024
-        #self.end_year = self.this_year
+        #self.end_year = 2024
+        self.end_year = self.this_year
         self.years = range(self.begin_year, self.end_year + 1)
         self.out_dir_core = os.path.join('data', 'output')
         self.cache_dir_core = os.path.join('data', 'cache')

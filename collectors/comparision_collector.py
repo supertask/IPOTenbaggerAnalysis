@@ -107,7 +107,8 @@ class ComparisonCollector(IPOAnalyzerCore):
         return row_dict
 
     def run(self):
-        self.save_companies_info_to_tsv(self.comparison_settings.output_dir, self.on_each_company)
+        self.save_companies_info_to_tsv(self.comparison_settings.output_dir, self.on_each_company,
+            skip_years=[2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023])
         #self.combine_all_files(self.comparison_settings.output_dir)
 
     def save_to_json(self, filename="companies.json"):
