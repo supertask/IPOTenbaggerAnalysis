@@ -119,28 +119,42 @@ class DataService:
     @staticmethod
     def get_competitors(company_code: str) -> List[Dict[str, str]]:
         """競合他社のリストを取得"""
-        competitors = []
+        comparison_files = sorted(glob.glob(f"{COMPARISON_DIR}/companies_*.tsv"), reverse=True)
+        
+        if not comparison_files:
+            return []
         
         try:
-            # 競合他社情報ファイルのパス
-            comparison_file = os.path.join(COMPARISON_DIR, f"{company_code}_competitors.json")
+            # 全てのファイルを読み込んで統合（空のファイルはスキップ）
+            dfs = []
+            for file in comparison_files:
+                if os.path.getsize(file) > 0:  # 空のファイルをスキップ
+                    try:
+                        df = pd.read_csv(file, sep='\t')
+                        dfs.append(df)
+                    except Exception as e:
+                        logger.warning(f"ファイル {file} の読み込み中にエラー: {e}")
             
-            if os.path.exists(comparison_file):
-                with open(comparison_file, 'r', encoding='utf-8') as f:
-                    competitors_data = json.load(f)
+            if not dfs:
+                logger.info("有効な競合企業情報ファイルが見つかりません")
+                return []
                 
-                for competitor in competitors_data:
-                    if 'code' in competitor and 'name' in competitor:
-                        competitors.append({
-                            'code': competitor['code'],
-                            'name': competitor['name']
-                        })
-            else:
-                logger.info(f"競合他社情報ファイルが見つかりません: {comparison_file}")
+            df = pd.concat(dfs, ignore_index=True)
+            
+            # 重複を削除（同じコードの企業は最新のデータを保持）
+            df = df.drop_duplicates(subset=['コード'], keep='first')
+            
+            # 企業コードに一致する行を探す
+            company_row = df[df['コード'].astype(str) == str(company_code)]
+            
+            if company_row.empty or pd.isna(company_row['競合リスト'].values[0]):
+                logger.info(f"企業コード {company_code} の競合企業情報が見つかりません")
+                return []
+            
+            return json.loads(company_row['競合リスト'].values[0])
         except Exception as e:
             logger.error(f"競合他社情報の取得中にエラー: {e}", exc_info=True)
-        
-        return competitors
+            return []
 
     @staticmethod
     def get_company_data(company_code: str) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
