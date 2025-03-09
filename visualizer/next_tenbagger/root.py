@@ -123,25 +123,31 @@ def load_companies_data() -> Tuple[list, bool]:
                         ipo_year_column = column
                         break
                 
+                # DataServiceから会社コードと名前のマップを取得
+                company_code_name_map = DataService.get_company_code_name_map()
+                
                 if ipo_year_column is None:
                     logger.warning("上場年のカラムが見つかりません。すべての企業を表示します。")
-                    # 上場年のカラムがない場合は、すべての企業を表示
+                    # 上場年のカラムがない場合は、すべての企業を表示（ただし、DataServiceに存在する企業のみ）
                     for _, row in df.iterrows():
                         # 企業名が数値の場合は文字列に変換
                         company_name = row['企業名']
                         if isinstance(company_name, (int, float)):
                             company_name = str(company_name)
-                            
-                        company = {
-                            'code': str(row['コード']),
-                            'name': company_name,
-                            'market': row.get('市場', '不明'),
-                            'industry': row.get('業種', '不明'),
-                            'ipo_year': None  # 上場年がない場合はNoneを設定
-                        }
-                        companies.append(company)
+                        
+                        company_code = str(row['コード'])
+                        # DataServiceに存在する企業のみを追加
+                        if company_code in company_code_name_map:
+                            company = {
+                                'code': company_code,
+                                'name': company_name,
+                                'market': row.get('市場', '不明'),
+                                'industry': row.get('業種', '不明'),
+                                'ipo_year': None  # 上場年がない場合はNoneを設定
+                            }
+                            companies.append(company)
                 else:
-                    # 上場年のカラムがある場合は、3年以内の企業をフィルタリング
+                    # 上場年のカラムがある場合は、3年以内の企業をフィルタリング（ただし、DataServiceに存在する企業のみ）
                     for _, row in df.iterrows():
                         # 上場年を取得
                         ipo_year = None
@@ -157,24 +163,27 @@ def load_companies_data() -> Tuple[list, bool]:
                                 except (ValueError, TypeError):
                                     ipo_year = None
                         
-                        # 上場年が3年以内の企業のみを追加
+                        # 上場年が3年以内の企業のみを追加（ただし、DataServiceに存在する企業のみ）
                         if ipo_year is not None and current_year - ipo_year <= 3:
                             # 企業名が数値の場合は文字列に変換
                             company_name = row['企業名']
                             if isinstance(company_name, (int, float)):
                                 company_name = str(company_name)
-                                
-                            company = {
-                                'code': str(row['コード']),
-                                'name': company_name,
-                                'market': row.get('市場', '不明'),
-                                'industry': row.get('業種', '不明'),
-                                'ipo_year': ipo_year
-                            }
-                            companies.append(company)
+                            
+                            company_code = str(row['コード'])
+                            # DataServiceに存在する企業のみを追加
+                            if company_code in company_code_name_map:
+                                company = {
+                                    'code': company_code,
+                                    'name': company_name,
+                                    'market': row.get('市場', '不明'),
+                                    'industry': row.get('業種', '不明'),
+                                    'ipo_year': ipo_year
+                                }
+                                companies.append(company)
                 
                 if not companies:
-                    logger.warning("3年以内に上場した企業が見つかりません。ダミーデータを表示します。")
+                    logger.warning("表示可能な企業が見つかりません。ダミーデータを表示します。")
                     # 企業が見つからない場合はダミーデータを作成
                     dummy_companies = [
                         {
