@@ -15,6 +15,9 @@ from .config import (
     RECENT_IPO_COMPANIES_PATH
 )
 
+# IPO_REPORTS_DIRを追加
+IPO_REPORTS_DIR = Path(__file__).parent.parent.parent / 'data/output/edinet_db/ipo_reports'
+
 # カラーフォーマッターの設定
 class ColoredFormatter(logging.Formatter):
     """ログメッセージに色を付けるフォーマッター"""
@@ -472,38 +475,66 @@ class DataService:
                 return None
             
             company_name = company_map[company_code]
-            company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
             
-            # 四半期報告書ディレクトリを確認
-            quarterly_reports_dir = f"{company_dir}/quarterly_reports"
-            if not os.path.exists(quarterly_reports_dir):
-                return None
+            # 各ディレクトリを確認
+            # 有価証券報告書はIPO_REPORTS_DIRから
+            annual_reports_dir = f"{IPO_REPORTS_DIR}/{company_code}_{company_name}/annual_securities_reports"
             
-            # 四半期報告書ファイルを取得
-            report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.tsv"))
+            # 有価証券届出書と四半期報告書はIPO_REPORTS_NEW_DIRから
+            new_company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
+            securities_registration_dir = f"{new_company_dir}/securities_registration_statement"
+            quarterly_reports_dir = f"{new_company_dir}/quarterly_reports"
             
-            if not report_files:
-                return None
+            # 優先順位: 有価証券報告書 > 有価証券届出書 > 四半期報告書
+            if os.path.exists(annual_reports_dir):
+                report_files = sorted(glob.glob(f"{annual_reports_dir}/*.tsv"))
+                if report_files:
+                    report_file = report_files[0]  # 最も古い有価証券報告書を使用
+                    logger.info(f"有価証券報告書から役員情報を取得: {report_file}")
+                    return DataService._extract_officers_info(report_file)
             
-            # 最新の四半期報告書を使用
-            latest_report = report_files[-1]
+            if os.path.exists(securities_registration_dir):
+                report_files = sorted(glob.glob(f"{securities_registration_dir}/*.tsv"))
+                if report_files:
+                    report_file = report_files[0]  # 最も古い有価証券届出書を使用
+                    logger.info(f"有価証券届出書から役員情報を取得: {report_file}")
+                    return DataService._extract_officers_info(report_file)
             
+            if os.path.exists(quarterly_reports_dir):
+                report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.tsv"))
+                if report_files:
+                    report_file = report_files[-1]  # 最新の四半期報告書を使用
+                    logger.info(f"四半期報告書から役員情報を取得: {report_file}")
+                    return DataService._extract_officers_info(report_file)
+            
+            logger.warning(f"企業コード {company_code} の役員情報が見つかりません")
+            return None
+        except Exception as e:
+            logger.error(f"役員情報の取得中にエラー: {e}", exc_info=True)
+            return None
+
+    @staticmethod
+    def _extract_officers_info(report_file: str) -> Optional[str]:
+        """報告書ファイルから役員情報を抽出"""
+        try:
             # ファイルのエンコーディングを確認
-            encoding = 'utf-16' if 'UTF-16' in os.popen(f'file "{latest_report}"').read() else 'utf-8'
+            encoding = 'utf-16' if 'UTF-16' in os.popen(f'file "{report_file}"').read() else 'utf-8'
             
             # ファイルを読み込む
-            df = pd.read_csv(latest_report, delimiter="\t", encoding=encoding, dtype=str, on_bad_lines='skip')
+            df = pd.read_csv(report_file, delimiter="\t", encoding=encoding, dtype=str, on_bad_lines='skip')
             
             # 役員情報を抽出
             officers_rows = df[df["要素ID"] == "jpcrp_cor:InformationAboutOfficersTextBlock"]
             
             if not officers_rows.empty:
                 officers_info = officers_rows.iloc[0].get("値", "")
-                return officers_info
+                # HTMLとして整形
+                officers_html = officers_info.replace('\n', '<br>')
+                return officers_html
             
             return None
         except Exception as e:
-            logger.error(f"役員情報の取得中にエラー: {e}", exc_info=True)
+            logger.error(f"役員情報の抽出中にエラー: {e}", exc_info=True)
             return None
 
     @staticmethod
@@ -516,36 +547,64 @@ class DataService:
                 return None
             
             company_name = company_map[company_code]
-            company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
             
-            # 四半期報告書ディレクトリを確認
-            quarterly_reports_dir = f"{company_dir}/quarterly_reports"
-            if not os.path.exists(quarterly_reports_dir):
-                return None
+            # 各ディレクトリを確認
+            # 有価証券報告書はIPO_REPORTS_DIRから
+            annual_reports_dir = f"{IPO_REPORTS_DIR}/{company_code}_{company_name}/annual_securities_reports"
             
-            # 四半期報告書ファイルを取得
-            report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.tsv"))
+            # 有価証券届出書と四半期報告書はIPO_REPORTS_NEW_DIRから
+            new_company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
+            securities_registration_dir = f"{new_company_dir}/securities_registration_statement"
+            quarterly_reports_dir = f"{new_company_dir}/quarterly_reports"
             
-            if not report_files:
-                return None
+            # 優先順位: 有価証券報告書 > 有価証券届出書 > 四半期報告書
+            if os.path.exists(annual_reports_dir):
+                report_files = sorted(glob.glob(f"{annual_reports_dir}/*.tsv"))
+                if report_files:
+                    report_file = report_files[0]  # 最も古い有価証券報告書を使用
+                    logger.info(f"有価証券報告書から事業内容を取得: {report_file}")
+                    return DataService._extract_business_description(report_file)
             
-            # 最新の四半期報告書を使用
-            latest_report = report_files[-1]
+            if os.path.exists(securities_registration_dir):
+                report_files = sorted(glob.glob(f"{securities_registration_dir}/*.tsv"))
+                if report_files:
+                    report_file = report_files[0]  # 最も古い有価証券届出書を使用
+                    logger.info(f"有価証券届出書から事業内容を取得: {report_file}")
+                    return DataService._extract_business_description(report_file)
             
+            if os.path.exists(quarterly_reports_dir):
+                report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.tsv"))
+                if report_files:
+                    report_file = report_files[-1]  # 最新の四半期報告書を使用
+                    logger.info(f"四半期報告書から事業内容を取得: {report_file}")
+                    return DataService._extract_business_description(report_file)
+            
+            logger.warning(f"企業コード {company_code} の事業内容が見つかりません")
+            return None
+        except Exception as e:
+            logger.error(f"事業内容の取得中にエラー: {e}", exc_info=True)
+            return None
+
+    @staticmethod
+    def _extract_business_description(report_file: str) -> Optional[str]:
+        """報告書ファイルから事業内容を抽出"""
+        try:
             # ファイルのエンコーディングを確認
-            encoding = 'utf-16' if 'UTF-16' in os.popen(f'file "{latest_report}"').read() else 'utf-8'
+            encoding = 'utf-16' if 'UTF-16' in os.popen(f'file "{report_file}"').read() else 'utf-8'
             
             # ファイルを読み込む
-            df = pd.read_csv(latest_report, delimiter="\t", encoding=encoding, dtype=str, on_bad_lines='skip')
+            df = pd.read_csv(report_file, delimiter="\t", encoding=encoding, dtype=str, on_bad_lines='skip')
             
             # 事業の内容を抽出
             business_rows = df[df["要素ID"] == "jpcrp_cor:DescriptionOfBusinessTextBlock"]
             
             if not business_rows.empty:
                 business_description = business_rows.iloc[0].get("値", "")
-                return business_description
+                # HTMLとして整形
+                business_html = business_description.replace('\n', '<br>')
+                return business_html
             
             return None
         except Exception as e:
-            logger.error(f"事業内容の取得中にエラー: {e}", exc_info=True)
+            logger.error(f"事業内容の抽出中にエラー: {e}", exc_info=True)
             return None 

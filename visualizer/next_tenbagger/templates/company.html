@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>{{ company_name }} ({{ company_code }}) - 四半期分析</title>
+    <title>{{ company_name }} ({{ company_code }}) - 分析</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -122,91 +122,6 @@
             opacity: 1;
             transform: translateY(0);
         }
-        
-        /* 年度比較ボタンのスタイル */
-        .metric-year-buttons {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            padding-right: 5px;
-        }
-        
-        /* スクロールバーのスタイル */
-        .metric-year-buttons::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .metric-year-buttons::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-        
-        .metric-year-buttons::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 3px;
-        }
-        
-        .metric-year-buttons::-webkit-scrollbar-thumb:hover {
-            background: #aaa;
-        }
-        
-        /* 年度比較ボタンの文字サイズを小さく */
-        .metric-year-buttons .btn {
-            font-size: 0.85rem;
-            padding: 0.25rem 0.5rem;
-            margin-bottom: 5px;
-        }
-        
-        /* 全年比較ボタンの文字サイズも小さく */
-        .all-years-btn {
-            font-size: 0.85rem;
-            padding: 0.25rem 0.5rem;
-        }
-        
-        /* カードの高さを固定して、内容がはみ出さないようにする */
-        .chart-card {
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .chart-card .card-body {
-            flex: 1 1 auto;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            font-size: 0.85rem;
-        }
-        
-        /* チャート部分が縮まないようにする */
-        .chart-container {
-            flex: 0 0 auto;
-        }
-        
-        /* ボタン部分が必要に応じて縮むようにする */
-        .buttons-container {
-            flex: 1 1 auto;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        /* ヘルプアイコンのスタイル */
-        .help-icon {
-            cursor: pointer;
-            font-size: 0.9rem;
-        }
-        
-        /* ツールチップのカスタマイズ */
-        .tooltip {
-            font-size: 0.85rem;
-        }
-        
-        /* 比較プロンプト部分のスタイル */
-        .chart-card .form-select {
-            font-size: 0.85rem;
-            padding: 0.25rem 0.5rem;
-        }
     </style>
 </head>
 <body>
@@ -221,7 +136,6 @@
                 </nav>
                 
                 <h1 class="mb-3">{{ company_name }} <small class="text-muted">({{ company_code }})</small></h1>
-                <p class="text-muted">四半期報告書に基づく財務分析</p>
                 
                 <div class="card mb-4">
                     <div class="card-header">
@@ -250,195 +164,396 @@
                                 <h5 class="mb-0">事業情報</h5>
                             </div>
                             <div class="card-body">
-                                {% if business_description %}
-                                    {{ business_description|safe }}
-                                {% else %}
-                                    <p>事業内容の情報がありません。</p>
-                                {% endif %}
+                                <ul class="nav nav-tabs" id="targetCompanyBusinessTabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" 
+                                                id="target-company-business-tab" 
+                                                data-bs-toggle="tab" 
+                                                data-bs-target="#target-company-business" 
+                                                type="button" 
+                                                role="tab" 
+                                                aria-controls="target-company-business" 
+                                                aria-selected="true">
+                                            {{ company_name }}
+                                        </button>
+                                    </li>
+                                </ul>
+                                <div class="tab-content mt-3" id="targetCompanyBusinessTabsContent">
+                                    <div class="tab-pane fade show active" 
+                                         id="target-company-business" 
+                                         role="tabpanel" 
+                                         aria-labelledby="target-company-business-tab">
+                                        <div style="max-height: 350px; overflow-y: auto;">
+                                            {% if business_description %}
+                                                <div>{{ business_description|safe }}</div>
+                                            {% else %}
+                                                <div class="alert alert-warning">
+                                                    事業の内容が見つかりません。
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
+                    {% if competitors %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">競合企業の事業情報</h5>
+                            </div>
+                            <div class="card-body">
+                                <ul class="nav nav-tabs" id="competitorBusinessTabs" role="tablist">
+                                    {% for competitor in competitors %}
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link {% if loop.first %}active{% endif %}" 
+                                                id="competitor-business-{{ competitor.code }}-tab" 
+                                                data-bs-toggle="tab" 
+                                                data-bs-target="#competitor-business-{{ competitor.code }}" 
+                                                type="button" 
+                                                role="tab" 
+                                                aria-controls="competitor-business-{{ competitor.code }}" 
+                                                aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+                                            {{ competitor.name }}
+                                        </button>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                <div class="tab-content mt-3" id="competitorBusinessTabsContent">
+                                    {% for competitor in competitors %}
+                                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
+                                         id="competitor-business-{{ competitor.code }}" 
+                                         role="tabpanel" 
+                                         aria-labelledby="competitor-business-{{ competitor.code }}-tab">
+                                        <div style="max-height: 350px; overflow-y: auto;">
+                                            {% if competitor.business_description %}
+                                                <div>{{ competitor.business_description|safe }}</div>
+                                            {% else %}
+                                                <div class="alert alert-warning">
+                                                    事業の内容が見つかりません。
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- 事業の内容の比較プロンプトコピーボタン -->
+                <div class="text-center mb-4">
+                    <button class="btn copy-button" onclick="copyBusinessComparisonPrompt()">
+                        <i class="bi bi-clipboard"></i> 事業の内容の比較プロンプト（Copy）
+                    </button>
+                </div>
+                
+                <!-- 役員情報セクション -->
+                <h2 class="mb-4">役員の状況</h2>
+                
+                <div class="row mb-4">
                     <div class="col-md-6 mb-3">
                         <div class="card h-100">
                             <div class="card-header">
                                 <h5 class="mb-0">役員情報</h5>
                             </div>
                             <div class="card-body">
-                                {% if officers_info %}
-                                    {{ officers_info|safe }}
-                                {% else %}
-                                    <p>役員情報がありません。</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 四半期報告書の差分セクション -->
-                <h2 class="mb-4">四半期報告書の差分</h2>
-                
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">四半期報告書の比較</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row mb-3">
-                            <div class="col-md-5">
-                                <select id="old-report" class="form-select">
-                                    <option value="">古い報告書を選択</option>
-                                </select>
-                            </div>
-                            <div class="col-md-5">
-                                <select id="new-report" class="form-select">
-                                    <option value="">新しい報告書を選択</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <button id="compare-btn" class="btn btn-primary w-100" disabled>比較</button>
-                            </div>
-                        </div>
-                        <div id="report-diff-container" style="display: none;">
-                            <div id="report-diff" style="white-space: pre-wrap; font-family: monospace; font-size: 0.9rem; background-color: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0; max-height: 500px; overflow-y: auto;"></div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- 財務指標チャートセクション -->
-                <h2 class="mb-4">財務指標チャート（四半期）</h2>
-                
-                <div class="row">
-                    {% for chart in charts %}
-                    <div class="col-lg-6 mb-4">
-                        <div class="card chart-card">
-                            <div class="card-header">
-                                <h5 class="mb-0">{{ chart.title }}</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="chart-container">
-                                    {{ chart.html|safe }}
+                                <ul class="nav nav-tabs" id="targetCompanyTabs" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" 
+                                                id="target-company-tab" 
+                                                data-bs-toggle="tab" 
+                                                data-bs-target="#target-company" 
+                                                type="button" 
+                                                role="tab" 
+                                                aria-controls="target-company" 
+                                                aria-selected="true">
+                                            {{ company_name }}
+                                        </button>
+                                    </li>
+                                </ul>
+                                <div class="tab-content mt-3" id="targetCompanyTabsContent">
+                                    <div class="tab-pane fade show active" 
+                                         id="target-company" 
+                                         role="tabpanel" 
+                                         aria-labelledby="target-company-tab">
+                                        <div style="max-height: 350px; overflow-y: auto;">
+                                            {% if officers_info %}
+                                                <div>{{ officers_info|safe }}</div>
+                                            {% else %}
+                                                <div class="alert alert-warning">
+                                                    役員情報が見つかりません。
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    {% endfor %}
-                </div>
-                
-                <!-- 競合企業の詳細セクション -->
-                {% if competitors %}
-                <h2 class="mb-4">競合企業の詳細</h2>
-                
-                <div class="row">
-                    {% for competitor in competitors %}
-                    <div class="col-md-6 mb-4">
+                    
+                    {% if competitors %}
+                    <div class="col-md-6 mb-3">
                         <div class="card h-100">
                             <div class="card-header">
-                                <h5 class="mb-0">{{ competitor.name }} ({{ competitor.code }})</h5>
+                                <h5 class="mb-0">競合企業の役員情報</h5>
                             </div>
                             <div class="card-body">
-                                <h6>事業内容:</h6>
-                                <div class="mb-3">
-                                    {% if competitor.business_description %}
-                                        {{ competitor.business_description|truncate(200)|safe }}
-                                    {% else %}
-                                        <p>事業内容の情報がありません。</p>
-                                    {% endif %}
+                                <ul class="nav nav-tabs" id="competitorTabs" role="tablist">
+                                    {% for competitor in competitors %}
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link {% if loop.first %}active{% endif %}" 
+                                                id="competitor-{{ competitor.code }}-tab" 
+                                                data-bs-toggle="tab" 
+                                                data-bs-target="#competitor-{{ competitor.code }}" 
+                                                type="button" 
+                                                role="tab" 
+                                                aria-controls="competitor-{{ competitor.code }}" 
+                                                aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
+                                            {{ competitor.name }}
+                                        </button>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                                <div class="tab-content mt-3" id="competitorTabsContent">
+                                    {% for competitor in competitors %}
+                                    <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
+                                         id="competitor-{{ competitor.code }}" 
+                                         role="tabpanel" 
+                                         aria-labelledby="competitor-{{ competitor.code }}-tab">
+                                        <div style="max-height: 350px; overflow-y: auto;">
+                                            {% if competitor.officers_info %}
+                                                <div>{{ competitor.officers_info|safe }}</div>
+                                            {% else %}
+                                                <div class="alert alert-warning">
+                                                    役員情報が見つかりません。
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
                                 </div>
-                                
-                                <h6>役員情報:</h6>
-                                <div class="mb-3">
-                                    {% if competitor.officers_info %}
-                                        {{ competitor.officers_info|truncate(200)|safe }}
-                                    {% else %}
-                                        <p>役員情報がありません。</p>
-                                    {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- 役員情報の比較プロンプトコピーボタン -->
+                <div class="text-center mb-4">
+                    <button class="btn copy-button" onclick="copyOfficersComparisonPrompt()">
+                        <i class="bi bi-clipboard"></i> 役員の状況の比較プロンプト（Copy）
+                    </button>
+                </div>
+                
+                <!-- トースト通知用のコンテナ -->
+                <div class="toast-container"></div>
+                
+                <!-- チャートセクション -->
+                <h2 class="mb-4">財務指標の比較</h2>
+                
+                {% if charts %}
+                    {% for chart in charts %}
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">{{ chart.title }}</h5>
                                 </div>
-                                
-                                <a href="/next_tenbagger/{{ competitor.code }}" class="btn btn-outline-primary">詳細を見る</a>
+                                <div class="card-body">
+                                    <div class="chart-container" id="chart-{{ loop.index }}"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                     {% endfor %}
-                </div>
+                {% else %}
+                    <div class="alert alert-warning">
+                        財務指標のチャートを生成できませんでした。
+                    </div>
                 {% endif %}
             </div>
         </div>
     </div>
     
-    <!-- トースト通知用のコンテナ -->
-    <div class="toast-container"></div>
-    
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // 競合企業データをJavaScriptで利用できるようにする
+        const competitorsData = [
+            {% for competitor in competitors %}
+            {
+                "code": "{{ competitor.code }}",
+                "name": "{{ competitor.name }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+        
+        // チャートの描画
         document.addEventListener('DOMContentLoaded', function() {
-            // 四半期報告書一覧を取得
-            fetch(`/next_tenbagger/api/securities_reports/${company_code}`)
-                .then(response => response.json())
-                .then(data => {
-                    const reports = data.reports;
-                    if (reports && reports.length > 0) {
-                        const oldReportSelect = document.getElementById('old-report');
-                        const newReportSelect = document.getElementById('new-report');
-                        
-                        // 報告書をドロップダウンに追加
-                        reports.forEach(report => {
-                            const option = document.createElement('option');
-                            option.value = JSON.stringify(report);
-                            option.textContent = report.date;
-                            oldReportSelect.appendChild(option.cloneNode(true));
-                            newReportSelect.appendChild(option);
-                        });
-                        
-                        // 選択状態の監視
-                        const compareBtn = document.getElementById('compare-btn');
-                        function checkSelections() {
-                            if (oldReportSelect.value && newReportSelect.value && oldReportSelect.value !== newReportSelect.value) {
-                                compareBtn.disabled = false;
-                            } else {
-                                compareBtn.disabled = true;
-                            }
-                        }
-                        
-                        oldReportSelect.addEventListener('change', checkSelections);
-                        newReportSelect.addEventListener('change', checkSelections);
-                        
-                        // 比較ボタンのクリックイベント
-                        compareBtn.addEventListener('click', function() {
-                            const oldReport = JSON.parse(oldReportSelect.value);
-                            const newReport = JSON.parse(newReportSelect.value);
-                            
-                            // 差分を取得
-                            fetch(`/next_tenbagger/api/securities_report_diff/${company_code}`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    old_report: oldReport.file,
-                                    new_report: newReport.file,
-                                    old_date: oldReport.date,
-                                    new_date: newReport.date
-                                })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                const diffContainer = document.getElementById('report-diff-container');
-                                const diffElement = document.getElementById('report-diff');
-                                
-                                diffElement.textContent = data.diff_text;
-                                diffContainer.style.display = 'block';
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                alert('報告書の差分取得に失敗しました。');
-                            });
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
+            {% if charts %}
+                {% for chart in charts %}
+                    var chartData{{ loop.index }} = {{ chart.data|safe }};
+                    var chartLayout{{ loop.index }} = {{ chart.layout|safe }};
+                    Plotly.newPlot('chart-{{ loop.index }}', chartData{{ loop.index }}, chartLayout{{ loop.index }}, {responsive: true});
+                {% endfor %}
+            {% endif %}
+            
+            // トースト表示関数
+            window.showToast = function(message) {
+                const toastContainer = document.querySelector('.toast-container');
+                const toast = document.createElement('div');
+                toast.className = 'toast';
+                toast.innerHTML = message;
+                toastContainer.appendChild(toast);
+                
+                // 表示アニメーション
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 10);
+                
+                // 3秒後に非表示
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        toastContainer.removeChild(toast);
+                    }, 300);
+                }, 3000);
+            };
         });
+        
+        // 事業の内容の比較プロンプトをコピーする関数
+        function copyBusinessComparisonPrompt() {
+            var button = document.querySelector('.copy-button[onclick="copyBusinessComparisonPrompt()"]');
+            
+            // ボタンの元のテキストを保存
+            var originalHtml = button.innerHTML;
+            
+            // ローディング状態に変更
+            button.classList.add('loading');
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
+            
+            // ターゲット企業の事業の内容を取得
+            var targetBusiness = document.querySelector('#target-company-business').textContent.trim();
+            
+            // 競合企業の事業の内容を取得
+            var competitorElements = document.querySelectorAll('[id^="competitor-business-"]:not([id$="-tab"])');
+            var competitorInfo = Array.from(competitorElements).map(function(el) {
+                return el.textContent.trim();
+            });
+            
+            // プロンプトテキストを作成
+            var promptText = "下記は、それぞれの企業の事業の内容です。テンバガーの企業を選ぶ際にこれらの事業内容だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
+            var companyName = '{{ company_name }}';
+            var businessText = "【" + companyName + "の事業の内容】\n" + targetBusiness + "\n\n";
+            
+            // 競合企業の情報を追加
+            var competitorsText = competitorInfo.map(function(info, index) {
+                return "【" + competitorsData[index].name + "の事業の内容】\n" + info;
+            }).join('\n\n');
+            
+            // 全テキストを結合
+            var fullText = promptText + businessText + competitorsText;
+            
+            // クリップボードにコピー
+            navigator.clipboard.writeText(fullText).then(function() {
+                // ローディング状態を解除
+                button.classList.remove('loading');
+                
+                // 成功状態に変更
+                button.classList.add('clicked');
+                button.innerHTML = originalHtml;
+                
+                // トースト表示
+                showToast('コピーしました！');
+                
+                // 1秒後に元の状態に戻す
+                setTimeout(function() {
+                    button.classList.remove('clicked');
+                    button.classList.add('recovering');
+                    
+                    // 復帰アニメーション完了後にクラスを削除
+                    setTimeout(function() {
+                        button.classList.remove('recovering');
+                    }, 500);
+                }, 1000);
+            }).catch(function(err) {
+                // ローディング状態を解除
+                button.classList.remove('loading');
+                button.innerHTML = originalHtml;
+                
+                console.error('クリップボードへのコピーに失敗しました:', err);
+                alert('クリップボードへのコピーに失敗しました。');
+            });
+        }
+        
+        // 役員情報の比較プロンプトをコピーする関数
+        function copyOfficersComparisonPrompt() {
+            var button = document.querySelector('.copy-button[onclick="copyOfficersComparisonPrompt()"]');
+            
+            // ボタンの元のテキストを保存
+            var originalHtml = button.innerHTML;
+            
+            // ローディング状態に変更
+            button.classList.add('loading');
+            button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
+            
+            // ターゲット企業の役員情報を取得
+            var targetOfficers = document.querySelector('#target-company').textContent.trim();
+            
+            // 競合企業の役員情報を取得
+            var competitorElements = document.querySelectorAll('[id^="competitor-"]:not([id$="-tab"]):not([id^="competitor-business-"])');
+            var competitorInfo = Array.from(competitorElements).map(function(el) {
+                return el.textContent.trim();
+            });
+            
+            // プロンプトテキストを作成
+            var promptText = "下記は、それぞれの企業の役員の状況です。テンバガーの企業を選ぶ際にこれらの役員だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
+            var companyName = '{{ company_name }}';
+            var officersText = "【" + companyName + "の役員の状況】\n" + targetOfficers + "\n\n";
+            
+            // 競合企業の情報を追加
+            var competitorsText = competitorInfo.map(function(info, index) {
+                return "【" + competitorsData[index].name + "の役員の状況】\n" + info;
+            }).join('\n\n');
+            
+            // 全テキストを結合
+            var fullText = promptText + officersText + competitorsText;
+            
+            // クリップボードにコピー
+            navigator.clipboard.writeText(fullText).then(function() {
+                // ローディング状態を解除
+                button.classList.remove('loading');
+                
+                // 成功状態に変更
+                button.classList.add('clicked');
+                button.innerHTML = originalHtml;
+                
+                // トースト表示
+                showToast('コピーしました！');
+                
+                // 1秒後に元の状態に戻す
+                setTimeout(function() {
+                    button.classList.remove('clicked');
+                    button.classList.add('recovering');
+                    
+                    // 復帰アニメーション完了後にクラスを削除
+                    setTimeout(function() {
+                        button.classList.remove('recovering');
+                    }, 500);
+                }, 1000);
+            }).catch(function(err) {
+                // ローディング状態を解除
+                button.classList.remove('loading');
+                button.innerHTML = originalHtml;
+                
+                console.error('クリップボードへのコピーに失敗しました:', err);
+                alert('クリップボードへのコピーに失敗しました。');
+            });
+        }
     </script>
 </body>
 </html> 
