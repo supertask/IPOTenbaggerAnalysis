@@ -11,7 +11,6 @@ from .root import (
 
 # 以前のBlueprintの定義（互換性のために残しています）
 from flask import Blueprint
-past_tenbagger_bp = Blueprint('past_tenbagger', __name__, 
-                             url_prefix='/past_tenbagger',
-                             template_folder='templates',
-                             static_folder='static') 
+next_tenbagger_bp = Blueprint('next_tenbagger', __name__, 
+                             url_prefix='/next_tenbagger',
+                             template_folder='templates') 

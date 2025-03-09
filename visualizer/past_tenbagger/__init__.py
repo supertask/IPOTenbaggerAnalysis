@@ -1,1 +1,2 @@
-from .app import create_app 
+# このモジュールは、past_tenbaggerのビジネスロジックを提供します。
+# ルーティングはvisualizer/app.pyで管理されています。 

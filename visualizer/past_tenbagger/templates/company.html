@@ -773,11 +773,27 @@
                             // 競合企業の有価証券報告書の一覧を取得
                             const response = await fetch(`/past_tenbagger/api/securities_reports/${competitorCode}`);
                             if (!response.ok) {
-                                throw new Error(`競合企業の有価証券報告書の一覧の取得に失敗しました`);
+                                console.warn(`競合企業(${competitorName})の有価証券報告書の一覧の取得に失敗しました: ${response.status}`);
+                                allResults.push({
+                                    companyCode: competitorCode,
+                                    companyName: competitorName,
+                                    oldYear: "N/A",
+                                    newYear: "N/A",
+                                    diffText: "有価証券報告書が見つかりませんでした。"
+                                });
+                                continue; // 次の競合企業へ
                             }
                             
                             const data = await response.json();
-                            if (data.reports.length < 2) {
+                            if (!data.reports || data.reports.length < 2) {
+                                console.warn(`競合企業(${competitorName})の有価証券報告書が2つ未満です。スキップします。`);
+                                allResults.push({
+                                    companyCode: competitorCode,
+                                    companyName: competitorName,
+                                    oldYear: "N/A",
+                                    newYear: "N/A",
+                                    diffText: data.message || "有価証券報告書が見つかりませんでした。"
+                                });
                                 continue; // 比較可能な報告書がない場合はスキップ
                             }
                             
@@ -1686,13 +1702,28 @@
                             // 競合企業の有価証券報告書の一覧を取得
                             const response = await fetch(`/past_tenbagger/api/securities_reports/${competitorCode}`);
                             if (!response.ok) {
-                                throw new Error(`競合企業の有価証券報告書の一覧の取得に失敗しました`);
+                                console.warn(`競合企業(${competitorName})の有価証券報告書の一覧の取得に失敗しました: ${response.status}`);
+                                allResults.push({
+                                    companyCode: competitorCode,
+                                    companyName: competitorName,
+                                    oldYear: "N/A",
+                                    newYear: "N/A",
+                                    diffText: "有価証券報告書が見つかりませんでした。"
+                                });
+                                continue; // 次の競合企業へ
                             }
                             
                             const data = await response.json();
-                            if (data.reports.length < 2) {
-                                console.warn(`${competitorName}の比較可能な有価証券報告書が見つかりません。`);
-                                continue;
+                            if (!data.reports || data.reports.length < 2) {
+                                console.warn(`競合企業(${competitorName})の有価証券報告書が2つ未満です。スキップします。`);
+                                allResults.push({
+                                    companyCode: competitorCode,
+                                    companyName: competitorName,
+                                    oldYear: "N/A",
+                                    newYear: "N/A",
+                                    diffText: data.message || "有価証券報告書が見つかりませんでした。"
+                                });
+                                continue; // 比較可能な報告書がない場合はスキップ
                             }
                             
                             // 年度ごとにグループ化
