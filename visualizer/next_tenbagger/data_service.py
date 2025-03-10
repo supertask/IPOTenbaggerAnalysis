@@ -161,7 +161,7 @@ class DataService:
 
     @staticmethod
     def get_company_data(company_code: str) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
-        """企業の四半期報告書データを取得"""
+        """企業の財務データを取得"""
         try:
             company_map = DataService.get_company_code_name_map()
             
@@ -171,75 +171,77 @@ class DataService:
             company_name = company_map[company_code]
             company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
             
-            # 四半期報告書ディレクトリを確認
-            quarterly_reports_dir = f"{company_dir}/quarterly_reports"
+            # 有価証券届出書ディレクトリを確認
             securities_registration_statement_dir = f"{company_dir}/securities_registration_statement"
             
-            # quarterly_reportsディレクトリが存在しない場合はsecurities_registration_statementディレクトリを試す
-            if not os.path.exists(quarterly_reports_dir):
-                if os.path.exists(securities_registration_statement_dir):
-                    logger.info(f"四半期報告書ディレクトリが見つからないため、securities_registration_statementディレクトリを使用します: {securities_registration_statement_dir}")
-                    quarterly_reports_dir = securities_registration_statement_dir
-                else:
-                    # 会社名のパターンを変えて試す
-                    possible_dirs = [
-                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_株式会社{company_name}/quarterly_reports",
-                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('株式会社', '')}/quarterly_reports",
-                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('・', '')}/quarterly_reports",
-                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_株式会社{company_name}/securities_registration_statement",
-                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('株式会社', '')}/securities_registration_statement",
-                        f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('・', '')}/securities_registration_statement"
-                    ]
+            # 有価証券届出書が存在する場合はそれを使用
+            if os.path.exists(securities_registration_statement_dir):
+                logger.info(f"有価証券届出書ディレクトリが見つかりました: {securities_registration_statement_dir}")
+                
+                # 有価証券届出書ファイルを取得
+                report_files = sorted(glob.glob(f"{securities_registration_statement_dir}/*.tsv"))
+                
+                if report_files:
+                    # 最新の有価証券届出書を使用
+                    latest_report = report_files[-1]
                     
-                    # 可能性のあるディレクトリを試す
-                    for dir_path in possible_dirs:
-                        if os.path.exists(dir_path):
-                            quarterly_reports_dir = dir_path
-                            logger.info(f"代替ディレクトリが見つかりました: {quarterly_reports_dir}")
-                            break
-                    else:
-                        # 企業コードだけで検索
-                        code_pattern = f"{IPO_REPORTS_NEW_DIR}/{company_code}_*/quarterly_reports"
-                        matching_dirs = glob.glob(code_pattern)
+                    # 財務データを読み込む
+                    financial_data = DataService._read_financial_file(latest_report)
+                    
+                    if financial_data is not None:
+                        return financial_data, None
+            
+            # 四半期報告書はスキップ
+            
+            # ipo_reports_newにデータがない場合は、ipo_reportsを試す
+            old_company_pattern = f"{IPO_REPORTS_DIR}/{company_code}_*"
+            old_company_dirs = glob.glob(old_company_pattern)
+            
+            if old_company_dirs:
+                old_company_dir = old_company_dirs[0]
+                logger.info(f"ipo_reportsディレクトリが見つかりました: {old_company_dir}")
+                
+                # 有価証券報告書ディレクトリを確認
+                annual_reports_dir = f"{old_company_dir}/annual_securities_reports"
+                
+                if os.path.exists(annual_reports_dir):
+                    logger.info(f"有価証券報告書ディレクトリが見つかりました: {annual_reports_dir}")
+                    
+                    # 有価証券報告書ファイルを取得
+                    report_files = sorted(glob.glob(f"{annual_reports_dir}/*.tsv"))
+                    
+                    if report_files:
+                        # 最新の有価証券報告書を使用
+                        latest_report = report_files[-1]
                         
-                        if matching_dirs:
-                            quarterly_reports_dir = matching_dirs[0]
-                            logger.info(f"企業コードで一致するディレクトリが見つかりました: {quarterly_reports_dir}")
-                        else:
-                            # securities_registration_statementを試す
-                            code_pattern = f"{IPO_REPORTS_NEW_DIR}/{company_code}_*/securities_registration_statement"
-                            matching_dirs = glob.glob(code_pattern)
-                            
-                            if matching_dirs:
-                                quarterly_reports_dir = matching_dirs[0]
-                                logger.info(f"企業コードで一致するsecurities_registration_statementディレクトリが見つかりました: {quarterly_reports_dir}")
-                            else:
-                                return None, f"四半期報告書またはsecurities_registration_statementディレクトリが見つかりません: {quarterly_reports_dir}"
+                        # 財務データを読み込む
+                        financial_data = DataService._read_financial_file(latest_report)
+                        
+                        if financial_data is not None:
+                            return financial_data, None
             
-            # 四半期報告書ファイルを取得
-            report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.tsv"))
+            # 会社名のパターンを変えて試す
+            possible_dirs = [
+                f"{IPO_REPORTS_NEW_DIR}/{company_code}_株式会社{company_name}/securities_registration_statement",
+                f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('株式会社', '')}/securities_registration_statement",
+                f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('・', '')}/securities_registration_statement",
+                f"{IPO_REPORTS_NEW_DIR}/{company_code}_株式会社{company_name}/quarterly_reports",
+                f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('株式会社', '')}/quarterly_reports",
+                f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name.replace('・', '')}/quarterly_reports"
+            ]
             
-            # TSVファイルがない場合はHTMLファイルを試す
-            if not report_files:
-                report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.html"))
+            # 可能性のあるディレクトリを試す
+            for dir_path in possible_dirs:
+                if os.path.exists(dir_path):
+                    report_files = sorted(glob.glob(f"{dir_path}/*.tsv"))
+                    
+                    if report_files:
+                        latest_report = report_files[-1]
+                        financial_data = DataService._read_financial_file(latest_report)
+                        if financial_data is not None:
+                            return financial_data, None
             
-            # HTMLファイルもない場合はテキストファイルを試す
-            if not report_files:
-                report_files = sorted(glob.glob(f"{quarterly_reports_dir}/*.txt"))
-            
-            if not report_files:
-                return None, f"四半期報告書ファイルが見つかりません: {quarterly_reports_dir}"
-            
-            # 最新の四半期報告書を使用
-            latest_report = report_files[-1]
-            
-            # 財務データを読み込む
-            financial_data = DataService._read_financial_file(latest_report)
-            
-            if financial_data is None:
-                return None, f"財務データの読み込みに失敗しました: {latest_report}"
-            
-            return financial_data, None
+            return None, f"財務データが見つかりません: {company_code}_{company_name}"
         except Exception as e:
             logger.error(f"企業データの取得中にエラー: {e}", exc_info=True)
             return None, f"企業データの取得中にエラー: {str(e)}"
@@ -318,35 +320,59 @@ class DataService:
                 if not rows.empty:
                     # 各行について処理
                     for _, row in rows.iterrows():
-                        # コンテキスト情報を取得
-                        context_ref = row.get("コンテキスト参照ID", "")
+                        # コンテキスト情報を取得（コンテキストIDまたはコンテキスト参照ID）
+                        context_ref = row.get("コンテキストID", row.get("コンテキスト参照ID", ""))
                         
                         # 日付情報を抽出
                         date_match = None
-                        if context_ref:
-                            # 四半期報告書の日付形式に対応
-                            import re
-                            date_match = re.search(r'([0-9]{4}-[0-9]{2}-[0-9]{2})', context_ref)
-                            if not date_match:
-                                date_match = re.search(r'([0-9]{8})', context_ref)
+                        year_match = None
                         
-                        if date_match:
-                            date_str = date_match.group(1)
+                        # Prior[1-5]Year(Instant|Duration)_NonConsolidatedMemberパターンを確認
+                        if context_ref:
+                            import re
+                            prior_year_match = re.search(r'Prior([1-5])Year(Instant|Duration)_NonConsolidatedMember', context_ref)
                             
-                            # 日付形式を統一
-                            if len(date_str) == 8:  # YYYYMMDD形式
-                                date_str = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
-                            
-                            # 値を取得
-                            value_str = row.get("値", "")
-                            
-                            if value_str and value_str.strip():
-                                try:
-                                    # カンマを除去して数値に変換
-                                    value = float(value_str.replace(",", ""))
-                                    metric_data[date_str] = value
-                                except ValueError:
-                                    logger.warning(f"数値への変換に失敗しました: {value_str}")
+                            if prior_year_match:
+                                # 何年前かを取得
+                                years_ago = int(prior_year_match.group(1))
+                                # 現在の年から何年前かを計算して日付文字列を作成
+                                current_year = datetime.now().year
+                                year = current_year - years_ago
+                                date_str = f"{year}-12-31"  # 12月31日を仮定
+                                
+                                # 値を取得
+                                value_str = row.get("値", "")
+                                
+                                if value_str and value_str.strip() and value_str != "－":
+                                    try:
+                                        # カンマを除去して数値に変換
+                                        value = float(value_str.replace(",", ""))
+                                        metric_data[date_str] = value
+                                    except ValueError:
+                                        logger.warning(f"数値への変換に失敗しました: {value_str}")
+                            else:
+                                # 通常の日付パターンを確認
+                                date_match = re.search(r'([0-9]{4}-[0-9]{2}-[0-9]{2})', context_ref)
+                                if not date_match:
+                                    date_match = re.search(r'([0-9]{8})', context_ref)
+                                
+                                if date_match:
+                                    date_str = date_match.group(1)
+                                    
+                                    # 日付形式を統一
+                                    if len(date_str) == 8:  # YYYYMMDD形式
+                                        date_str = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+                                    
+                                    # 値を取得
+                                    value_str = row.get("値", "")
+                                    
+                                    if value_str and value_str.strip() and value_str != "－":
+                                        try:
+                                            # カンマを除去して数値に変換
+                                            value = float(value_str.replace(",", ""))
+                                            metric_data[date_str] = value
+                                        except ValueError:
+                                            logger.warning(f"数値への変換に失敗しました: {value_str}")
             
             return metric_data
         except Exception as e:

@@ -26,9 +26,6 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
                  'jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults',
                  'jppfs_qcor:OrdinaryIncomeQuarterly',
                  'jpcrp_qcor:OrdinaryIncomeLossQuarterlySummaryOfBusinessResults']),
-    ('四半期純利益', ['jpcrp_qcor:ProfitLossAttributableToOwnersOfParentQuarterlySummaryOfBusinessResults',
-                   'jppfs_qcor:ProfitLossAttributableToOwnersOfParentQuarterly',
-                   'jpcrp_qcor:NetIncomeLossQuarterlySummaryOfBusinessResults']),
     ('ROE（自己資本利益率）', ['jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults',
                           'jpcrp_qcor:RateOfReturnOnEquityQuarterlySummaryOfBusinessResults']),
     ('純資産', ['jpcrp_cor:NetAssetsSummaryOfBusinessResults',
@@ -39,10 +36,9 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
                    'jpcrp_qcor:EquityToAssetRatioQuarterlySummaryOfBusinessResult']),
     ('PER（株価収益率）', ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults',
                         'jpcrp_qcor:PriceEarningsRatioQuarterlySummaryOfBusinessResults']),
-    ('従業員数', ['jpcrp_cor:NumberOfEmployees',
-                'jpcrp_qcor:NumberOfEmployeesQuarterly']),
-    ('１株当たり四半期純利益（EPS）', ['jpcrp_qcor:DilutedEarningsPerShareQuarterlySummaryOfBusinessResults', 
-                                'jpcrp_qcor:BasicEarningsLossPerShareQuarterlySummaryOfBusinessResults']),
+    ('従業員数', ['jpcrp_cor:NumberOfEmployees', 'jpcrp_qcor:NumberOfEmployeesQuarterly']),
+    ('平均臨時雇用人員', ['jpcrp_cor:AverageNumberOfTemporaryWorkers']),
+    ('１株当たり当期純利益（EPS）', ['jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults']),
 ])
 
 # グラフの表示順序設定

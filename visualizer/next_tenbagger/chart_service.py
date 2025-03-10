@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple, Any, Optional
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import logging
+from datetime import datetime
 
 from .config import CHART_COLORS, CHART_DISPLAY_ORDER
 from .data_service import DataService
@@ -60,19 +61,31 @@ class ChartService:
             if sales_chart:
                 charts.append(sales_chart)
             
-            # 営業利益と営業利益成長率の複合グラフを生成
-            profit_chart = self._generate_metric_growth_chart('営業利益', '営業利益', main_metrics, competitors_data, competitors)
-            if profit_chart:
-                charts.append(profit_chart)
+            # 営業利益のチャートはスキップ
             
-            # １株当たり四半期純利益と１株当たり四半期純利益成長率の複合グラフを生成
-            eps_chart = self._generate_metric_growth_chart('１株当たり四半期純利益（EPS）', '１株当たり四半期純利益（EPS）', main_metrics, competitors_data, competitors)
+            # １株当たり当期純利益と１株当たり当期純利益成長率の複合グラフを生成
+            eps_chart = self._generate_metric_growth_chart('１株当たり当期純利益（EPS）', '１株当たり当期純利益（EPS）', main_metrics, competitors_data, competitors)
             if eps_chart:
                 charts.append(eps_chart)
             
+            # 純資産のチャートを生成
+            net_assets_chart = self._generate_metric_chart('純資産', main_metrics.get('純資産', {}), competitors_data, competitors)
+            if net_assets_chart:
+                charts.append(net_assets_chart)
+                
+            # 総資産のチャートを生成
+            total_assets_chart = self._generate_metric_chart('総資産', main_metrics.get('総資産', {}), competitors_data, competitors)
+            if total_assets_chart:
+                charts.append(total_assets_chart)
+                
+            # 平均臨時雇用人員のチャートを生成
+            temp_workers_chart = self._generate_metric_chart('平均臨時雇用人員', main_metrics.get('平均臨時雇用人員', {}), competitors_data, competitors)
+            if temp_workers_chart:
+                charts.append(temp_workers_chart)
+            
             # その他の指標のチャートを生成
             for metric_name, metric_data in main_metrics.items():
-                if not metric_data or metric_name in ['売上高', '営業利益', '１株当たり四半期純利益（EPS）']:
+                if not metric_data or metric_name in ['売上高', '営業利益', '１株当たり四半期純利益（EPS）', '１株当たり当期純利益（EPS）', '純資産', '総資産', '平均臨時雇用人員']:
                     continue
                 
                 chart = self._generate_metric_chart(metric_name, metric_data, competitors_data, competitors)
@@ -108,155 +121,158 @@ class ChartService:
             if metric_name not in main_metrics or not main_metrics[metric_name]:
                 return None
             
-            # 指標データを取得
+            # メイン企業のデータを取得
             metric_data = main_metrics[metric_name]
             
-            # 年度のリストを取得（ソート済み）
-            years = sorted(metric_data.keys())
-            if len(years) < 2:
-                # 成長率を計算するには少なくとも2年分のデータが必要
-                return self._generate_metric_chart(metric_name, metric_data, competitors_data, competitors)
+            # 日付でソート
+            dates = sorted(metric_data.keys())
+            values = [metric_data[date] for date in dates]
+            
+            # 日付を年月表示に変換
+            display_dates = []
+            for date in dates:
+                try:
+                    dt = datetime.strptime(date, '%Y-%m-%d')
+                    display_dates.append(dt.strftime('%Y/%m'))
+                except ValueError:
+                    display_dates.append(date)
             
             # 成長率を計算
-            growth_rates = {}
-            for i in range(1, len(years)):
-                prev_year = years[i-1]
-                curr_year = years[i]
-                prev_value = metric_data[prev_year]
-                curr_value = metric_data[curr_year]
-                
-                if prev_value != 0:
-                    growth_rate = (curr_value - prev_value) / abs(prev_value) * 100
-                    growth_rates[curr_year] = growth_rate
+            growth_rates = DataService.calculate_growth_rate(metric_data)
+            growth_dates = sorted(growth_rates.keys())
+            growth_values = [growth_rates[date] for date in growth_dates]
             
-            # 競合企業の成長率を計算
-            competitors_growth_rates = {}
-            for comp_code, comp_metrics in competitors_data.items():
-                if metric_name in comp_metrics and comp_metrics[metric_name]:
-                    comp_metric_data = comp_metrics[metric_name]
-                    comp_years = sorted(comp_metric_data.keys())
-                    
-                    if len(comp_years) >= 2:
-                        comp_growth_rates = {}
-                        for i in range(1, len(comp_years)):
-                            prev_year = comp_years[i-1]
-                            curr_year = comp_years[i]
-                            prev_value = comp_metric_data[prev_year]
-                            curr_value = comp_metric_data[curr_year]
-                            
-                            if prev_value != 0:
-                                growth_rate = (curr_value - prev_value) / abs(prev_value) * 100
-                                comp_growth_rates[curr_year] = growth_rate
-                        
-                        competitors_growth_rates[comp_code] = comp_growth_rates
-            
-            # サブプロットを作成（左軸：指標値、右軸：成長率）
-            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            # 成長率の日付を年月表示に変換
+            growth_display_dates = []
+            for date in growth_dates:
+                try:
+                    dt = datetime.strptime(date, '%Y-%m-%d')
+                    growth_display_dates.append(dt.strftime('%Y/%m'))
+                except ValueError:
+                    growth_display_dates.append(date)
             
             # 単位を決定
-            all_values = list(metric_data.values())
-            for comp_metrics in competitors_data.values():
-                if metric_name in comp_metrics and comp_metrics[metric_name]:
-                    all_values.extend(comp_metrics[metric_name].values())
+            max_value = max(values) if values else 0
+            unit_text, divisor = determine_unit_from_max_value(max_value)
             
-            unit, divisor = determine_unit_from_max_value(max(all_values) if all_values else 0)
+            # 単位で割った値
+            scaled_values = [value / divisor for value in values]
             
-            # メイン企業の指標値を棒グラフとして追加
-            fig.add_trace(
-                go.Bar(
-                    x=list(metric_data.keys()),
-                    y=[value / divisor for value in metric_data.values()],
-                    name=f"{self.company_name} {metric_name}",
-                    marker_color=CHART_COLORS["main"]["bar"],
-                    hovertemplate=f"%{{x}}: %{{y:.2f}}{unit}<extra></extra>"
-                ),
-                secondary_y=False
-            )
+            # プロットデータを作成
+            data = []
             
-            # メイン企業の成長率を折れ線グラフとして追加
-            if growth_rates:
-                fig.add_trace(
-                    go.Scatter(
-                        x=list(growth_rates.keys()),
-                        y=list(growth_rates.values()),
-                        name=f"{self.company_name} 成長率",
-                        mode="lines+markers",
-                        line=dict(color=CHART_COLORS["main"]["line"], width=3),
-                        marker=dict(size=8),
-                        hovertemplate="%{x}: %{y:.2f}%<extra></extra>"
-                    ),
-                    secondary_y=True
-                )
+            # メイン企業のバーチャート
+            data.append({
+                'type': 'bar',
+                'x': display_dates,
+                'y': scaled_values,
+                'name': self.company_name,
+                'marker': {'color': CHART_COLORS['main']['bar']},
+                'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
+            })
             
-            # 競合企業のデータを追加
+            # 競合企業のバーチャート
             for i, competitor in enumerate(competitors):
                 comp_code = competitor['code']
-                comp_name = competitor['name']
-                
                 if comp_code in competitors_data and metric_name in competitors_data[comp_code]:
-                    comp_metric_data = competitors_data[comp_code][metric_name]
+                    comp_data = competitors_data[comp_code][metric_name]
                     
-                    if comp_metric_data:
-                        # 競合企業の指標値を棒グラフとして追加
-                        fig.add_trace(
-                            go.Bar(
-                                x=list(comp_metric_data.keys()),
-                                y=[value / divisor for value in comp_metric_data.values()],
-                                name=f"{comp_name} {metric_name}",
-                                marker_color=self.competitor_bar_colors[i % len(self.competitor_bar_colors)],
-                                hovertemplate=f"%{{x}}: %{{y:.2f}}{unit}<extra></extra>"
-                            ),
-                            secondary_y=False
-                        )
+                    # 競合企業のデータを日付でソート
+                    comp_dates = sorted(comp_data.keys())
+                    comp_values = [comp_data[date] if date in comp_data else None for date in dates]
+                    
+                    # 単位で割った値
+                    scaled_comp_values = [value / divisor if value is not None else None for value in comp_values]
+                    
+                    # 競合企業のバーチャートを追加
+                    data.append({
+                        'type': 'bar',
+                        'x': display_dates,
+                        'y': scaled_comp_values,
+                        'name': competitor['name'],
+                        'marker': {'color': self.competitor_bar_colors[i % len(self.competitor_bar_colors)]},
+                        'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
+                    })
+            
+            # メイン企業の成長率ラインチャート
+            if growth_values:
+                data.append({
+                    'type': 'scatter',
+                    'x': growth_display_dates,
+                    'y': [rate * 100 for rate in growth_values],  # パーセント表示
+                    'name': f'{self.company_name} 成長率',
+                    'yaxis': 'y2',
+                    'line': {'color': CHART_COLORS['main']['line'], 'width': 3},
+                    'hovertemplate': '%{x}: %{y:.2f}%<extra></extra>'
+                })
+            
+            # 競合企業の成長率ラインチャート
+            for i, competitor in enumerate(competitors):
+                comp_code = competitor['code']
+                if comp_code in competitors_data and metric_name in competitors_data[comp_code]:
+                    comp_data = competitors_data[comp_code][metric_name]
+                    
+                    # 成長率を計算
+                    comp_growth_rates = DataService.calculate_growth_rate(comp_data)
+                    
+                    if comp_growth_rates:
+                        # 競合企業の成長率データを日付でソート
+                        comp_growth_dates = sorted(comp_growth_rates.keys())
+                        comp_growth_values = [comp_growth_rates[date] for date in comp_growth_dates]
                         
-                        # 競合企業の成長率を折れ線グラフとして追加
-                        if comp_code in competitors_growth_rates and competitors_growth_rates[comp_code]:
-                            comp_growth_rates = competitors_growth_rates[comp_code]
-                            fig.add_trace(
-                                go.Scatter(
-                                    x=list(comp_growth_rates.keys()),
-                                    y=list(comp_growth_rates.values()),
-                                    name=f"{comp_name} 成長率",
-                                    mode="lines+markers",
-                                    line=dict(
-                                        color=self.competitor_line_colors[i % len(self.competitor_line_colors)],
-                                        width=2,
-                                        dash="dot"
-                                    ),
-                                    marker=dict(size=6),
-                                    hovertemplate="%{x}: %{y:.2f}%<extra></extra>"
-                                ),
-                                secondary_y=True
-                            )
+                        # 成長率の日付を年月表示に変換
+                        comp_growth_display_dates = []
+                        for date in comp_growth_dates:
+                            try:
+                                dt = datetime.strptime(date, '%Y-%m-%d')
+                                comp_growth_display_dates.append(dt.strftime('%Y/%m'))
+                            except ValueError:
+                                comp_growth_display_dates.append(date)
+                        
+                        # 競合企業の成長率ラインチャートを追加
+                        data.append({
+                            'type': 'scatter',
+                            'x': comp_growth_display_dates,
+                            'y': [rate * 100 for rate in comp_growth_values],  # パーセント表示
+                            'name': f'{competitor["name"]} 成長率',
+                            'yaxis': 'y2',
+                            'line': {'color': self.competitor_line_colors[i % len(self.competitor_line_colors)], 'width': 2},
+                            'hovertemplate': '%{x}: %{y:.2f}%<extra></extra>'
+                        })
             
-            # グラフのレイアウトを設定
-            fig.update_layout(
-                title=f"{chart_title}と{chart_title}成長率",
-                barmode="group",
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1
-                ),
-                margin=dict(l=50, r=50, t=80, b=50),
-                height=500
-            )
-            
-            # 軸のタイトルを設定
-            fig.update_yaxes(title_text=f"{metric_name} ({unit})", secondary_y=False)
-            fig.update_yaxes(title_text="成長率 (%)", secondary_y=True)
-            
-            # HTMLに変換
-            chart_html = fig.to_html(full_html=False, include_plotlyjs=False)
+            # レイアウト設定
+            layout = {
+                'title': f'{chart_title}と{chart_title}成長率',
+                'xaxis': {'title': {'text': '年月'}},
+                'yaxis': {
+                    'title': {'text': f'{chart_title}（{unit_text}）'},
+                    'side': 'left'
+                },
+                'yaxis2': {
+                    'title': {'text': '成長率（%）'},
+                    'side': 'right',
+                    'overlaying': 'y',
+                    'showgrid': 'false'
+                },
+                'barmode': 'group',
+                'legend': {
+                    'orientation': 'h',
+                    'yanchor': 'bottom',
+                    'y': 1.02,
+                    'xanchor': 'right',
+                    'x': 1
+                },
+                'margin': {'l': 50, 'r': 50, 't': 80, 'b': 50},
+                'height': 500
+            }
             
             return {
-                "title": f"{chart_title}と{chart_title}成長率",
-                "html": chart_html
+                'title': chart_title,
+                'data': data,
+                'layout': layout
             }
         except Exception as e:
-            logger.error(f"{metric_name}の成長率チャート生成中にエラー: {e}", exc_info=True)
+            logger.error(f"指標と成長率の複合グラフ生成中にエラー: {e}", exc_info=True)
             return None
 
     def _generate_metric_chart(
@@ -266,79 +282,97 @@ class ChartService:
         competitors_data: Dict[str, Dict[str, Dict[str, float]]],
         competitors: List[Dict[str, str]]
     ) -> Optional[Dict[str, str]]:
-        """単一指標のチャートを生成"""
+        """指標のチャートを生成"""
         try:
             if not metric_data:
                 return None
             
-            # 年度のリストを取得（ソート済み）
-            years = sorted(metric_data.keys())
+            # 日付でソート
+            dates = sorted(metric_data.keys())
+            values = [metric_data[date] for date in dates]
+            
+            # 日付を年月表示に変換
+            display_dates = []
+            for date in dates:
+                try:
+                    dt = datetime.strptime(date, '%Y-%m-%d')
+                    display_dates.append(dt.strftime('%Y/%m'))
+                except ValueError:
+                    display_dates.append(date)
             
             # 単位を決定
-            all_values = list(metric_data.values())
-            for comp_metrics in competitors_data.values():
-                if metric_name in comp_metrics and comp_metrics[metric_name]:
-                    all_values.extend(comp_metrics[metric_name].values())
+            max_value = max(values) if values else 0
+            unit_text, divisor = determine_unit_from_max_value(max_value)
             
-            unit, divisor = determine_unit_from_max_value(max(all_values) if all_values else 0)
+            # 単位で割った値
+            scaled_values = [value / divisor for value in values]
             
-            # グラフを作成
-            fig = go.Figure()
+            # プロットデータを作成
+            data = []
             
-            # メイン企業のデータを追加
-            fig.add_trace(
-                go.Bar(
-                    x=years,
-                    y=[value / divisor for value in [metric_data[year] for year in years]],
-                    name=self.company_name,
-                    marker_color=CHART_COLORS["main"]["bar"],
-                    hovertemplate=f"%{{x}}: %{{y:.2f}}{unit}<extra></extra>"
-                )
-            )
+            # メイン企業のバーチャート
+            data.append({
+                'type': 'bar',
+                'x': display_dates,
+                'y': scaled_values,
+                'name': self.company_name,
+                'marker': {'color': CHART_COLORS['main']['bar']},
+                'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
+            })
             
-            # 競合企業のデータを追加
+            # 競合企業のバーチャート
             for i, competitor in enumerate(competitors):
                 comp_code = competitor['code']
-                comp_name = competitor['name']
-                
                 if comp_code in competitors_data and metric_name in competitors_data[comp_code]:
-                    comp_metric_data = competitors_data[comp_code][metric_name]
+                    comp_data = competitors_data[comp_code][metric_name]
                     
-                    if comp_metric_data:
-                        comp_years = sorted(comp_metric_data.keys())
-                        fig.add_trace(
-                            go.Bar(
-                                x=comp_years,
-                                y=[value / divisor for value in [comp_metric_data[year] for year in comp_years]],
-                                name=comp_name,
-                                marker_color=self.competitor_bar_colors[i % len(self.competitor_bar_colors)],
-                                hovertemplate=f"%{{x}}: %{{y:.2f}}{unit}<extra></extra>"
-                            )
-                        )
+                    # 競合企業のデータを日付でソート
+                    comp_dates = sorted(comp_data.keys())
+                    comp_values = [comp_data[date] if date in comp_data else None for date in dates]
+                    
+                    # 単位で割った値
+                    scaled_comp_values = [value / divisor if value is not None else None for value in comp_values]
+                    
+                    # 競合企業のバーチャートを追加
+                    data.append({
+                        'type': 'bar',
+                        'x': display_dates,
+                        'y': scaled_comp_values,
+                        'name': competitor['name'],
+                        'marker': {'color': self.competitor_bar_colors[i % len(self.competitor_bar_colors)]},
+                        'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
+                    })
             
-            # グラフのレイアウトを設定
-            fig.update_layout(
-                title=metric_name,
-                barmode="group",
-                yaxis=dict(title=f"{metric_name} ({unit})"),
-                legend=dict(
-                    orientation="h",
-                    yanchor="bottom",
-                    y=1.02,
-                    xanchor="right",
-                    x=1
-                ),
-                margin=dict(l=50, r=50, t=80, b=50),
-                height=400
-            )
+            # 特殊な単位表示の処理
+            unit_display = unit_text
+            if metric_name == '営業利益率' or metric_name == 'ROE（自己資本利益率）':
+                # パーセント表示の場合は値を100倍
+                for trace in data:
+                    trace['y'] = [value * 100 if value is not None else None for value in trace['y']]
+                unit_display = '%'
             
-            # HTMLに変換
-            chart_html = fig.to_html(full_html=False, include_plotlyjs=False)
+            # レイアウト設定
+            layout = {
+                'title': metric_name,
+                'xaxis': {'title': {'text': '年月'}},
+                'yaxis': {'title': {'text': f'{metric_name}（{unit_display}）'}},
+                'barmode': 'group',
+                'legend': {
+                    'orientation': 'h',
+                    'yanchor': 'bottom',
+                    'y': 1.02,
+                    'xanchor': 'right',
+                    'x': 1
+                },
+                'margin': {'l': 50, 'r': 50, 't': 80, 'b': 50},
+                'height': 500
+            }
             
             return {
-                "title": metric_name,
-                "html": chart_html
+                'title': metric_name,
+                'data': data,
+                'layout': layout
             }
         except Exception as e:
-            logger.error(f"{metric_name}のチャート生成中にエラー: {e}", exc_info=True)
+            logger.error(f"指標チャート生成中にエラー: {e}", exc_info=True)
             return None 

@@ -84,27 +84,64 @@ def format_value_with_unit(value: float, formatter: Callable[[float], Tuple[floa
     return f"{converted_value:.1f}{unit}"
 
 def determine_unit_from_max_value(
-    metric_data: Dict[str, float],
-    competitors_data: Dict[str, Dict[str, Dict[str, float]]],
-    metric_name: str,
-    formatter: Callable[[float], Tuple[float, str]]
-) -> Tuple[str, str]:
+    max_value_or_data,
+    competitors_data=None,
+    metric_name=None,
+    formatter=None
+) -> Tuple[str, float]:
     """
     データの最大値から適切な単位を決定する
     
     Args:
-        metric_data: メイン企業のデータ
-        competitors_data: 競合企業のデータ
-        metric_name: 指標名
-        formatter: 単位変換関数
+        max_value_or_data: 最大値または指標データ辞書
+        competitors_data: 競合企業のデータ（オプション）
+        metric_name: 指標名（オプション）
+        formatter: 単位変換関数（オプション）
     
     Returns:
-        Tuple[str, str]: (単位を含むY軸ラベルの接尾辞, 強制単位)
+        Tuple[str, float]: (単位, 除数)
     """
-    max_value = max(
-        max(metric_data.values() if metric_data else [0]),
-        *[max(comp_metrics[metric_name].values()) if metric_name in comp_metrics and comp_metrics[metric_name] else [0]
-          for comp_metrics in competitors_data.values()]
-    )
-    _, unit = formatter(max_value)
-    return f" ({unit})", unit 
+    # 単一の値が渡された場合
+    if isinstance(max_value_or_data, (int, float)):
+        max_value = max_value_or_data
+        
+        # 単位を決定
+        if max_value >= 1e12:  # 1兆以上
+            return '兆', 1e12
+        elif max_value >= 1e9:  # 10億以上
+            return '十億', 1e9
+        elif max_value >= 1e8:  # 1億以上
+            return '億', 1e8
+        elif max_value >= 1e6:  # 100万以上
+            return '百万', 1e6
+        elif max_value >= 1e4:  # 1万以上
+            return '万', 1e4
+        else:
+            return '', 1
+    
+    # 辞書が渡された場合（従来の動作）
+    else:
+        metric_data = max_value_or_data
+        max_value = max(
+            max(metric_data.values() if metric_data else [0]),
+            *[max(comp_metrics[metric_name].values()) if metric_name in comp_metrics and comp_metrics[metric_name] else [0]
+              for comp_metrics in competitors_data.values()]
+        )
+        
+        if formatter:
+            _, unit = formatter(max_value)
+            return unit, 1  # 既にformatterで変換されているので除数は1
+        else:
+            # 単位を決定
+            if max_value >= 1e12:  # 1兆以上
+                return '兆', 1e12
+            elif max_value >= 1e9:  # 10億以上
+                return '十億', 1e9
+            elif max_value >= 1e8:  # 1億以上
+                return '億', 1e8
+            elif max_value >= 1e6:  # 100万以上
+                return '百万', 1e6
+            elif max_value >= 1e4:  # 1万以上
+                return '万', 1e4
+            else:
+                return '', 1 

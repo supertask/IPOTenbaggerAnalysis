@@ -26,7 +26,7 @@ class EdinetReportDownloader:
         self.end_x_year_ago = 0
         
         # 有価証券届出書と四半期報告書の取得期間（年）
-        self.recent_docs_years = 3
+        self.recent_docs_years = 10
 
         #self.begin_x_year_ago = 0.5 #過去13年分を辿る
         self.is_debug = True
@@ -313,8 +313,8 @@ class EdinetReportDownloader:
             self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REGISTRATION, company_folder, '有価証券届出書', company_code4, company_name, start_date_str, end_date_str)
             
             # 四半期報告書を保存
-            company_folder = f"{self.NEW_REPORTS_DIR}/{company_code4}_{company_name}/quarterly_reports"
-            self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_QUARTERLY_REPORT, company_folder, '四半期報告書', company_code4, company_name, start_date_str, end_date_str)
+            #company_folder = f"{self.NEW_REPORTS_DIR}/{company_code4}_{company_name}/quarterly_reports"
+            #self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_QUARTERLY_REPORT, company_folder, '四半期報告書', company_code4, company_name, start_date_str, end_date_str)
 
             # 有価証券報告書を保存
             #company_folder = f"{self.REPORTS_DIR}/{company_code4}_{company_name}/annual_securities_reports"
