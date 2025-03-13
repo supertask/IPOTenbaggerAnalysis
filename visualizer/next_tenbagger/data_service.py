@@ -7,6 +7,7 @@ import os
 import subprocess
 from pathlib import Path
 from datetime import datetime, timedelta
+import re
 
 from .config import (
     IPO_REPORTS_NEW_DIR,
@@ -171,10 +172,15 @@ class DataService:
             company_name = company_map[company_code]
             company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
             
+            # 有価証券届出書と有価証券報告書の両方のデータを取得
+            securities_registration_data = None
+            annual_report_data = None
+            
             # 有価証券届出書ディレクトリを確認
             securities_registration_statement_dir = f"{company_dir}/securities_registration_statement"
+            securities_registration_file_path = None
             
-            # 有価証券届出書が存在する場合はそれを使用
+            # 有価証券届出書が存在する場合はそれを読み込む
             if os.path.exists(securities_registration_statement_dir):
                 logger.info(f"有価証券届出書ディレクトリが見つかりました: {securities_registration_statement_dir}")
                 
@@ -184,14 +190,13 @@ class DataService:
                 if report_files:
                     # 最新の有価証券届出書を使用
                     latest_report = report_files[-1]
+                    securities_registration_file_path = latest_report
                     
                     # 財務データを読み込む
-                    financial_data = DataService._read_financial_file(latest_report)
-                    
-                    if financial_data is not None:
-                        return financial_data, None
+                    securities_registration_data = DataService._read_financial_file(latest_report)
             
-            # 四半期報告書はスキップ
+            # 有価証券報告書を探す
+            annual_report_file_paths = []
             
             # ipo_reports_newにデータがない場合は、ipo_reportsを試す
             old_company_pattern = f"{IPO_REPORTS_DIR}/{company_code}_*"
@@ -207,18 +212,67 @@ class DataService:
                 if os.path.exists(annual_reports_dir):
                     logger.info(f"有価証券報告書ディレクトリが見つかりました: {annual_reports_dir}")
                     
-                    # 有価証券報告書ファイルを取得
+                    # 有価証券報告書ファイルを取得（全てのファイルを取得）
                     report_files = sorted(glob.glob(f"{annual_reports_dir}/*.tsv"))
                     
                     if report_files:
-                        # 最新の有価証券報告書を使用
-                        latest_report = report_files[-1]
+                        annual_report_file_paths = report_files
                         
-                        # 財務データを読み込む
-                        financial_data = DataService._read_financial_file(latest_report)
+                        # 全ての有価証券報告書データを結合
+                        all_annual_reports_data = []
+                        for report_file in report_files:
+                            report_data = DataService._read_financial_file(report_file)
+                            if report_data is not None:
+                                # ファイル名から日付を抽出して列を追加
+                                file_name = os.path.basename(report_file)
+                                date_match = re.search(r'(\d{4}-\d{2}-\d{2})', file_name)
+                                report_date = date_match.group(1) if date_match else None
+                                
+                                report_data["annual_report_date"] = report_date
+                                all_annual_reports_data.append(report_data)
                         
-                        if financial_data is not None:
-                            return financial_data, None
+                        # 全てのデータを結合
+                        if all_annual_reports_data:
+                            annual_report_data = pd.concat(all_annual_reports_data, ignore_index=True)
+            
+            # 条件①: 有価証券届出書に5年分のデータが存在するか確認
+            use_securities_registration_data = False
+            if securities_registration_data is not None:
+                # 売上高の5年分のデータが存在するか確認
+                has_five_years_data = True
+                for i in range(1, 6):
+                    pattern = f"Prior{i}YearDuration_NonConsolidatedMember"
+                    rows = securities_registration_data[securities_registration_data["コンテキストID"].str.contains(pattern, na=False)]
+                    rows = rows[rows["要素ID"] == "jpcrp_cor:NetSalesSummaryOfBusinessResults"]
+                    if rows.empty:
+                        has_five_years_data = False
+                        break
+                
+                if has_five_years_data:
+                    use_securities_registration_data = True
+                    logger.info("有価証券届出書に5年分のデータが存在します。有価証券届出書を使用します。")
+            
+            # 両方のデータが存在する場合、条件に応じてマージ
+            if securities_registration_data is not None and annual_report_data is not None and use_securities_registration_data:
+                # 有価証券届出書のファイル名から日付を抽出
+                securities_registration_date = None
+                if securities_registration_file_path:
+                    file_name = os.path.basename(securities_registration_file_path)
+                    date_match = re.search(r'(\d{4}-\d{2}-\d{2})', file_name)
+                    if date_match:
+                        securities_registration_date = date_match.group(1)
+                
+                # 有価証券届出書に日付情報を追加
+                securities_registration_data["securities_registration_date"] = securities_registration_date
+                
+                # 両方のデータを結合
+                combined_data = pd.concat([securities_registration_data, annual_report_data], ignore_index=True)
+                
+                return combined_data, None
+            elif securities_registration_data is not None:
+                return securities_registration_data, None
+            elif annual_report_data is not None:
+                return annual_report_data, None
             
             # 会社名のパターンを変えて試す
             possible_dirs = [
@@ -296,7 +350,7 @@ class DataService:
         if '営業利益' in metrics_data and '売上高' in metrics_data:
             DataService._calculate_operating_margin(metrics_data)
         
-        if 'PER（株価収益率）' in metrics_data and '１株当たり四半期純利益（EPS）' in metrics_data:
+        if 'PER（株価収益率）' in metrics_data and '１株当たり当期純利益（EPS）' in metrics_data:
             DataService._calculate_peg_ratio(metrics_data)
         
         if '当期純利益' in metrics_data and '総資産' in metrics_data:
@@ -304,6 +358,14 @@ class DataService:
         
         if '営業利益' in metrics_data and '従業員数' in metrics_data:
             DataService._calculate_operating_profit_per_employee(metrics_data)
+        
+        # 四半期純利益がない場合は親会社株主に帰属する当期純利益を使用
+        if '四半期純利益' not in metrics_data and '親会社株主に帰属する当期純利益' in metrics_data:
+            metrics_data['四半期純利益'] = metrics_data['親会社株主に帰属する当期純利益']
+        
+        # １株当たり四半期純利益がない場合は１株当たり当期純利益を使用
+        if '１株当たり四半期純利益（EPS）' not in metrics_data and '１株当たり当期純利益（EPS）' in metrics_data:
+            metrics_data['１株当たり四半期純利益（EPS）'] = metrics_data['１株当たり当期純利益（EPS）']
         
         return metrics_data
 
@@ -313,6 +375,19 @@ class DataService:
         metric_data = {}
         
         try:
+            # 有価証券届出書と有価証券報告書の日付を取得
+            securities_registration_date = None
+            annual_report_dates = []
+            
+            if "securities_registration_date" in data.columns:
+                securities_registration_date_values = data["securities_registration_date"].dropna().unique()
+                if len(securities_registration_date_values) > 0:
+                    securities_registration_date = securities_registration_date_values[0]
+            
+            if "annual_report_date" in data.columns:
+                annual_report_dates = sorted(data["annual_report_date"].dropna().unique())
+                logger.debug(f"有価証券報告書の日付: {annual_report_dates}")
+            
             # 指標IDに一致する行を抽出
             for metric_id in metric_ids:
                 rows = data[data["要素ID"] == metric_id]
@@ -324,55 +399,70 @@ class DataService:
                         context_ref = row.get("コンテキストID", row.get("コンテキスト参照ID", ""))
                         
                         # 日付情報を抽出
-                        date_match = None
-                        year_match = None
+                        date_str = None
                         
-                        # Prior[1-5]Year(Instant|Duration)_NonConsolidatedMemberパターンを確認
-                        if context_ref:
+                        # この行の有価証券報告書の日付を取得
+                        row_annual_report_date = row.get("annual_report_date", None)
+                        
+                        # 有価証券届出書の特殊パターンを確認
+                        if context_ref and securities_registration_date:
                             import re
+                            # Prior[1-5]Year(Instant|Duration)_NonConsolidatedMemberパターンを確認
                             prior_year_match = re.search(r'Prior([1-5])Year(Instant|Duration)_NonConsolidatedMember', context_ref)
                             
                             if prior_year_match:
                                 # 何年前かを取得
                                 years_ago = int(prior_year_match.group(1))
-                                # 現在の年から何年前かを計算して日付文字列を作成
-                                current_year = datetime.now().year
-                                year = current_year - years_ago
-                                date_str = f"{year}-12-31"  # 12月31日を仮定
-                                
-                                # 値を取得
-                                value_str = row.get("値", "")
-                                
-                                if value_str and value_str.strip() and value_str != "－":
-                                    try:
-                                        # カンマを除去して数値に変換
-                                        value = float(value_str.replace(",", ""))
-                                        metric_data[date_str] = value
-                                    except ValueError:
-                                        logger.warning(f"数値への変換に失敗しました: {value_str}")
+                                # 有価証券届出書の日付から何年前かを計算
+                                sr_date = datetime.strptime(securities_registration_date, '%Y-%m-%d')
+                                date = sr_date - timedelta(days=365 * years_ago)
+                                date_str = date.strftime('%Y-%m-%d')
+                        
+                        # 有価証券報告書の特殊パターンを確認
+                        if context_ref and row_annual_report_date and not date_str:
+                            # CurrentYear(Instant|Duration)_NonConsolidatedMemberパターンを確認
+                            current_year_match = re.search(r'CurrentYear(Instant|Duration)_NonConsolidatedMember', context_ref)
+                            
+                            if current_year_match:
+                                # この行の有価証券報告書の日付をそのまま使用
+                                date_str = row_annual_report_date
                             else:
-                                # 通常の日付パターンを確認
-                                date_match = re.search(r'([0-9]{4}-[0-9]{2}-[0-9]{2})', context_ref)
-                                if not date_match:
-                                    date_match = re.search(r'([0-9]{8})', context_ref)
+                                # Prior[1-5]Year(Instant|Duration)_NonConsolidatedMemberパターンを確認
+                                prior_year_match = re.search(r'Prior([1-5])Year(Instant|Duration)_NonConsolidatedMember', context_ref)
                                 
-                                if date_match:
-                                    date_str = date_match.group(1)
-                                    
-                                    # 日付形式を統一
-                                    if len(date_str) == 8:  # YYYYMMDD形式
-                                        date_str = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
-                                    
-                                    # 値を取得
-                                    value_str = row.get("値", "")
-                                    
-                                    if value_str and value_str.strip() and value_str != "－":
-                                        try:
-                                            # カンマを除去して数値に変換
-                                            value = float(value_str.replace(",", ""))
-                                            metric_data[date_str] = value
-                                        except ValueError:
-                                            logger.warning(f"数値への変換に失敗しました: {value_str}")
+                                if prior_year_match:
+                                    # 何年前かを取得
+                                    years_ago = int(prior_year_match.group(1))
+                                    # この行の有価証券報告書の日付から何年前かを計算
+                                    ar_date = datetime.strptime(row_annual_report_date, '%Y-%m-%d')
+                                    date = ar_date - timedelta(days=365 * years_ago)
+                                    date_str = date.strftime('%Y-%m-%d')
+                        
+                        # 通常の日付パターンを確認（上記の特殊パターンに一致しない場合）
+                        if not date_str and context_ref:
+                            date_match = re.search(r'([0-9]{4}-[0-9]{2}-[0-9]{2})', context_ref)
+                            if not date_match:
+                                date_match = re.search(r'([0-9]{8})', context_ref)
+                            
+                            if date_match:
+                                date_str = date_match.group(1)
+                                
+                                # 日付形式を統一
+                                if len(date_str) == 8:  # YYYYMMDD形式
+                                    date_str = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
+                        
+                        # 日付が取得できた場合のみ処理
+                        if date_str:
+                            # 値を取得
+                            value_str = row.get("値", "")
+                            
+                            if value_str and value_str.strip() and value_str != "－":
+                                try:
+                                    # カンマを除去して数値に変換
+                                    value = float(value_str.replace(",", ""))
+                                    metric_data[date_str] = value
+                                except ValueError:
+                                    logger.warning(f"数値への変換に失敗しました: {value_str}")
             
             return metric_data
         except Exception as e:
@@ -404,7 +494,7 @@ class DataService:
         """PEGレシオを計算"""
         try:
             per = metrics_data['PER（株価収益率）']
-            eps = metrics_data['１株当たり四半期純利益（EPS）']
+            eps = metrics_data['１株当たり当期純利益（EPS）']
             
             # EPSの成長率を計算
             eps_growth = DataService.calculate_growth_rate(eps)

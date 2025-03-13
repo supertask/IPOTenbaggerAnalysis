@@ -365,7 +365,7 @@
                                     <h5 class="mb-0">{{ chart.title }}</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div class="chart-container" id="chart-{{ loop.index }}"></div>
+                                    <div class="chart-container" id="chart-{{ loop.index }}" data-chart="{{ loop.index }}"></div>
                                 </div>
                             </div>
                         </div>
@@ -392,12 +392,18 @@
             {% endfor %}
         ];
         
+        // チャートデータの定義
+        {% if charts %}
+            {% for chart in charts %}
+                var chartData{{ loop.index }} = {{ chart.data|tojson|safe }};
+                var chartLayout{{ loop.index }} = {{ chart.layout|tojson|safe }};
+            {% endfor %}
+        {% endif %}
+        
         // チャートの描画
         document.addEventListener('DOMContentLoaded', function() {
             {% if charts %}
                 {% for chart in charts %}
-                    var chartData{{ loop.index }} = {{ chart.data|safe }};
-                    var chartLayout{{ loop.index }} = {{ chart.layout|safe }};
                     Plotly.newPlot('chart-{{ loop.index }}', chartData{{ loop.index }}, chartLayout{{ loop.index }}, {responsive: true});
                 {% endfor %}
             {% endif %}

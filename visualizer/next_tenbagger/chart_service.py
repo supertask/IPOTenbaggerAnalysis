@@ -3,6 +3,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import logging
 from datetime import datetime
+import json
 
 from .config import CHART_COLORS, CHART_DISPLAY_ORDER
 from .data_service import DataService
@@ -16,6 +17,13 @@ from .utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Noneをnullに変換するカスタムJSONエンコーダー
+class NoneToNullEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if obj is None:
+            return None  # JSONではnullに変換される
+        return super().default(obj)
 
 class ChartService:
     def __init__(self, company_code: str, company_name: str):
@@ -37,6 +45,7 @@ class ChartService:
         """企業と競合他社の比較チャートを生成"""
         try:
             competitors = self.data_service.get_competitors(self.company_code)
+            logger.info(f"競合企業: {competitors}")
             
             # メイン企業のデータを取得
             main_company_data, error = self.data_service.get_company_data(self.company_code)
@@ -50,9 +59,14 @@ class ChartService:
             if competitors:
                 for competitor in competitors:
                     comp_code = competitor['code']
-                    comp_data, _ = self.data_service.get_company_data(comp_code)
+                    logger.info(f"競合企業 {comp_code} のデータを取得中...")
+                    comp_data, error = self.data_service.get_company_data(comp_code)
                     if comp_data is not None:
+                        logger.info(f"競合企業 {comp_code} のデータ取得成功")
                         competitors_data[comp_code] = self.data_service.extract_metrics(comp_data)
+                        logger.info(f"競合企業 {comp_code} の指標: {list(competitors_data[comp_code].keys())}")
+                    else:
+                        logger.warning(f"競合企業 {comp_code} のデータ取得失敗: {error}")
             
             charts = []
             
@@ -61,7 +75,10 @@ class ChartService:
             if sales_chart:
                 charts.append(sales_chart)
             
-            # 営業利益のチャートはスキップ
+            # 営業利益と営業利益成長率の複合グラフを生成
+            operating_profit_chart = self._generate_metric_growth_chart('営業利益', '営業利益', main_metrics, competitors_data, competitors)
+            if operating_profit_chart:
+                charts.append(operating_profit_chart)
             
             # １株当たり当期純利益と１株当たり当期純利益成長率の複合グラフを生成
             eps_chart = self._generate_metric_growth_chart('１株当たり当期純利益（EPS）', '１株当たり当期純利益（EPS）', main_metrics, competitors_data, competitors)
@@ -128,28 +145,35 @@ class ChartService:
             dates = sorted(metric_data.keys())
             values = [metric_data[date] for date in dates]
             
-            # 日付を年月表示に変換
+            # 日付を年月日表示に変換
             display_dates = []
+            original_dates = {}  # 表示用日付から元の日付へのマッピング
             for date in dates:
                 try:
                     dt = datetime.strptime(date, '%Y-%m-%d')
-                    display_dates.append(dt.strftime('%Y/%m'))
+                    display_date = dt.strftime('%Y/%m/%d')
+                    display_dates.append(display_date)
+                    original_dates[display_date] = date
                 except ValueError:
                     display_dates.append(date)
+                    original_dates[date] = date
             
             # 成長率を計算
             growth_rates = DataService.calculate_growth_rate(metric_data)
             growth_dates = sorted(growth_rates.keys())
             growth_values = [growth_rates[date] for date in growth_dates]
             
-            # 成長率の日付を年月表示に変換
+            # 成長率の日付を年月日表示に変換
             growth_display_dates = []
             for date in growth_dates:
                 try:
                     dt = datetime.strptime(date, '%Y-%m-%d')
-                    growth_display_dates.append(dt.strftime('%Y/%m'))
+                    display_date = dt.strftime('%Y/%m/%d')
+                    growth_display_dates.append(display_date)
+                    original_dates[display_date] = date
                 except ValueError:
                     growth_display_dates.append(date)
+                    original_dates[date] = date
             
             # 単位を決定
             max_value = max(values) if values else 0
@@ -171,23 +195,46 @@ class ChartService:
                 'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
             })
             
+            # すべての日付を収集（メイン企業と競合企業の両方）
+            all_display_dates = display_dates.copy()
+            
             # 競合企業のバーチャート
             for i, competitor in enumerate(competitors):
                 comp_code = competitor['code']
                 if comp_code in competitors_data and metric_name in competitors_data[comp_code]:
                     comp_data = competitors_data[comp_code][metric_name]
                     
+                    if not comp_data:
+                        logger.warning(f"競合企業 {comp_code} の {metric_name} データが空です")
+                        continue
+                    
                     # 競合企業のデータを日付でソート
                     comp_dates = sorted(comp_data.keys())
-                    comp_values = [comp_data[date] if date in comp_data else None for date in dates]
+                    comp_values = [comp_data[date] for date in comp_dates]
+                    
+                    # 競合企業の日付を年月日表示に変換
+                    comp_display_dates = []
+                    for date in comp_dates:
+                        try:
+                            dt = datetime.strptime(date, '%Y-%m-%d')
+                            display_date = dt.strftime('%Y/%m/%d')
+                            comp_display_dates.append(display_date)
+                            original_dates[display_date] = date
+                            if display_date not in all_display_dates:
+                                all_display_dates.append(display_date)
+                        except ValueError:
+                            comp_display_dates.append(date)
+                            original_dates[date] = date
+                            if date not in all_display_dates:
+                                all_display_dates.append(date)
                     
                     # 単位で割った値
-                    scaled_comp_values = [value / divisor if value is not None else None for value in comp_values]
+                    scaled_comp_values = [value / divisor for value in comp_values]
                     
                     # 競合企業のバーチャートを追加
                     data.append({
                         'type': 'bar',
-                        'x': display_dates,
+                        'x': comp_display_dates,
                         'y': scaled_comp_values,
                         'name': competitor['name'],
                         'marker': {'color': self.competitor_bar_colors[i % len(self.competitor_bar_colors)]},
@@ -212,6 +259,9 @@ class ChartService:
                 if comp_code in competitors_data and metric_name in competitors_data[comp_code]:
                     comp_data = competitors_data[comp_code][metric_name]
                     
+                    if not comp_data:
+                        continue
+                    
                     # 成長率を計算
                     comp_growth_rates = DataService.calculate_growth_rate(comp_data)
                     
@@ -220,14 +270,21 @@ class ChartService:
                         comp_growth_dates = sorted(comp_growth_rates.keys())
                         comp_growth_values = [comp_growth_rates[date] for date in comp_growth_dates]
                         
-                        # 成長率の日付を年月表示に変換
+                        # 成長率の日付を年月日表示に変換
                         comp_growth_display_dates = []
                         for date in comp_growth_dates:
                             try:
                                 dt = datetime.strptime(date, '%Y-%m-%d')
-                                comp_growth_display_dates.append(dt.strftime('%Y/%m'))
+                                display_date = dt.strftime('%Y/%m/%d')
+                                comp_growth_display_dates.append(display_date)
+                                original_dates[display_date] = date
+                                if display_date not in all_display_dates:
+                                    all_display_dates.append(display_date)
                             except ValueError:
                                 comp_growth_display_dates.append(date)
+                                original_dates[date] = date
+                                if date not in all_display_dates:
+                                    all_display_dates.append(date)
                         
                         # 競合企業の成長率ラインチャートを追加
                         data.append({
@@ -240,10 +297,18 @@ class ChartService:
                             'hovertemplate': '%{x}: %{y:.2f}%<extra></extra>'
                         })
             
+            # 日付を時系列順にソート
+            all_display_dates_sorted = sorted(all_display_dates, key=lambda x: original_dates[x])
+            
             # レイアウト設定
             layout = {
                 'title': f'{chart_title}と{chart_title}成長率',
-                'xaxis': {'title': {'text': '年月'}},
+                'xaxis': {
+                    'title': {'text': '年月日'},
+                    'type': 'category',
+                    'categoryorder': 'array',
+                    'categoryarray': all_display_dates_sorted
+                },
                 'yaxis': {
                     'title': {'text': f'{chart_title}（{unit_text}）'},
                     'side': 'left'
@@ -287,18 +352,27 @@ class ChartService:
             if not metric_data:
                 return None
             
+            logger.info(f"チャート生成: {metric_name}")
+            
             # 日付でソート
             dates = sorted(metric_data.keys())
             values = [metric_data[date] for date in dates]
             
-            # 日付を年月表示に変換
+            logger.info(f"メイン企業の日付: {dates}")
+            logger.info(f"メイン企業の値: {values}")
+            
+            # 日付を年月日表示に変換
             display_dates = []
+            original_dates = {}  # 表示用日付から元の日付へのマッピング
             for date in dates:
                 try:
                     dt = datetime.strptime(date, '%Y-%m-%d')
-                    display_dates.append(dt.strftime('%Y/%m'))
+                    display_date = dt.strftime('%Y/%m/%d')
+                    display_dates.append(display_date)
+                    original_dates[display_date] = date
                 except ValueError:
                     display_dates.append(date)
+                    original_dates[date] = date
             
             # 単位を決定
             max_value = max(values) if values else 0
@@ -320,41 +394,92 @@ class ChartService:
                 'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
             })
             
+            # すべての日付を収集（メイン企業と競合企業の両方）
+            all_display_dates = display_dates.copy()
+            
             # 競合企業のバーチャート
             for i, competitor in enumerate(competitors):
                 comp_code = competitor['code']
+                comp_name = competitor['name']
+                logger.info(f"競合企業 {comp_code} ({comp_name}) のチャートデータ処理中...")
+                
                 if comp_code in competitors_data and metric_name in competitors_data[comp_code]:
                     comp_data = competitors_data[comp_code][metric_name]
+                    logger.info(f"競合企業 {comp_code} の {metric_name} データ: {comp_data}")
+                    
+                    if not comp_data:
+                        logger.warning(f"競合企業 {comp_code} の {metric_name} データが空です")
+                        continue
                     
                     # 競合企業のデータを日付でソート
                     comp_dates = sorted(comp_data.keys())
-                    comp_values = [comp_data[date] if date in comp_data else None for date in dates]
+                    logger.info(f"競合企業 {comp_code} の日付: {comp_dates}")
+                    
+                    # 競合企業の値を取得
+                    comp_values = [comp_data[date] for date in comp_dates]
+                    logger.info(f"競合企業 {comp_code} の値: {comp_values}")
+                    
+                    # 日付を年月日表示に変換
+                    comp_display_dates = []
+                    for date in comp_dates:
+                        try:
+                            dt = datetime.strptime(date, '%Y-%m-%d')
+                            display_date = dt.strftime('%Y/%m/%d')
+                            comp_display_dates.append(display_date)
+                            original_dates[display_date] = date
+                            if display_date not in all_display_dates:
+                                all_display_dates.append(display_date)
+                        except ValueError:
+                            comp_display_dates.append(date)
+                            original_dates[date] = date
+                            if date not in all_display_dates:
+                                all_display_dates.append(date)
                     
                     # 単位で割った値
-                    scaled_comp_values = [value / divisor if value is not None else None for value in comp_values]
+                    scaled_comp_values = [value / divisor for value in comp_values]
+                    logger.info(f"競合企業 {comp_code} のスケーリング後の値: {scaled_comp_values}")
                     
                     # 競合企業のバーチャートを追加
                     data.append({
                         'type': 'bar',
-                        'x': display_dates,
+                        'x': comp_display_dates,
                         'y': scaled_comp_values,
                         'name': competitor['name'],
                         'marker': {'color': self.competitor_bar_colors[i % len(self.competitor_bar_colors)]},
                         'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
                     })
+                else:
+                    if comp_code not in competitors_data:
+                        logger.warning(f"競合企業 {comp_code} のデータがcompetitors_dataに存在しません")
+                    elif metric_name not in competitors_data[comp_code]:
+                        logger.warning(f"競合企業 {comp_code} の {metric_name} データが存在しません")
             
             # 特殊な単位表示の処理
             unit_display = unit_text
             if metric_name == '営業利益率' or metric_name == 'ROE（自己資本利益率）':
                 # パーセント表示の場合は値を100倍
                 for trace in data:
-                    trace['y'] = [value * 100 if value is not None else None for value in trace['y']]
+                    new_y = []
+                    for value in trace['y']:
+                        if value == "null":
+                            new_y.append("null")
+                        else:
+                            new_y.append(value * 100)
+                    trace['y'] = new_y
                 unit_display = '%'
+            
+            # 日付を時系列順にソート
+            all_display_dates_sorted = sorted(all_display_dates, key=lambda x: original_dates[x])
             
             # レイアウト設定
             layout = {
                 'title': metric_name,
-                'xaxis': {'title': {'text': '年月'}},
+                'xaxis': {
+                    'title': {'text': '年月日'},
+                    'type': 'category',
+                    'categoryorder': 'array',
+                    'categoryarray': all_display_dates_sorted
+                },
                 'yaxis': {'title': {'text': f'{metric_name}（{unit_display}）'}},
                 'barmode': 'group',
                 'legend': {
