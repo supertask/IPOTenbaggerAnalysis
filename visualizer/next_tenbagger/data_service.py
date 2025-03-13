@@ -386,6 +386,9 @@ class DataService:
     @staticmethod
     def _extract_single_metric(data: pd.DataFrame, metric_ids: List[str]) -> Dict[str, float]:
         """単一の指標を抽出"""
+        import re  # reモジュールを明示的にインポート
+        from datetime import datetime, timedelta
+        
         metric_data = {}
         
         try:
@@ -426,7 +429,6 @@ class DataService:
                         
                         # 有価証券届出書の特殊パターンを確認
                         if context_ref and securities_registration_date:
-                            import re
                             # Prior[1-5]Year(Instant|Duration)_NonConsolidatedMemberパターンを確認
                             prior_year_match = re.search(r'Prior([1-5])Year(Instant|Duration)_NonConsolidatedMember', context_ref)
                             
@@ -458,12 +460,17 @@ class DataService:
                                 prior_year_match = re.search(r'Prior([1-5])Year(Instant|Duration)_NonConsolidatedMember', context_ref)
                                 
                                 if prior_year_match:
-                                    # 何年前かを取得
-                                    years_ago = int(prior_year_match.group(1))
-                                    # この行の有価証券報告書の日付から何年前かを計算
-                                    ar_date = datetime.strptime(row_annual_report_date, '%Y-%m-%d')
-                                    date = ar_date - timedelta(days=365 * years_ago)
-                                    date_str = date.strftime('%Y-%m-%d')
+                                    # 有価証券届出書がなく、かつこの行が最も古い有価証券報告書の場合のみ処理
+                                    if not securities_registration_date and row_annual_report_date == oldest_annual_report_date:
+                                        # 何年前かを取得
+                                        years_ago = int(prior_year_match.group(1))
+                                        # この行の有価証券報告書の日付から何年前かを計算
+                                        ar_date = datetime.strptime(row_annual_report_date, '%Y-%m-%d')
+                                        date = ar_date - timedelta(days=365 * years_ago)
+                                        date_str = date.strftime('%Y-%m-%d')
+                                    else:
+                                        # 有価証券届出書がある場合、または最も古い有価証券報告書でない場合は処理しない
+                                        continue
                         
                         # 通常の日付パターンを確認（上記の特殊パターンに一致しない場合）
                         if not date_str and context_ref:
