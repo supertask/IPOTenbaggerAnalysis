@@ -65,6 +65,20 @@ class DataService:
                             company_map[code] = name
             else:
                 logger.warning(f"ディレクトリが存在しません: {IPO_REPORTS_NEW_DIR}")
+            
+            # IPO_REPORTS_DIRからもディレクトリ名を取得（既存のマップに追加）
+            if os.path.exists(IPO_REPORTS_DIR):
+                for company_dir in os.listdir(IPO_REPORTS_DIR):
+                    if os.path.isdir(os.path.join(IPO_REPORTS_DIR, company_dir)):
+                        # ディレクトリ名から企業コードと名前を抽出（例: 1234_企業名）
+                        parts = company_dir.split('_', 1)
+                        if len(parts) == 2:
+                            code, name = parts
+                            # 既存のマップに存在しない場合のみ追加
+                            if code not in company_map:
+                                company_map[code] = name
+            else:
+                logger.warning(f"ディレクトリが存在しません: {IPO_REPORTS_DIR}")
         except Exception as e:
             logger.error(f"企業コードと名前のマッピング取得中にエラー: {e}", exc_info=True)
         
@@ -618,14 +632,14 @@ class DataService:
             if os.path.exists(annual_reports_dir):
                 report_files = sorted(glob.glob(f"{annual_reports_dir}/*.tsv"))
                 if report_files:
-                    report_file = report_files[0]  # 最も古い有価証券報告書を使用
+                    report_file = report_files[-1]  # 最新の有価証券報告書を使用
                     logger.info(f"有価証券報告書から役員情報を取得: {report_file}")
                     return DataService._extract_officers_info(report_file)
             
             if os.path.exists(securities_registration_dir):
                 report_files = sorted(glob.glob(f"{securities_registration_dir}/*.tsv"))
                 if report_files:
-                    report_file = report_files[0]  # 最も古い有価証券届出書を使用
+                    report_file = report_files[-1]  # 最新の有価証券届出書を使用
                     logger.info(f"有価証券届出書から役員情報を取得: {report_file}")
                     return DataService._extract_officers_info(report_file)
             
@@ -690,14 +704,14 @@ class DataService:
             if os.path.exists(annual_reports_dir):
                 report_files = sorted(glob.glob(f"{annual_reports_dir}/*.tsv"))
                 if report_files:
-                    report_file = report_files[0]  # 最も古い有価証券報告書を使用
+                    report_file = report_files[-1]  # 最新の有価証券報告書を使用
                     logger.info(f"有価証券報告書から事業内容を取得: {report_file}")
                     return DataService._extract_business_description(report_file)
             
             if os.path.exists(securities_registration_dir):
                 report_files = sorted(glob.glob(f"{securities_registration_dir}/*.tsv"))
                 if report_files:
-                    report_file = report_files[0]  # 最も古い有価証券届出書を使用
+                    report_file = report_files[-1]  # 最新の有価証券届出書を使用
                     logger.info(f"有価証券届出書から事業内容を取得: {report_file}")
                     return DataService._extract_business_description(report_file)
             
