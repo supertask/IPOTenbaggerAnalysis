@@ -384,20 +384,34 @@ class ChartService:
             # プロットデータを作成
             data = []
             
-            # メイン企業のバーチャート
-            data.append({
-                'type': 'bar',
-                'x': display_dates,
-                'y': scaled_values,
-                'name': self.company_name,
-                'marker': {'color': CHART_COLORS['main']['bar']},
-                'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
-            })
+            # 売上高、営業利益、EPSの場合は棒グラフ、それ以外は折れ線グラフ
+            if metric_name in ['売上高', '営業利益', '１株当たり当期純利益（EPS）', '１株当たり四半期純利益（EPS）']:
+                # メイン企業のバーチャート
+                data.append({
+                    'type': 'bar',
+                    'x': display_dates,
+                    'y': scaled_values,
+                    'name': self.company_name,
+                    'marker': {'color': CHART_COLORS['main']['bar']},
+                    'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
+                })
+            else:
+                # メイン企業の折れ線グラフ
+                data.append({
+                    'type': 'scatter',
+                    'mode': 'lines+markers',
+                    'x': display_dates,
+                    'y': scaled_values,
+                    'name': self.company_name,
+                    'line': {'color': CHART_COLORS['main']['line'], 'width': 3},
+                    'marker': {'size': 8, 'color': CHART_COLORS['main']['line']},
+                    'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
+                })
             
             # すべての日付を収集（メイン企業と競合企業の両方）
             all_display_dates = display_dates.copy()
             
-            # 競合企業のバーチャート
+            # 競合企業のチャート
             for i, competitor in enumerate(competitors):
                 comp_code = competitor['code']
                 comp_name = competitor['name']
@@ -439,15 +453,29 @@ class ChartService:
                     scaled_comp_values = [value / divisor for value in comp_values]
                     logger.info(f"競合企業 {comp_code} のスケーリング後の値: {scaled_comp_values}")
                     
-                    # 競合企業のバーチャートを追加
-                    data.append({
-                        'type': 'bar',
-                        'x': comp_display_dates,
-                        'y': scaled_comp_values,
-                        'name': competitor['name'],
-                        'marker': {'color': self.competitor_bar_colors[i % len(self.competitor_bar_colors)]},
-                        'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
-                    })
+                    # 売上高、営業利益、EPSの場合は棒グラフ、それ以外は折れ線グラフ
+                    if metric_name in ['売上高', '営業利益', '１株当たり当期純利益（EPS）', '１株当たり四半期純利益（EPS）']:
+                        # 競合企業のバーチャートを追加
+                        data.append({
+                            'type': 'bar',
+                            'x': comp_display_dates,
+                            'y': scaled_comp_values,
+                            'name': competitor['name'],
+                            'marker': {'color': self.competitor_bar_colors[i % len(self.competitor_bar_colors)]},
+                            'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
+                        })
+                    else:
+                        # 競合企業の折れ線グラフを追加
+                        data.append({
+                            'type': 'scatter',
+                            'mode': 'lines+markers',
+                            'x': comp_display_dates,
+                            'y': scaled_comp_values,
+                            'name': competitor['name'],
+                            'line': {'color': self.competitor_line_colors[i % len(self.competitor_line_colors)], 'width': 2},
+                            'marker': {'size': 6, 'color': self.competitor_line_colors[i % len(self.competitor_line_colors)]},
+                            'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
+                        })
                 else:
                     if comp_code not in competitors_data:
                         logger.warning(f"競合企業 {comp_code} のデータがcompetitors_dataに存在しません")
