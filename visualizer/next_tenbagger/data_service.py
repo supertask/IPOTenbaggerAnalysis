@@ -388,6 +388,12 @@ class DataService:
                 annual_report_dates = sorted(data["annual_report_date"].dropna().unique())
                 logger.debug(f"有価証券報告書の日付: {annual_report_dates}")
             
+            # 最も古い有価証券報告書の日付を取得
+            oldest_annual_report_date = None
+            if annual_report_dates:
+                oldest_annual_report_date = annual_report_dates[0]
+                logger.debug(f"最も古い有価証券報告書の日付: {oldest_annual_report_date}")
+            
             # 指標IDに一致する行を抽出
             for metric_id in metric_ids:
                 rows = data[data["要素ID"] == metric_id]
@@ -413,10 +419,17 @@ class DataService:
                             if prior_year_match:
                                 # 何年前かを取得
                                 years_ago = int(prior_year_match.group(1))
-                                # 有価証券届出書の日付から何年前かを計算
-                                sr_date = datetime.strptime(securities_registration_date, '%Y-%m-%d')
-                                date = sr_date - timedelta(days=365 * years_ago)
-                                date_str = date.strftime('%Y-%m-%d')
+                                
+                                # 最も古い有価証券報告書の日付があれば、そこからX年前の日付を使用
+                                if oldest_annual_report_date:
+                                    ar_date = datetime.strptime(oldest_annual_report_date, '%Y-%m-%d')
+                                    date = ar_date - timedelta(days=365 * years_ago)
+                                    date_str = date.strftime('%Y-%m-%d')
+                                else:
+                                    # 最も古い有価証券報告書の日付がない場合は、有価証券届出書の日付から計算
+                                    sr_date = datetime.strptime(securities_registration_date, '%Y-%m-%d')
+                                    date = sr_date - timedelta(days=365 * years_ago)
+                                    date_str = date.strftime('%Y-%m-%d')
                         
                         # 有価証券報告書の特殊パターンを確認
                         if context_ref and row_annual_report_date and not date_str:
