@@ -352,25 +352,32 @@
                 
                 <!-- トースト通知用のコンテナ -->
                 <div class="toast-container"></div>
-                
+            </div>
+        </div>
+    </div>
+    
+    <!-- 財務指標の比較セクション（ページ幅いっぱいに表示） -->
+    <div class="container-fluid mt-5">
+        <div class="row justify-content-center">
+            <div class="col-12">
                 <!-- チャートセクション -->
                 <h2 class="mb-4">財務指標の比較</h2>
                 
                 {% if charts %}
+                    <div class="row">
                     {% for chart in charts %}
-                    <div class="row mb-4">
-                        <div class="col-12">
-                            <div class="card">
+                        <div class="col-12 col-md-6 mb-4">
+                            <div class="card h-100">
                                 <div class="card-header">
                                     <h5 class="mb-0">{{ chart.title }}</h5>
                                 </div>
-                                <div class="card-body">
-                                    <div class="chart-container" id="chart-{{ loop.index }}" data-chart="{{ loop.index }}"></div>
+                                <div class="card-body pb-5">
+                                    <div class="chart-container" id="chart-{{ loop.index }}" data-chart="{{ loop.index }}" style="min-height: 350px;"></div>
                                 </div>
                             </div>
                         </div>
-                    </div>
                     {% endfor %}
+                    </div>
                 {% else %}
                     <div class="alert alert-warning">
                         財務指標のチャートを生成できませんでした。

@@ -147,15 +147,20 @@ class ChartService:
             
             # 日付を年月日表示に変換
             display_dates = []
+            year_only_dates = []  # 年のみの表示用
             original_dates = {}  # 表示用日付から元の日付へのマッピング
             for date in dates:
                 try:
                     dt = datetime.strptime(date, '%Y-%m-%d')
                     display_date = dt.strftime('%Y/%m/%d')
+                    year_only = dt.strftime('%Y')  # 年のみの表示
                     display_dates.append(display_date)
+                    year_only_dates.append(year_only)
                     original_dates[display_date] = date
+                    original_dates[year_only] = date  # 年のみの表示用にも追加
                 except ValueError:
                     display_dates.append(date)
+                    year_only_dates.append(date)
                     original_dates[date] = date
             
             # 成長率を計算
@@ -165,14 +170,19 @@ class ChartService:
             
             # 成長率の日付を年月日表示に変換
             growth_display_dates = []
+            growth_year_only_dates = []  # 年のみの表示用
             for date in growth_dates:
                 try:
                     dt = datetime.strptime(date, '%Y-%m-%d')
                     display_date = dt.strftime('%Y/%m/%d')
+                    year_only = dt.strftime('%Y')  # 年のみの表示
                     growth_display_dates.append(display_date)
+                    growth_year_only_dates.append(year_only)
                     original_dates[display_date] = date
+                    original_dates[year_only] = date  # 年のみの表示用にも追加
                 except ValueError:
                     growth_display_dates.append(date)
+                    growth_year_only_dates.append(date)
                     original_dates[date] = date
             
             # 単位を決定
@@ -185,10 +195,10 @@ class ChartService:
             # プロットデータを作成
             data = []
             
-            # メイン企業のバーチャート
+            # メイン企業のバーチャート（年のみの表示）
             data.append({
                 'type': 'bar',
-                'x': display_dates,
+                'x': year_only_dates,
                 'y': scaled_values,
                 'name': self.company_name,
                 'marker': {'color': CHART_COLORS['main']['bar']},
@@ -197,6 +207,7 @@ class ChartService:
             
             # すべての日付を収集（メイン企業と競合企業の両方）
             all_display_dates = display_dates.copy()
+            all_year_only_dates = year_only_dates.copy()
             
             # 競合企業のバーチャート
             for i, competitor in enumerate(competitors):
@@ -214,27 +225,36 @@ class ChartService:
                     
                     # 競合企業の日付を年月日表示に変換
                     comp_display_dates = []
+                    comp_year_only_dates = []  # 年のみの表示用
                     for date in comp_dates:
                         try:
                             dt = datetime.strptime(date, '%Y-%m-%d')
                             display_date = dt.strftime('%Y/%m/%d')
+                            year_only = dt.strftime('%Y')  # 年のみの表示
                             comp_display_dates.append(display_date)
+                            comp_year_only_dates.append(year_only)
                             original_dates[display_date] = date
+                            original_dates[year_only] = date  # 年のみの表示用にも追加
                             if display_date not in all_display_dates:
                                 all_display_dates.append(display_date)
+                            if year_only not in all_year_only_dates:
+                                all_year_only_dates.append(year_only)
                         except ValueError:
                             comp_display_dates.append(date)
+                            comp_year_only_dates.append(date)
                             original_dates[date] = date
                             if date not in all_display_dates:
                                 all_display_dates.append(date)
+                            if date not in all_year_only_dates:
+                                all_year_only_dates.append(date)
                     
                     # 単位で割った値
                     scaled_comp_values = [value / divisor for value in comp_values]
                     
-                    # 競合企業のバーチャートを追加
+                    # 競合企業のバーチャートを追加（年のみの表示）
                     data.append({
                         'type': 'bar',
-                        'x': comp_display_dates,
+                        'x': comp_year_only_dates,
                         'y': scaled_comp_values,
                         'name': competitor['name'],
                         'marker': {'color': self.competitor_bar_colors[i % len(self.competitor_bar_colors)]},
@@ -245,7 +265,7 @@ class ChartService:
             if growth_values:
                 data.append({
                     'type': 'scatter',
-                    'x': growth_display_dates,
+                    'x': growth_year_only_dates,  # 年のみの表示
                     'y': [rate * 100 for rate in growth_values],  # パーセント表示
                     'name': f'{self.company_name} 成長率',
                     'yaxis': 'y2',
@@ -272,24 +292,33 @@ class ChartService:
                         
                         # 成長率の日付を年月日表示に変換
                         comp_growth_display_dates = []
+                        comp_growth_year_only_dates = []  # 年のみの表示用
                         for date in comp_growth_dates:
                             try:
                                 dt = datetime.strptime(date, '%Y-%m-%d')
                                 display_date = dt.strftime('%Y/%m/%d')
+                                year_only = dt.strftime('%Y')  # 年のみの表示
                                 comp_growth_display_dates.append(display_date)
+                                comp_growth_year_only_dates.append(year_only)
                                 original_dates[display_date] = date
+                                original_dates[year_only] = date  # 年のみの表示用にも追加
                                 if display_date not in all_display_dates:
                                     all_display_dates.append(display_date)
+                                if year_only not in all_year_only_dates:
+                                    all_year_only_dates.append(year_only)
                             except ValueError:
                                 comp_growth_display_dates.append(date)
+                                comp_growth_year_only_dates.append(date)
                                 original_dates[date] = date
                                 if date not in all_display_dates:
                                     all_display_dates.append(date)
+                                if date not in all_year_only_dates:
+                                    all_year_only_dates.append(date)
                         
                         # 競合企業の成長率ラインチャートを追加
                         data.append({
                             'type': 'scatter',
-                            'x': comp_growth_display_dates,
+                            'x': comp_growth_year_only_dates,  # 年のみの表示
                             'y': [rate * 100 for rate in comp_growth_values],  # パーセント表示
                             'name': f'{competitor["name"]} 成長率',
                             'yaxis': 'y2',
@@ -298,37 +327,49 @@ class ChartService:
                         })
             
             # 日付を時系列順にソート
-            all_display_dates_sorted = sorted(all_display_dates, key=lambda x: original_dates[x])
+            all_year_only_dates_sorted = sorted(all_year_only_dates)
             
             # レイアウト設定
             layout = {
-                'title': f'{chart_title}と{chart_title}成長率',
+                'title': {
+                    'text': f'{chart_title}と{chart_title}成長率',
+                    'font': {'size': 14}
+                },
                 'xaxis': {
-                    'title': {'text': '年月日'},
+                    'title': {'text': '年'},
                     'type': 'category',
                     'categoryorder': 'array',
-                    'categoryarray': all_display_dates_sorted
+                    'categoryarray': all_year_only_dates_sorted,
+                    'tickangle': -45,  # X軸のラベルを45度傾ける
+                    'automargin': True  # 自動的にマージンを調整
                 },
                 'yaxis': {
                     'title': {'text': f'{chart_title}（{unit_text}）'},
-                    'side': 'left'
+                    'side': 'left',
+                    'automargin': True  # 自動的にマージンを調整
                 },
                 'yaxis2': {
                     'title': {'text': '成長率（%）'},
                     'side': 'right',
                     'overlaying': 'y',
-                    'showgrid': 'false'
+                    'showgrid': 'false',
+                    'automargin': True  # 自動的にマージンを調整
                 },
                 'barmode': 'group',
+                'bargap': 0.3,  # 棒グラフ間の間隔（グループ間）
+                'bargroupgap': 0.0,  # 棒グラフ間の間隔（グループ内）
                 'legend': {
                     'orientation': 'h',
-                    'yanchor': 'bottom',
-                    'y': 1.02,
-                    'xanchor': 'right',
-                    'x': 1
+                    'yanchor': 'top',
+                    'y': 1.0,
+                    'xanchor': 'left',
+                    'x': 0,
+                    'font': {'size': 10},
+                    'traceorder': 'normal'
                 },
-                'margin': {'l': 50, 'r': 50, 't': 80, 'b': 50},
-                'height': 500
+                'margin': {'l': 40, 'r': 40, 't': 40, 'b': 70},  # 下部のマージンをさらに増やす
+                'height': 400,
+                'autosize': True  # グラフのサイズを自動調整
             }
             
             return {
@@ -364,14 +405,20 @@ class ChartService:
             # 日付を年月日表示に変換
             display_dates = []
             original_dates = {}  # 表示用日付から元の日付へのマッピング
+            year_only_dates = []  # 年のみの表示用
+            
             for date in dates:
                 try:
                     dt = datetime.strptime(date, '%Y-%m-%d')
                     display_date = dt.strftime('%Y/%m/%d')
+                    year_only = dt.strftime('%Y')  # 年のみの表示
                     display_dates.append(display_date)
+                    year_only_dates.append(year_only)
                     original_dates[display_date] = date
+                    original_dates[year_only] = date  # 年のみの表示用にも追加
                 except ValueError:
                     display_dates.append(date)
+                    year_only_dates.append(date)
                     original_dates[date] = date
             
             # 単位を決定
@@ -385,11 +432,13 @@ class ChartService:
             data = []
             
             # 売上高、営業利益、EPSの場合は棒グラフ、それ以外は折れ線グラフ
-            if metric_name in ['売上高', '営業利益', '１株当たり当期純利益（EPS）', '１株当たり四半期純利益（EPS）']:
-                # メイン企業のバーチャート
+            is_bar_chart = metric_name in ['売上高', '営業利益', '１株当たり当期純利益（EPS）', '１株当たり四半期純利益（EPS）']
+            
+            if is_bar_chart:
+                # メイン企業のバーチャート（年のみの表示）
                 data.append({
                     'type': 'bar',
-                    'x': display_dates,
+                    'x': year_only_dates,
                     'y': scaled_values,
                     'name': self.company_name,
                     'marker': {'color': CHART_COLORS['main']['bar']},
@@ -410,6 +459,7 @@ class ChartService:
             
             # すべての日付を収集（メイン企業と競合企業の両方）
             all_display_dates = display_dates.copy()
+            all_year_only_dates = year_only_dates.copy()
             
             # 競合企業のチャート
             for i, competitor in enumerate(competitors):
@@ -435,30 +485,40 @@ class ChartService:
                     
                     # 日付を年月日表示に変換
                     comp_display_dates = []
+                    comp_year_only_dates = []  # 年のみの表示用
+                    
                     for date in comp_dates:
                         try:
                             dt = datetime.strptime(date, '%Y-%m-%d')
                             display_date = dt.strftime('%Y/%m/%d')
+                            year_only = dt.strftime('%Y')  # 年のみの表示
                             comp_display_dates.append(display_date)
+                            comp_year_only_dates.append(year_only)
                             original_dates[display_date] = date
+                            original_dates[year_only] = date  # 年のみの表示用にも追加
                             if display_date not in all_display_dates:
                                 all_display_dates.append(display_date)
+                            if year_only not in all_year_only_dates:
+                                all_year_only_dates.append(year_only)
                         except ValueError:
                             comp_display_dates.append(date)
+                            comp_year_only_dates.append(date)
                             original_dates[date] = date
                             if date not in all_display_dates:
                                 all_display_dates.append(date)
+                            if date not in all_year_only_dates:
+                                all_year_only_dates.append(date)
                     
                     # 単位で割った値
                     scaled_comp_values = [value / divisor for value in comp_values]
                     logger.info(f"競合企業 {comp_code} のスケーリング後の値: {scaled_comp_values}")
                     
                     # 売上高、営業利益、EPSの場合は棒グラフ、それ以外は折れ線グラフ
-                    if metric_name in ['売上高', '営業利益', '１株当たり当期純利益（EPS）', '１株当たり四半期純利益（EPS）']:
-                        # 競合企業のバーチャートを追加
+                    if is_bar_chart:
+                        # 競合企業のバーチャートを追加（年のみの表示）
                         data.append({
                             'type': 'bar',
-                            'x': comp_display_dates,
+                            'x': comp_year_only_dates,
                             'y': scaled_comp_values,
                             'name': competitor['name'],
                             'marker': {'color': self.competitor_bar_colors[i % len(self.competitor_bar_colors)]},
@@ -497,28 +557,50 @@ class ChartService:
                 unit_display = '%'
             
             # 日付を時系列順にソート
-            all_display_dates_sorted = sorted(all_display_dates, key=lambda x: original_dates[x])
+            if is_bar_chart:
+                # 年のみの表示の場合
+                all_year_only_dates_sorted = sorted(all_year_only_dates)
+                x_axis_data = all_year_only_dates_sorted
+                x_axis_title = '年'
+            else:
+                # 通常の日付表示の場合
+                all_display_dates_sorted = sorted(all_display_dates, key=lambda x: original_dates[x])
+                x_axis_data = all_display_dates_sorted
+                x_axis_title = '年月日'
             
             # レイアウト設定
             layout = {
-                'title': metric_name,
+                'title': {
+                    'text': metric_name,
+                    'font': {'size': 14}
+                },
                 'xaxis': {
-                    'title': {'text': '年月日'},
+                    'title': {'text': x_axis_title},
                     'type': 'category',
                     'categoryorder': 'array',
-                    'categoryarray': all_display_dates_sorted
+                    'categoryarray': x_axis_data,
+                    'tickangle': -45,  # X軸のラベルを45度傾ける
+                    'automargin': True  # 自動的にマージンを調整
                 },
-                'yaxis': {'title': {'text': f'{metric_name}（{unit_display}）'}},
+                'yaxis': {
+                    'title': {'text': f'{metric_name}（{unit_display}）'},
+                    'automargin': True  # 自動的にマージンを調整
+                },
                 'barmode': 'group',
+                'bargap': 0.3,  # 棒グラフ間の間隔（グループ間）
+                'bargroupgap': 0.1,  # 棒グラフ間の間隔（グループ内）
                 'legend': {
                     'orientation': 'h',
-                    'yanchor': 'bottom',
-                    'y': 1.02,
-                    'xanchor': 'right',
-                    'x': 1
+                    'yanchor': 'top',
+                    'y': 1.0,
+                    'xanchor': 'left',
+                    'x': 0,
+                    'font': {'size': 10},
+                    'traceorder': 'normal'
                 },
-                'margin': {'l': 50, 'r': 50, 't': 80, 'b': 50},
-                'height': 500
+                'margin': {'l': 40, 'r': 40, 't': 40, 'b': 70},  # 下部のマージンをさらに増やす
+                'height': 400,
+                'autosize': True  # グラフのサイズを自動調整
             }
             
             return {
