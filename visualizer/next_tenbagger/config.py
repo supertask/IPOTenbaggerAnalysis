@@ -39,6 +39,9 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
     ('従業員数', ['jpcrp_cor:NumberOfEmployees', 'jpcrp_qcor:NumberOfEmployeesQuarterly']),
     ('平均臨時雇用人員', ['jpcrp_cor:AverageNumberOfTemporaryWorkers']),
     ('１株当たり当期純利益（EPS）', ['jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults']),
+    ('平均年齢', ['jpcrp_cor:AverageAgeYearsInformationAboutReportingCompanyInformationAboutEmployees']),
+    ('平均勤続年数', ['jpcrp_cor:AverageLengthOfServiceYearsInformationAboutReportingCompanyInformationAboutEmployees']),
+    ('平均年間給与', ['jpcrp_cor:AverageAnnualSalaryInformationAboutReportingCompanyInformationAboutEmployees']),
 ])
 
 # グラフの表示順序設定
@@ -61,6 +64,9 @@ CHART_DISPLAY_ORDER = [
     '売上高',
     '純資産',
     '総資産',
+    '平均年齢',
+    '平均勤続年数',
+    '平均年間給与',
 ]
 
 # チャートの色設定
