@@ -201,7 +201,7 @@ class ChartService:
                 'x': year_only_dates,
                 'y': scaled_values,
                 'name': self.company_name,
-                'marker': {'color': CHART_COLORS['main']['bar']},
+                'marker': {'color': CHART_COLORS['main']['line']},
                 'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
             })
             
@@ -257,7 +257,7 @@ class ChartService:
                         'x': comp_year_only_dates,
                         'y': scaled_comp_values,
                         'name': competitor['name'],
-                        'marker': {'color': self.competitor_bar_colors[i % len(self.competitor_bar_colors)]},
+                        'marker': {'color': self.competitor_line_colors[i % len(self.competitor_line_colors)]},
                         'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
                     })
             
@@ -441,7 +441,7 @@ class ChartService:
                     'x': year_only_dates,
                     'y': scaled_values,
                     'name': self.company_name,
-                    'marker': {'color': CHART_COLORS['main']['bar']},
+                    'marker': {'color': CHART_COLORS['main']['line']},
                     'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
                 })
             else:
@@ -521,7 +521,7 @@ class ChartService:
                             'x': comp_year_only_dates,
                             'y': scaled_comp_values,
                             'name': competitor['name'],
-                            'marker': {'color': self.competitor_bar_colors[i % len(self.competitor_bar_colors)]},
+                            'marker': {'color': self.competitor_line_colors[i % len(self.competitor_line_colors)]},
                             'hovertemplate': '%{x}: %{y:.2f}<extra></extra>'
                         })
                     else:
