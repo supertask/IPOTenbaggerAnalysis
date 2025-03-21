@@ -265,6 +265,11 @@ class DataService:
                 if has_five_years_data:
                     use_securities_registration_data = True
                     logger.info("有価証券届出書に5年分のデータが存在します。有価証券届出書を使用します。")
+                else:
+                    # 5年分のデータがなくても、annual_report_dataがない場合は有価証券届出書を使用
+                    if annual_report_data is None:
+                        use_securities_registration_data = True
+                        logger.info("有価証券報告書が存在しないため、有価証券届出書を使用します。")
             
             # 両方のデータが存在する場合、条件に応じてマージ
             if securities_registration_data is not None and annual_report_data is not None and use_securities_registration_data:
@@ -284,6 +289,17 @@ class DataService:
                 
                 return combined_data, None
             elif securities_registration_data is not None:
+                # 有価証券届出書のファイル名から日付を抽出
+                securities_registration_date = None
+                if securities_registration_file_path:
+                    file_name = os.path.basename(securities_registration_file_path)
+                    date_match = re.search(r'(\d{4}-\d{2}-\d{2})', file_name)
+                    if date_match:
+                        securities_registration_date = date_match.group(1)
+                
+                # 有価証券届出書に日付情報を追加
+                securities_registration_data["securities_registration_date"] = securities_registration_date
+                
                 return securities_registration_data, None
             elif annual_report_data is not None:
                 return annual_report_data, None
