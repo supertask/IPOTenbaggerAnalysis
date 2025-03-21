@@ -30,34 +30,33 @@ def main():
     elif collector_name == "edinet":
         downloader = EdinetReportDownloader()
         downloader.run()
-    #elif collector_name == "edinet":
-    #    collector = IPOEdinetCollector()
-    #    collector.run()
     elif collector_name == "combiner":
         collector = IPOCombiner()
+        collector.run()
+    elif collector_name == "comparison":
+        collector = ComparisonCollector()
         collector.run()
     elif collector_name == "ai":
         num = int(sys.argv[2]) if len(sys.argv) == 3 else None
         collector = AISummaryGenerator(num)
-        collector.run()
-    elif collector_name == "comparison":
-        collector = ComparisonCollector()
         collector.run()
     elif collector_name == "all":
         list_collector = IPOKisoListCollector()
         details_collector = IPOKisoDetailsCollector()
         traders_collector = IPOTradersAnalyzer()
         yfinance_collector = IPOYFinanceAnalyzer()
-        edinet_collector = IPOEdinetCollector()
+        edinet_downloader = EdinetReportDownloader()
+        comparison_collector = ComparisonCollector()
         combiner_collector = IPOCombiner()
-        ai_summary_collector = AISummaryGenerator()
         list_collector.run()
         details_collector.run()
         traders_collector.run()
         yfinance_collector.run()
-        edinet_collector.run()
+        edinet_downloader.run()
+        comparison_collector.run()
         combiner_collector.run()
-        ai_summary_collector.generate_summary()
+        #ai_summary_collector = AISummaryGenerator()
+        #ai_summary_collector.generate_summary()
         return
     else:
         print(f"Unknown collector: {collector_name}")

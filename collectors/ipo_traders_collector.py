@@ -7,6 +7,7 @@ import pandas as pd
 from collectors.settings import GeneralSettings, TradersScraperSettings
 from collectors.ipo_analyzer_core import IPOAnalyzerCore
 import traceback
+from tqdm import tqdm
 
 class IPOTradersAnalyzer(IPOAnalyzerCore):
     def __init__(self):
@@ -341,7 +342,7 @@ class IPOTradersAnalyzer(IPOAnalyzerCore):
         for year in self.traders_scraper_settings.years:
             # DEBUG: 特定の年をデバッグする用
             #if not year in [2011]: continue
-            print("year:", year)
+            #print("year:", year)
     
             input_file = os.path.join(self.traders_scraper_settings.input_dir, f'companies_{year}.tsv')
             output_file = os.path.join(self.traders_scraper_settings.output_dir, f'companies_{year}.tsv')
@@ -352,7 +353,8 @@ class IPOTradersAnalyzer(IPOAnalyzerCore):
     
             with open(input_file, 'r', encoding='utf-8') as file:
                 reader = csv.DictReader(file, delimiter='\t')
-                for row in reader:
+                rows = list(reader)  # tqdmで進捗表示するためにリストに変換
+                for row in tqdm(rows, desc=f"Processing(year: {year})..."):
                     company_name = row['企業名']
                     company_code = row['コード']
 
@@ -373,7 +375,7 @@ class IPOTradersAnalyzer(IPOAnalyzerCore):
                         if html:
                             try:
                                 traders_web_info = self.parse_traders_web(html, company_code, company_name, year)
-                                print(f"{traders_web_info['コード']}: {traders_web_info['企業名']}")
+                                #print(f"{traders_web_info['コード']}: {traders_web_info['企業名']}")
 
                                 if error_count >= 1:
                                     print(f"Successed to get one-time errored company ({company_code}, {company_name})")

@@ -4,6 +4,7 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
 import pickle
+from tqdm import tqdm
 
 from collectors.settings import GeneralSettings, YFinanceScraperSettings
 from collectors.ipo_analyzer_core import IPOAnalyzerCore
@@ -177,7 +178,6 @@ class IPOYFinanceAnalyzer(IPOAnalyzerCore):
         for year in self.yfinance_settings.years:
             # DEBUG: 特定の年をデバッグする用
             #if not year in [2011]: continue
-            print("year:", year)
 
             input_file = os.path.join(self.yfinance_settings.input_dir, f'companies_{year}.tsv')
             output_file = os.path.join(self.yfinance_settings.output_dir, f'companies_{year}.tsv')
@@ -188,7 +188,10 @@ class IPOYFinanceAnalyzer(IPOAnalyzerCore):
             company_data_list = []  # 年ごとのすべての会社データを保持するリスト
             with open(input_file, 'r', encoding='utf-8') as file:
                 reader = csv.DictReader(file, delimiter='\t')
-                for row in reader:
+                rows = list(reader)
+                
+                # tqdmで進捗バーを表示
+                for row in tqdm(rows, desc=f"Processing companies for {year}..", unit="company"):
                     company_code = row['コード']
                     company_name = row['企業名']
 
