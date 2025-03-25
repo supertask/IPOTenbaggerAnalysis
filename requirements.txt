@@ -1,6 +1,5 @@
 requests
 langchain
-pypdf
 langchain-community
 langchain_groq
 playwright_stealth
