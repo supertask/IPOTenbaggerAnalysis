@@ -6,3 +6,4 @@ playwright_stealth
 flask
 pandas
 matplotlib
+plotly
