@@ -44,7 +44,7 @@ class ComparisonCollector(IPOAnalyzerCore):
             json.dump(self.comparison_cache, f, ensure_ascii=False, indent=4)
 
     def playwright_comparisons(self, company_code):
-        if company_code in self.comparison_cache:
+        if company_code in self.comparison_cache and self.comparison_cache[company_code]:
             if self.is_debug:
                 print(f"✅ キャッシュヒット: {company_code}")
             return self.comparison_cache[company_code]
@@ -89,8 +89,11 @@ class ComparisonCollector(IPOAnalyzerCore):
             
             browser.close()
 
-        self.comparison_cache[company_code] = comparison_companies
-        self.save_cache()
+        # 空のリストの場合はキャッシュに保存しない
+        if comparison_companies:
+            self.comparison_cache[company_code] = comparison_companies
+            self.save_cache()
+
         time.sleep(random.uniform(3, 15))
 
         return comparison_companies
