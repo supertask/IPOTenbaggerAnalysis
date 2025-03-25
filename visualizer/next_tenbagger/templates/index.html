@@ -38,6 +38,12 @@
             font-size: 0.85rem;
             color: #6c757d;
             margin-bottom: 0.5rem;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .info-item {
+            width: 50%;
+            margin-bottom: 0.5rem;
         }
         .info-label {
             font-weight: 600;
@@ -72,23 +78,23 @@
                         
                         <div class="company-info">
                             {% if company.ipo_year is defined and company.ipo_year is not none %}
-                            <div><span class="info-label">上場年:</span> <span class="info-value ipo-date">{{ company.ipo_year }}年</span></div>
+                            <div class="info-item"><span class="info-label">上場年:</span> <span class="info-value ipo-date">{{ company.ipo_year }}年</span></div>
                             {% endif %}
                             
                             {% if company.current_multiple is defined and company.current_multiple is not none %}
-                            <div><span class="info-label">現在何倍株:</span> <span class="info-value">{{ company.current_multiple }}倍</span></div>
+                            <div class="info-item"><span class="info-label">現在何倍株:</span> <span class="info-value">{{ company.current_multiple }}倍</span></div>
                             {% endif %}
                             
                             {% if company.max_multiple is defined and company.max_multiple is not none %}
-                            <div><span class="info-label">最大何倍株:</span> <span class="info-value">{{ company.max_multiple }}倍</span></div>
+                            <div class="info-item"><span class="info-label">最大何倍株:</span> <span class="info-value">{{ company.max_multiple }}倍</span></div>
                             {% endif %}
                             
                             {% if company.president_share is defined and company.president_share is not none %}
-                            <div><span class="info-label">社長株式保有率:</span> <span class="info-value">{{ company.president_share }}%</span></div>
+                            <div class="info-item"><span class="info-label">社長_株:</span> <span class="info-value">{{ company.president_share }}%</span></div>
                             {% endif %}
                             
                             {% if company.market_cap is defined and company.market_cap is not none %}
-                            <div><span class="info-label">想定時価総額:</span> <span class="info-value">
+                            <div class="info-item"><span class="info-label">時価総額:</span> <span class="info-value">
                                 {% if company.market_cap >= 10000000000000 %}
                                     {{ "{:,.0f}".format(company.market_cap / 1000000000000) }}兆円
                                 {% else %}
@@ -96,13 +102,21 @@
                                 {% endif %}
                             </span></div>
                             {% endif %}
+
+                            {% if company.attention_rate is defined and company.attention_rate is not none %}
+                            <div class="info-item"><span class="info-label">注目度:</span> <span class="info-value">{{ company.attention_rate }}</span></div>
+                            {% endif %}
+                            
+                            {% if company.years_since_ipo is defined and company.years_since_ipo is not none %}
+                            <div class="info-item"><span class="info-label">上場までの年数:</span> <span class="info-value">{{ company.years_since_ipo }}年</span></div>
+                            {% endif %}
                             
                             {% if company.industry is defined and company.industry is not none %}
-                            <div><span class="info-label">業種:</span> <span class="info-value">{{ company.industry }}</span></div>
+                            <div class="info-item"><span class="info-label">業種:</span> <span class="info-value">{{ company.industry }}</span></div>
                             {% endif %}
                             
                             {% if company.market is defined and company.market is not none %}
-                            <div><span class="info-label">市場:</span> <span class="info-value">{{ company.market }}</span></div>
+                            <div class="info-item"><span class="info-label">市場:</span> <span class="info-value">{{ company.market }}</span></div>
                             {% endif %}
                         </div>
                         

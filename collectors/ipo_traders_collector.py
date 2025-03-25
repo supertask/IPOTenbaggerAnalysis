@@ -132,10 +132,36 @@ class IPOTradersAnalyzer(IPOAnalyzerCore):
         return public_shares, sub_values['公募'], sub_values['売り出し'], sub_values['オーバーアロットメント']
     
     
+    def parse_intro_section(self, soup, code, company_name):
+        data = {}
+        # 基本情報テーブルを探す（最初のdata_tableクラスのテーブル）
+        intro_table = soup.find('table', class_='data_table')
+        if not intro_table:
+            raise ValueError(f"基本情報テーブルが見つかりません: コード={code}, 企業名={company_name}")
+        
+        try:
+            # 2行目のtdタグから市場、業種、注目度を取得
+            cells = intro_table.find_all('tr')[1].find_all('td')
+            if len(cells) >= 5:  # 少なくとも5つのセルがあることを確認
+                data['市場'] = cells[1].text.strip()
+                data['業種'] = cells[2].text.strip()
+                data['注目度'] = cells[4].text.strip()
+            else:
+                raise ValueError(f"基本情報テーブルの構造が異なります: コード={code}, 企業名={company_name}")
+        except (AttributeError, IndexError) as e:
+            print(traceback.format_exc())
+            raise ValueError(f"基本情報データが正しく取得できません: コード={code}, 企業名={company_name}, エラー={e}")
+        
+        return data
+    
     def parse_traders_web(self, html, code, company_name, listing_year):
         data = {'コード': code, '企業名': company_name}  # コードと会社名を最初に追加
         soup = BeautifulSoup(html, 'html.parser')
     
+        # 基本情報（市場、業種、注目度）のパース
+        intro_data = self.parse_intro_section(soup, code, company_name)
+        data.update(intro_data)
+
         # スケジュールセクションのパース
         schedule_data = self.parse_schedule_section(soup, code, company_name)
         data.update(schedule_data)
@@ -289,7 +315,7 @@ class IPOTradersAnalyzer(IPOAnalyzerCore):
             shareholder_name = cells[0].text.strip()
             shareholder_notes = cells[1].text.strip()
             shareholder_stocks = cells[2].text.strip().replace(',', '')
-            shareholder_ratio = float(cells[3].text.strip().replace('%', ''))
+            shareholder_ratio = round(float(cells[3].text.strip().replace('%', '')), 1)  # 少数第一桁まで丸める
     
             shareholders_data.append(f"{shareholder_name}\t{shareholder_notes}\t{shareholder_stocks}\t{shareholder_ratio}")
     
@@ -327,9 +353,10 @@ class IPOTradersAnalyzer(IPOAnalyzerCore):
     
         data['オーナー株%'] = 0
         for category, total in category_totals.items():
-            data[f"{category}_株%"] = total
+            data[f"{category}_株%"] = round(total, 1)
             if category in self.traders_scraper_settings.owners:
                 data['オーナー株%'] += total
+        data['オーナー株%'] = round(data['オーナー株%'], 1)  # オーナー株%も少数第一桁まで丸める
     
         # 「大株主」情報を結合してデータに追加
         data['大株主'] = "\n".join(shareholders_data)

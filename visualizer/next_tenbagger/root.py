@@ -78,6 +78,27 @@ def extract_diff(file_old, file_new, date_old, date_new):
         logger.error(f"差分抽出中にエラー: {e}", exc_info=True)
         return f"差分の抽出に失敗しました: {str(e)}"
 
+def create_company_dict(row, company_code, company_name, ipo_year=None):
+    """企業情報の辞書を作成する関数"""
+    return {
+        'code': company_code,
+        'name': company_name,
+        'president_share': row.get('社長_株%', '不明'),
+        'attention_rate': row.get('注目度', '不明'),
+        'market_cap': row.get('想定時価総額', '不明'),
+        'years_since_ipo': row.get('上場までの年数', '不明'),
+        'industry': row.get('業種', '不明'),
+        #'market': row.get('市場', '不明'),
+        'ipo_year': ipo_year
+    }
+
+def get_company_name(row):
+    """企業名を取得し、必要に応じて文字列に変換する関数"""
+    company_name = row['企業名']
+    if isinstance(company_name, (int, float)):
+        company_name = str(company_name)
+    return company_name
+
 def load_companies_data() -> Tuple[list, bool]:
     """企業データの読み込み"""
     try:
@@ -101,7 +122,8 @@ def load_companies_data() -> Tuple[list, bool]:
                         continue
                 
                 # ファイルを読み込む
-                df = pd.read_csv(ALL_COMPANIES_PATH, sep='\t', encoding=encoding, dtype={'コード': str, '企業名': str})
+                df = pd.read_csv(ALL_COMPANIES_PATH, sep='\t', encoding=encoding, 
+                                dtype={'コード': str, '企業名': str, '上場までの年数': 'Int64'})
                 
                 # 必須カラムの存在確認
                 required_columns = ['コード', '企業名']
@@ -130,21 +152,11 @@ def load_companies_data() -> Tuple[list, bool]:
                     logger.warning("上場年のカラムが見つかりません。すべての企業を表示します。")
                     # 上場年のカラムがない場合は、すべての企業を表示（ただし、DataServiceに存在する企業のみ）
                     for _, row in df.iterrows():
-                        # 企業名が数値の場合は文字列に変換
-                        company_name = row['企業名']
-                        if isinstance(company_name, (int, float)):
-                            company_name = str(company_name)
-                        
                         company_code = str(row['コード'])
                         # DataServiceに存在する企業のみを追加
                         if company_code in company_code_name_map:
-                            company = {
-                                'code': company_code,
-                                'name': company_name,
-                                'market': row.get('市場', '不明'),
-                                'industry': row.get('業種', '不明'),
-                                'ipo_year': None  # 上場年がない場合はNoneを設定
-                            }
+                            company_name = get_company_name(row)
+                            company = create_company_dict(row, company_code, company_name)
                             companies.append(company)
                 else:
                     # 上場年のカラムがある場合は、3年以内の企業をフィルタリング（ただし、DataServiceに存在する企業のみ）
@@ -165,21 +177,11 @@ def load_companies_data() -> Tuple[list, bool]:
                         
                         # 上場年が3年以内の企業のみを追加（ただし、DataServiceに存在する企業のみ）
                         if ipo_year is not None and current_year - ipo_year <= 3:
-                            # 企業名が数値の場合は文字列に変換
-                            company_name = row['企業名']
-                            if isinstance(company_name, (int, float)):
-                                company_name = str(company_name)
-                            
                             company_code = str(row['コード'])
                             # DataServiceに存在する企業のみを追加
                             if company_code in company_code_name_map:
-                                company = {
-                                    'code': company_code,
-                                    'name': company_name,
-                                    'market': row.get('市場', '不明'),
-                                    'industry': row.get('業種', '不明'),
-                                    'ipo_year': ipo_year
-                                }
+                                company_name = get_company_name(row)
+                                company = create_company_dict(row, company_code, company_name, ipo_year)
                                 companies.append(company)
                 
                 if not companies:

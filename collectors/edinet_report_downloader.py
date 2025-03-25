@@ -322,6 +322,12 @@ class EdinetReportDownloader:
 
     def run(self):
         self.save_securities_reports()
+        self.save_companies_info_list()
+    
+    def save_companies_info_list(self):
+        pass
+
+
 
     # 日付を抽出してソート
     def extract_date(self, file_path):

@@ -117,7 +117,7 @@ class IPOCombiner(IPOAnalyzerCore):
         traders_df = self.load_tsv(self.combiner_settings.traders_output_dir, traders_file)
         yfinance_df = self.load_tsv(self.combiner_settings.yfinance_output_dir, yfinance_file)
 
-        kiso_df = kiso_df.drop(columns=['企業名', '上場日', '想定時価総額（億円）', '会社設立'], errors='ignore')
+        kiso_df = kiso_df.drop(columns=['企業名', '上場日', '想定時価総額（億円）', '会社設立', '市場'], errors='ignore')
         yfinance_df = yfinance_df.drop(columns=['企業名'], errors='ignore')
         
         print(year)
@@ -131,7 +131,11 @@ class IPOCombiner(IPOAnalyzerCore):
         combined_df = combined_df.merge(yfinance_df, on="コード", how="outer")
         #combined_df = combined_df.merge(edinet_df, on="コード", how="outer")
 
-        combined_df['上場年'] = year
+        ipo_datetime_str = traders_df['上場日']
+        ipo_year = pd.to_datetime(ipo_datetime_str).dt.year
+        # 設立年にNaNが含まれている場合の対処
+        combined_df['上場までの年数'] = ipo_year - combined_df['設立年'].fillna(0).astype(int)
+        combined_df['上場年'] = ipo_year
         combined_df['売買回転率'] = round(combined_df["上場後の取引量"].astype(float) / combined_df["上場時発行済株数"].astype(float), 3)
 
         combined_df = self.reorder_columns(combined_df)

@@ -523,7 +523,7 @@
                             まぐまぐの配信停止は<a href="https://www.mag2.com/m/0000113398.html?l=lqj0565a2e" target="_blank" rel="noreferrer">こちら</a>をクリック。
                         </span>
                         <form id="voice_form" name="FrmVoice">
-                            <input id="csrf_token_voice" name="csrf_token" type="hidden" value="ImIzNDAxZGRkZGViMjE0NmZkMjlhYjkwNmVkYTgyZTExNzIzNzc4YjQi.Gq9c_w.GasAVnCwr9-K6aff01O_KNppMFU">
+                            <input id="csrf_token_voice" name="csrf_token" type="hidden" value="ImRkNmJjYTYzNmVjYjliNGRiYTA0YzdjNDgyODhmZTJhOTk1MDgyMzci.GsRo_g.71t6_hTOjtVOYj99l1YBX_T4qyU">
                             <table class="mx-auto mt-4">
                                 <tbody>
                                     <tr>
@@ -589,7 +589,7 @@
                         <div class="stock_search mb-3">
                             <form name="search_form" onsubmit="return false" autocomplete="off">
                                 <div id="stock_search_box" class="d-flex justify-content-around mb-3">
-                                    <input id="csrf_token_search" name="csrf_token" type="hidden" value="ImIzNDAxZGRkZGViMjE0NmZkMjlhYjkwNmVkYTgyZTExNzIzNzc4YjQi.Gq9c_w.GasAVnCwr9-K6aff01O_KNppMFU">
+                                    <input id="csrf_token_search" name="csrf_token" type="hidden" value="ImRkNmJjYTYzNmVjYjliNGRiYTA0YzdjNDgyODhmZTJhOTk1MDgyMzci.GsRo_g.71t6_hTOjtVOYj99l1YBX_T4qyU">
                                     <input aria-describedby="button-addon2" aria-label="stock search" class="form-control" id="search_value" maxlength="20" name="search_value" placeholder="銘柄コードもしくは銘柄名" type="text" value="">
                                     <button type="button" class="btn btn-twlink text-nowrap" id="btn_stock_search" onclick="init_search()">
                                         検索
@@ -735,6 +735,12 @@
                             
                         </div>
                         
+                        <div class="another_link">
+                            <a href="/stocks/330A/">
+                                <div class="stock_link">直近の株価≫</div>
+                            </a>
+                        </div>
+                        
                     </div>
                         
                     <div class="zone">
@@ -823,13 +829,13 @@
                                         <th class="border-left border-md-left-0">初値予想</th>
                                         <td>
                                         
-                                            <img src="/static/img/lock.svg?m=1688528286" alt="">
+                                            1,050円
                                         
                                         </td>
                                     </tr>
                                     <tr>
                                         <th class="border-left border-md-left-0">初値</th>
-                                        <td>-</td>
+                                        <td>1,026円</td>
                                     </tr>
                                 </table>
                             </div>
@@ -1412,11 +1418,68 @@
 
                     <!-- 公開価格分析 -->
                     
+                    <div id="offer_price_analysis" class="zone">
+                        <div class="zone_title d-flex flex-wrap align-items-start">
+                            公開価格分析
+                            
+                            <img src="/static/img/lock.svg?m=1688528286" alt="" class="now_locking">
+                            
+                        </div>
+                        
+                        <div class="ipo_comment_container w-100 frame_premium_service">
+                            
+                            <div class="premium_introduction p-md-5 p-3">
+                                <div class="text-center">
+                                    会員サービス「トレーダーズ・プレミアム」でご覧ください。
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    
 
                     <!-- 初値予想 -->
                     
+                    <div id="open_price_predict" class="zone">
+                        <div class="zone_title d-flex flex-wrap align-items-start">
+                            初値予想
+                            
+                            <img src="/static/img/lock.svg?m=1688528286" alt="" class="now_locking">
+                            
+                        </div>
+                        
+                        <div class="ipo_comment_container w-100 frame_premium_service">
+                            
+                            <div class="premium_introduction p-md-5 p-3">
+                                <div class="text-center">
+                                    会員サービス「トレーダーズ・プレミアム」でご覧ください。
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
+                    
 
                     <!-- 初値分析 -->
+                    
+                    <div id="open_price_analysis" class="zone">
+                        <div class="zone_title d-flex flex-wrap align-items-start">
+                            初値分析
+                            
+                            <img src="/static/img/lock.svg?m=1688528286" alt="" class="now_locking">
+                            
+                        </div>
+                        
+                        <div class="ipo_comment_container w-100 frame_premium_service">
+                            
+                            <div class="premium_introduction p-md-5 p-3">
+                                <div class="text-center">
+                                    会員サービス「トレーダーズ・プレミアム」でご覧ください。
+                                </div>
+                            </div>
+                            
+                        </div>
+                    </div>
                     
 
                     <!-- 追加情報 -->
@@ -1532,7 +1595,7 @@
     
     <div class="card">
         <a href="/service/ipo_info">
-            <img src="/static/img/service/premium/banner_premium_ipo_info_2.jpg?m=1688528286" alt="トレーダーズ・プレミアムのご案内" class="w-100">
+            <img src="/static/img/service/premium/banner_premium_ipo_info_1.jpg?m=1688528286" alt="トレーダーズ・プレミアムのご案内" class="w-100">
         </a>    
     </div>
 
@@ -1560,6 +1623,48 @@
             IPO更新情報
         </div>
     
+        
+        <div class="card-body">
+            <div class="card-text d-flex pt-2">
+                <div class="text-nowrap mr-3">03/24</div>
+                <div>
+                
+                    
+                    <a href="/ipo/report">ウイークリー／最大の懸案を意外な健闘で通過</a>
+                    
+                
+                <span class="new_icon"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="card-text d-flex pt-2">
+                <div class="text-nowrap mr-3">03/19</div>
+                <div>
+                
+                    
+                    <a href="/ipo/350A">デジグリッドの銘柄速報／電力取引プラットフォームを運営</a>
+                    
+                
+                
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="card-text d-flex pt-2">
+                <div class="text-nowrap mr-3">03/10</div>
+                <div>
+                
+                    
+                    <a href="/ipo/340A">ジグザグの銘柄詳細／ECショップの越境対応を支援</a>
+                    
+                
+                
+                </div>
+            </div>
+        </div>
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
@@ -1595,7 +1700,7 @@
                 <div>
                 
                     
-                    <a href="/ipo/336A">ダイナミクマの銘柄詳細／オールジャパン体制の国策ベンチャー</a>
+                    <a href="/ipo/336A">ダイナマップの銘柄詳細／オールジャパン体制の国策ベンチャー</a>
                     
                 
                 
@@ -1624,20 +1729,6 @@
                 
                     
                     <a href="/ipo/343A">ＩＡＣＥトラの銘柄速報／社名は国際文化交流協会の頭文字より</a>
-                    
-                
-                
-                </div>
-            </div>
-        </div>
-        
-        <div class="card-body">
-            <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">03/03</div>
-                <div>
-                
-                    
-                    <a href="/ipo/report">ウイークリー／年度末ラッシュの見どころ</a>
                     
                 
                 
@@ -1748,9 +1839,7 @@
                 <div class="text-nowrap mr-3">02/20</div>
                 <div>
                 
-                    
-                    <a href="/ipo/336A">ダイナミクマの銘柄速報／縮小してはいるが２桁億円の赤字上場</a>
-                    
+                    ダイナミクマの銘柄速報／縮小してはいるが２桁億円の赤字上場
                 
                 
                 </div>
@@ -1898,10 +1987,58 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">03/07</div>
+                <div class="text-nowrap mr-3">03/25</div>
                 <div>
                     
-                    <a href="/ipo/330A">タレントＸの公開価格は750円</a>
+                    <a href="/ipo/334A">ＶＰＪの初値は2.1倍の3040円</a>
+                    
+                    <span class="new_icon"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="card-text d-flex pt-2">
+                <div class="text-nowrap mr-3">03/25</div>
+                <div>
+                    
+                    <a href="/ipo/335A">ミライロの初値は2.45倍の661円</a>
+                    
+                    <span class="new_icon"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="card-text d-flex pt-2">
+                <div class="text-nowrap mr-3">03/24</div>
+                <div>
+                    
+                    <a href="/ipo/353A">エレコミの札証アンビシャス上場が承認</a>
+                    
+                    <span class="new_icon"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="card-text d-flex pt-2">
+                <div class="text-nowrap mr-3">03/24</div>
+                <div>
+                    
+                    <a href="/ipo/335A">ミライロは初値付かず</a>
+                    
+                    <span class="new_icon"></span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="card-text d-flex pt-2">
+                <div class="text-nowrap mr-3">03/21</div>
+                <div>
+                    
+                    <a href="/ipo/340A">ジグザグの公開価格は1500円</a>
                     
                     
                 </div>
@@ -1910,10 +2047,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">03/06</div>
+                <div class="text-nowrap mr-3">03/21</div>
                 <div>
                     
-                    <a href="/ipo/338A">ゼンムテックの仮条件は1500～1580円</a>
+                    <a href="/ipo/352A">Ｌクリエイトの東証グロース上場が承認</a>
                     
                     
                 </div>
@@ -1922,10 +2059,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">03/05</div>
+                <div class="text-nowrap mr-3">03/21</div>
                 <div>
                     
-                    <a href="/ipo/335A">ミライロの仮条件は255～270円</a>
+                    <a href="/ipo/9388">パパネッツの初値は18.6％高の830円</a>
                     
                     
                 </div>
@@ -1934,10 +2071,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">03/04</div>
+                <div class="text-nowrap mr-3">03/21</div>
                 <div>
                     
-                    <a href="/ipo/334A">ＶＰＪの仮条件は1360～1430円</a>
+                    <a href="/ipo/332A">ミークの初値は5.6％高の845円</a>
                     
                     
                 </div>
@@ -1946,10 +2083,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">03/04</div>
+                <div class="text-nowrap mr-3">03/19</div>
                 <div>
                     
-                    <a href="/ipo/9388">パパネッツの仮条件は700～740円</a>
+                    <a href="/ipo/341A">トヨコーの公開価格は730円</a>
                     
                     
                 </div>
@@ -1958,10 +2095,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">03/04</div>
+                <div class="text-nowrap mr-3">03/19</div>
                 <div>
                     
-                    <a href="/ipo/332A">ミークの仮条件は760～800円</a>
+                    <a href="/ipo/331A">メディックスの初値は5％安の760円</a>
                     
                     
                 </div>
@@ -1970,10 +2107,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">03/03</div>
+                <div class="text-nowrap mr-3">03/19</div>
                 <div>
                     
-                    <a href="/ipo/5016">ＪＸ金属の仮条件は810～820円</a>
+                    <a href="/ipo/5016">ＪＸ金属の初値は2.8％高の843円</a>
                     
                     
                 </div>
@@ -1982,10 +2119,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/28</div>
+                <div class="text-nowrap mr-3">03/18</div>
                 <div>
                     
-                    <a href="/ipo/343A">ＩＡＣＥトラの東証スタンダード上場が承認</a>
+                    <a href="/ipo/339A">プログレスの公開価格は1950円</a>
                     
                     
                 </div>
@@ -1994,10 +2131,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/28</div>
+                <div class="text-nowrap mr-3">03/18</div>
                 <div>
                     
-                    <a href="/ipo/325A">テンシャルの初値は30％高の2600円</a>
+                    <a href="/ipo/336A">ダイナマップが公開株数を上乗せ</a>
                     
                     
                 </div>
@@ -2006,10 +2143,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/27</div>
+                <div class="text-nowrap mr-3">03/18</div>
                 <div>
                     
-                    <a href="/ipo/331A">メディックスの仮条件は760～800円</a>
+                    <a href="/ipo/336A">ダイナマップの公開価格は1200円</a>
                     
                     
                 </div>
@@ -2018,10 +2155,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/26</div>
+                <div class="text-nowrap mr-3">03/18</div>
                 <div>
                     
-                    <a href="/ipo/330A">タレントＸの仮条件は650～750円</a>
+                    <a href="/ipo/350A">デジグリッドの東証グロース上場が承認</a>
                     
                     
                 </div>
@@ -2030,10 +2167,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/25</div>
+                <div class="text-nowrap mr-3">03/18</div>
                 <div>
                     
-                    <a href="/ipo/341A">トヨコーの東証グロース上場が承認</a>
+                    <a href="/ipo/330A">タレントＸの初値は36.8％高の1026円</a>
                     
                     
                 </div>
@@ -2042,10 +2179,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/25</div>
+                <div class="text-nowrap mr-3">03/17</div>
                 <div>
                     
-                    <a href="/ipo/340A">ジグザグの東証グロース上場が承認</a>
+                    <a href="/ipo/343A">ＩＡＣＥトラの仮条件は980～1000円</a>
                     
                     
                 </div>
@@ -2054,10 +2191,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/21</div>
+                <div class="text-nowrap mr-3">03/17</div>
                 <div>
                     
-                    <a href="/ipo/339A">プログレスの東証グロース上場が承認</a>
+                    <a href="/ipo/338A">ゼンムテックの公開価格は1580円</a>
                     
                     
                 </div>
@@ -2066,10 +2203,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/21</div>
+                <div class="text-nowrap mr-3">03/13</div>
                 <div>
                     
-                    <a href="/ipo/338A">ゼンムテックの東証グロース上場が承認</a>
+                    <a href="/ipo/334A">ＶＰＪの公開価格は1430円</a>
                     
                     
                 </div>
@@ -2078,10 +2215,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/21</div>
+                <div class="text-nowrap mr-3">03/13</div>
                 <div>
                     
-                    <a href="/ipo/324A">ブッキングＲの初値は25％高の1550円</a>
+                    <a href="/ipo/335A">ミライロの公開価格は270円</a>
                     
                     
                 </div>
@@ -2090,10 +2227,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/20</div>
+                <div class="text-nowrap mr-3">03/12</div>
                 <div>
                     
-                    <a href="/ipo/323A">フライヤーの初値は73％高の1178円</a>
+                    <a href="/ipo/340A">ジグザグの仮条件は1470～1500円</a>
                     
                     
                 </div>
@@ -2102,10 +2239,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/19</div>
+                <div class="text-nowrap mr-3">03/12</div>
                 <div>
                     
-                    <a href="/ipo/336A">ダイナミクマの東証グロース上場が承認</a>
+                    <a href="/ipo/9388">パパネッツの公開価格は700円</a>
                     
                     
                 </div>
@@ -2114,10 +2251,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/18</div>
+                <div class="text-nowrap mr-3">03/12</div>
                 <div>
                     
-                    <a href="/ipo/325A">テンシャルの公開価格は2000円</a>
+                    <a href="/ipo/332A">ミークの公開価格は800円</a>
                     
                     
                 </div>
@@ -2126,10 +2263,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/17</div>
+                <div class="text-nowrap mr-3">03/11</div>
                 <div>
                     
-                    <a href="/ipo/9388">パパネッツの福証Ｑ－Ｂｏａｒｄ上場が承認</a>
+                    <a href="/ipo/339A">プログレスの仮条件は1890～1950円</a>
                     
                     
                 </div>
@@ -2138,10 +2275,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/17</div>
+                <div class="text-nowrap mr-3">03/11</div>
                 <div>
                     
-                    <a href="/ipo/335A">ミライロの東証グロース上場が承認</a>
+                    <a href="/ipo/341A">トヨコーの仮条件は700～730円</a>
                     
                     
                 </div>
@@ -2150,10 +2287,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/17</div>
+                <div class="text-nowrap mr-3">03/10</div>
                 <div>
                     
-                    <a href="/ipo/334A">ＶＰＪの東証グロース上場が承認</a>
+                    <a href="/ipo/336A">ダイナマップの仮条件は1130～1200円</a>
                     
                     
                 </div>
@@ -2162,10 +2299,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/14</div>
+                <div class="text-nowrap mr-3">03/10</div>
                 <div>
                     
-                    <a href="/ipo/332A">ミークの東証グロース上場が承認</a>
+                    <a href="/ipo/331A">メディックスの公開価格は800円</a>
                     
                     
                 </div>
@@ -2174,34 +2311,10 @@
         
         <div class="card-body">
             <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/14</div>
+                <div class="text-nowrap mr-3">03/10</div>
                 <div>
                     
-                    <a href="/ipo/5016">ＪＸ金属の東証プライム上場が承認</a>
-                    
-                    
-                </div>
-            </div>
-        </div>
-        
-        <div class="card-body">
-            <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/13</div>
-                <div>
-                    
-                    <a href="/ipo/324A">ブッキングＲの公開価格は1240円</a>
-                    
-                    
-                </div>
-            </div>
-        </div>
-        
-        <div class="card-body">
-            <div class="card-text d-flex pt-2">
-                <div class="text-nowrap mr-3">02/12</div>
-                <div>
-                    
-                    <a href="/ipo/331A">メディックスの東証スタンダード上場が承認</a>
+                    <a href="/ipo/5016">ＪＸ金属の公開価格は820円</a>
                     
                     
                 </div>
@@ -2243,6 +2356,27 @@
             
             <div class="card-text d-flex justify-content-between">
                 <div>
+                    <a href="/ipo/353A">エレコミ</a>                    
+                </div>
+                <div>04/25</div>
+            </div>
+            
+            <div class="card-text d-flex justify-content-between">
+                <div>
+                    <a href="/ipo/352A">Ｌクリエイト</a>                    
+                </div>
+                <div>04/24</div>
+            </div>
+            
+            <div class="card-text d-flex justify-content-between">
+                <div>
+                    <a href="/ipo/350A">デジグリッド</a>                    
+                </div>
+                <div>04/22</div>
+            </div>
+            
+            <div class="card-text d-flex justify-content-between">
+                <div>
                     <a href="/ipo/343A">ＩＡＣＥトラ</a>                    
                 </div>
                 <div>04/07</div>
@@ -2271,7 +2405,7 @@
             
             <div class="card-text d-flex justify-content-between">
                 <div>
-                    <a href="/ipo/336A">ダイナミクマ</a>                    
+                    <a href="/ipo/336A">ダイナマップ</a>                    
                 </div>
                 <div>03/27</div>
             </div>
@@ -2281,55 +2415,6 @@
                     <a href="/ipo/338A">ゼンムテック</a>                    
                 </div>
                 <div>03/27</div>
-            </div>
-            
-            <div class="card-text d-flex justify-content-between">
-                <div>
-                    <a href="/ipo/334A">ＶＰＪ</a>                    
-                </div>
-                <div>03/25</div>
-            </div>
-            
-            <div class="card-text d-flex justify-content-between">
-                <div>
-                    <a href="/ipo/335A">ミライロ</a>                    
-                </div>
-                <div>03/24</div>
-            </div>
-            
-            <div class="card-text d-flex justify-content-between">
-                <div>
-                    <a href="/ipo/332A">ミーク</a>                    
-                </div>
-                <div>03/21</div>
-            </div>
-            
-            <div class="card-text d-flex justify-content-between">
-                <div>
-                    <a href="/ipo/9388">パパネッツ</a>                    
-                </div>
-                <div>03/21</div>
-            </div>
-            
-            <div class="card-text d-flex justify-content-between">
-                <div>
-                    <a href="/ipo/331A">メディックス</a>                    
-                </div>
-                <div>03/19</div>
-            </div>
-            
-            <div class="card-text d-flex justify-content-between">
-                <div>
-                    <a href="/ipo/5016">ＪＸ金属</a>                    
-                </div>
-                <div>03/19</div>
-            </div>
-            
-            <div class="card-text d-flex justify-content-between">
-                <div>
-                    <a href="/ipo/330A">タレントＸ</a>                    
-                </div>
-                <div>03/18</div>
             </div>
             
         </div>
@@ -2350,7 +2435,7 @@
         
         <div class="card-section-label d-flex justify-content-between">
             <div>国内</div>
-            <div class="data_table_timestamp">2025/03/07 15:45</div>
+            <div class="data_table_timestamp">2025/03/25 15:45</div>
         </div>
         <div class="card-body">
             <div class="card-text">
@@ -2363,8 +2448,8 @@
                                     日経平均
                                 </a>
                             </td>
-                            <td>36,887.17</td>
-                            <td><span class="negative">-817.76</span></td>
+                            <td>37,780.54</td>
+                            <td><span class="positive">+172.05</span></td>
                         </tr>
                         
                         <tr>
@@ -2373,8 +2458,8 @@
                                     TOPIX
                                 </a>
                             </td>
-                            <td>2,708.59</td>
-                            <td><span class="negative">-42.82</span></td>
+                            <td>2,797.52</td>
+                            <td><span class="positive">+6.64</span></td>
                         </tr>
                         
                         <tr>
@@ -2383,8 +2468,8 @@
                                     グロース250
                                 </a>
                             </td>
-                            <td>631.01</td>
-                            <td><span class="negative">-13.31</span></td>
+                            <td>671.72</td>
+                            <td><span class="positive">+6.15</span></td>
                         </tr>
                         
                     </tbody>
@@ -2395,7 +2480,7 @@
         
         <div class="card-section-label d-flex justify-content-between">
             <div>海外</div>
-            <div class="data_table_timestamp">2025/03/08 07:35</div>
+            <div class="data_table_timestamp">2025/03/25 06:35</div>
         </div>
         <div class="card-body">
             <div class="card-text">
@@ -2408,8 +2493,8 @@
                                     NYダウ
                                 </a>
                             </td>
-                            <td>42,801.72</td>
-                            <td><span class="positive">+222.64</span></td>
+                            <td>42,583.32</td>
+                            <td><span class="positive">+597.97</span></td>
                         </tr>
                         
                         <tr>
@@ -2418,8 +2503,8 @@
                                     ナスダック総合
                                 </a>
                             </td>
-                            <td>18,196.22</td>
-                            <td><span class="positive">+126.96</span></td>
+                            <td>18,188.59</td>
+                            <td><span class="positive">+404.54</span></td>
                         </tr>
                         
                     </tbody>
@@ -2430,7 +2515,7 @@
         
         <div class="card-section-label d-flex justify-content-between">
             <div>為替</div>
-            <div class="data_table_timestamp">2025/03/07 18:15</div>
+            <div class="data_table_timestamp">2025/03/25 18:15</div>
         </div>
         <div class="card-body">
             <div class="card-text">
@@ -2441,8 +2526,8 @@
                             <td>
                                 ドル/円
                             </td>
-                            <td>147.34</td>
-                            <td><span class="negative">-0.64</span></td>
+                            <td>150.64</td>
+                            <td><span class="negative">-0.06</span></td>
                         </tr>
                         
                     </tbody>
