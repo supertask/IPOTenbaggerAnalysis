@@ -51,9 +51,13 @@
         .info-value {
             font-weight: normal;
         }
-        .ipo-date {
-            color: #0d6efd;
-            font-weight: 600;
+        .highlight-value {
+            color: #dc3545; /* 赤色 */
+            font-weight: 700; /* 太字 */
+        }
+        .highlight-attention {
+            color: #0d6efd; /* 青色 */
+            font-weight: 700; /* 太字 */
         }
     </style>
 </head>
@@ -67,18 +71,16 @@
                 <div class="card company-card">
                     <div class="card-header">
                         <h5 class="card-title">
-                            {{ company.name }}
+                            {{ company.name }}（{{ company.code }}）
                             {% if company.current_multiple is defined and company.current_multiple is not none %}
                             <span class="multiple-badge bg-success text-white">{{ company.current_multiple }}倍</span>
                             {% endif %}
                         </h5>
                     </div>
                     <div class="card-body">
-                        <h6 class="card-subtitle mb-3 text-muted">コード: {{ company.code }}</h6>
-                        
                         <div class="company-info">
                             {% if company.ipo_year is defined and company.ipo_year is not none %}
-                            <div class="info-item"><span class="info-label">上場年:</span> <span class="info-value ipo-date">{{ company.ipo_year }}年</span></div>
+                            <div class="info-item"><span class="info-label">上場年:</span> <span class="info-value">{{ company.ipo_year }}年</span></div>
                             {% endif %}
                             
                             {% if company.current_multiple is defined and company.current_multiple is not none %}
@@ -90,25 +92,39 @@
                             {% endif %}
                             
                             {% if company.president_share is defined and company.president_share is not none %}
-                            <div class="info-item"><span class="info-label">社長_株:</span> <span class="info-value">{{ company.president_share }}%</span></div>
+                            <div class="info-item"><span class="info-label">社長_株:</span> 
+                                <span class="info-value {% if company.president_share|float >= 30 %}highlight-value{% endif %}">
+                                    {{ company.president_share }}%
+                                </span>
+                            </div>
                             {% endif %}
                             
                             {% if company.market_cap is defined and company.market_cap is not none %}
-                            <div class="info-item"><span class="info-label">時価総額:</span> <span class="info-value">
+                            <div class="info-item"><span class="info-label">時価総額:</span> 
+                                <span class="info-value {% if company.market_cap <= 30000000000 %}highlight-value{% endif %}">
                                 {% if company.market_cap >= 10000000000000 %}
                                     {{ "{:,.0f}".format(company.market_cap / 1000000000000) }}兆円
                                 {% else %}
                                     {{ "{:,.0f}".format(company.market_cap / 100000000) }}億円
                                 {% endif %}
-                            </span></div>
+                                </span>
+                            </div>
                             {% endif %}
 
                             {% if company.attention_rate is defined and company.attention_rate is not none %}
-                            <div class="info-item"><span class="info-label">注目度:</span> <span class="info-value">{{ company.attention_rate }}</span></div>
+                            <div class="info-item"><span class="info-label">注目度:</span> 
+                                <span class="info-value {% if company.attention_rate in ['S', 'A'] %}highlight-attention{% endif %}">
+                                    {{ company.attention_rate }}
+                                </span>
+                            </div>
                             {% endif %}
                             
                             {% if company.years_since_ipo is defined and company.years_since_ipo is not none %}
-                            <div class="info-item"><span class="info-label">上場までの年数:</span> <span class="info-value">{{ company.years_since_ipo }}年</span></div>
+                            <div class="info-item"><span class="info-label">上場までの年数:</span> 
+                                <span class="info-value {% if company.years_since_ipo|int <= 10 %}highlight-attention{% endif %}">
+                                    {{ company.years_since_ipo }}年
+                                </span>
+                            </div>
                             {% endif %}
                             
                             {% if company.industry is defined and company.industry is not none %}
