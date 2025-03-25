@@ -59,89 +59,179 @@
             color: #0d6efd; /* 青色 */
             font-weight: 700; /* 太字 */
         }
+        .year-heading {
+            margin-top: 30px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #dee2e6;
+        }
     </style>
 </head>
 <body>
     <div class="container-fluid">
         <h1 class="mb-4 text-center">次のテンバガー企業予測ツール</h1>
         <p class="text-center mb-4">直近3年でIPOした企業を上場年が新しい順に表示しています</p>
-        <div class="row">
-            {% for company in companies %}
-            <div class="col-md-3 col-lg-2">
-                <div class="card company-card">
-                    <div class="card-header">
-                        <h5 class="card-title">
-                            {{ company.name }}（{{ company.code }}）
-                            {% if company.current_multiple is defined and company.current_multiple is not none %}
-                            <span class="multiple-badge bg-success text-white">{{ company.current_multiple }}倍</span>
-                            {% endif %}
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="company-info">
-                            {% if company.ipo_year is defined and company.ipo_year is not none %}
-                            <div class="info-item"><span class="info-label">上場年:</span> <span class="info-value">{{ company.ipo_year }}年</span></div>
-                            {% endif %}
-                            
-                            {% if company.current_multiple is defined and company.current_multiple is not none %}
-                            <div class="info-item"><span class="info-label">現在何倍株:</span> <span class="info-value">{{ company.current_multiple }}倍</span></div>
-                            {% endif %}
-                            
-                            {% if company.max_multiple is defined and company.max_multiple is not none %}
-                            <div class="info-item"><span class="info-label">最大何倍株:</span> <span class="info-value">{{ company.max_multiple }}倍</span></div>
-                            {% endif %}
-                            
-                            {% if company.president_share is defined and company.president_share is not none %}
-                            <div class="info-item"><span class="info-label">社長_株:</span> 
-                                <span class="info-value {% if company.president_share|float >= 30 %}highlight-value{% endif %}">
-                                    {{ company.president_share }}%
-                                </span>
+        
+        {% if companies|groupby('ipo_year') %}
+            {% for year, year_companies in companies|groupby('ipo_year')|sort(reverse=true) %}
+                <h2 class="year-heading">{{ year }}年</h2>
+                <div class="row">
+                {% for company in year_companies %}
+                    <div class="col-md-3 col-lg-2">
+                        <div class="card company-card">
+                            <div class="card-header">
+                                <h5 class="card-title">
+                                    {{ company.name }}（{{ company.code }}）
+                                    {% if company.current_multiple is defined and company.current_multiple is not none %}
+                                    <span class="multiple-badge bg-success text-white">{{ company.current_multiple }}倍</span>
+                                    {% endif %}
+                                </h5>
                             </div>
-                            {% endif %}
-                            
-                            {% if company.market_cap is defined and company.market_cap is not none %}
-                            <div class="info-item"><span class="info-label">時価総額:</span> 
-                                <span class="info-value {% if company.market_cap <= 30000000000 %}highlight-value{% endif %}">
-                                {% if company.market_cap >= 10000000000000 %}
-                                    {{ "{:,.0f}".format(company.market_cap / 1000000000000) }}兆円
-                                {% else %}
-                                    {{ "{:,.0f}".format(company.market_cap / 100000000) }}億円
-                                {% endif %}
-                                </span>
-                            </div>
-                            {% endif %}
+                            <div class="card-body">
+                                <div class="company-info">
+                                    {% if company.ipo_year is defined and company.ipo_year is not none %}
+                                    <!--<div class="info-item"><span class="info-label">上場年:</span> <span class="info-value">{{ company.ipo_year }}年</span></div>-->
+                                    {% endif %}
+                                    
+                                    {% if company.current_multiple is defined and company.current_multiple is not none %}
+                                    <div class="info-item"><span class="info-label">現在何倍株:</span> <span class="info-value">{{ company.current_multiple }}倍</span></div>
+                                    {% endif %}
+                                    
+                                    {% if company.max_multiple is defined and company.max_multiple is not none %}
+                                    <div class="info-item"><span class="info-label">最大何倍株:</span> <span class="info-value">{{ company.max_multiple }}倍</span></div>
+                                    {% endif %}
+                                    
+                                    {% if company.president_share is defined and company.president_share is not none %}
+                                    <div class="info-item"><span class="info-label">社長_株:</span> 
+                                        <span class="info-value {% if company.president_share|float >= 30 %}highlight-value{% endif %}">
+                                            {{ company.president_share }}%
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if company.market_cap is defined and company.market_cap is not none %}
+                                    <div class="info-item"><span class="info-label">時価総額:</span> 
+                                        <span class="info-value {% if company.market_cap <= 30000000000 %}highlight-value{% endif %}">
+                                        {% if company.market_cap >= 10000000000000 %}
+                                            {{ "{:,.0f}".format(company.market_cap / 1000000000000) }}兆円
+                                        {% else %}
+                                            {{ "{:,.0f}".format(company.market_cap / 100000000) }}億円
+                                        {% endif %}
+                                        </span>
+                                    </div>
+                                    {% endif %}
 
-                            {% if company.attention_rate is defined and company.attention_rate is not none %}
-                            <div class="info-item"><span class="info-label">注目度:</span> 
-                                <span class="info-value {% if company.attention_rate in ['S', 'A'] %}highlight-attention{% endif %}">
-                                    {{ company.attention_rate }}
-                                </span>
+                                    {% if company.attention_rate is defined and company.attention_rate is not none %}
+                                    <div class="info-item"><span class="info-label">注目度:</span> 
+                                        <span class="info-value {% if company.attention_rate in ['S', 'A'] %}highlight-attention{% endif %}">
+                                            {{ company.attention_rate }}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if company.years_since_ipo is defined and company.years_since_ipo is not none %}
+                                    <div class="info-item"><span class="info-label">上場までの年数:</span> 
+                                        <span class="info-value {% if company.years_since_ipo|int <= 10 %}highlight-attention{% endif %}">
+                                            {{ company.years_since_ipo }}年
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if company.industry is defined and company.industry is not none %}
+                                    <div class="info-item"><span class="info-label">業種:</span> <span class="info-value">{{ company.industry }}</span></div>
+                                    {% endif %}
+                                    
+                                    {% if company.market is defined and company.market is not none %}
+                                    <div class="info-item"><span class="info-label">市場:</span> <span class="info-value">{{ company.market }}</span></div>
+                                    {% endif %}
+                                </div>
+                                
+                                <a href="/next_tenbagger/{{ company.code }}" target="_blank" class="btn btn-primary w-100 mt-2">詳細を見る</a>
                             </div>
-                            {% endif %}
-                            
-                            {% if company.years_since_ipo is defined and company.years_since_ipo is not none %}
-                            <div class="info-item"><span class="info-label">上場までの年数:</span> 
-                                <span class="info-value {% if company.years_since_ipo|int <= 10 %}highlight-attention{% endif %}">
-                                    {{ company.years_since_ipo }}年
-                                </span>
-                            </div>
-                            {% endif %}
-                            
-                            {% if company.industry is defined and company.industry is not none %}
-                            <div class="info-item"><span class="info-label">業種:</span> <span class="info-value">{{ company.industry }}</span></div>
-                            {% endif %}
-                            
-                            {% if company.market is defined and company.market is not none %}
-                            <div class="info-item"><span class="info-label">市場:</span> <span class="info-value">{{ company.market }}</span></div>
-                            {% endif %}
                         </div>
-                        
-                        <a href="/next_tenbagger/{{ company.code }}" target="_blank" class="btn btn-primary w-100 mt-2">詳細を見る</a>
+                    </div>
+                {% endfor %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="row">
+            {% for company in companies %}
+                <div class="col-md-3 col-lg-2">
+                    <div class="card company-card">
+                        <div class="card-header">
+                            <h5 class="card-title">
+                                {{ company.name }}（{{ company.code }}）
+                                {% if company.current_multiple is defined and company.current_multiple is not none %}
+                                <span class="multiple-badge bg-success text-white">{{ company.current_multiple }}倍</span>
+                                {% endif %}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="company-info">
+                                {% if company.ipo_year is defined and company.ipo_year is not none %}
+                                <!-- 上場年の表示を削除 -->
+                                {% endif %}
+                                
+                                {% if company.current_multiple is defined and company.current_multiple is not none %}
+                                <div class="info-item"><span class="info-label">現在何倍株:</span> <span class="info-value">{{ company.current_multiple }}倍</span></div>
+                                {% endif %}
+                                
+                                {% if company.max_multiple is defined and company.max_multiple is not none %}
+                                <div class="info-item"><span class="info-label">最大何倍株:</span> <span class="info-value">{{ company.max_multiple }}倍</span></div>
+                                {% endif %}
+                                
+                                {% if company.president_share is defined and company.president_share is not none %}
+                                <div class="info-item"><span class="info-label">社長_株:</span> 
+                                    <span class="info-value {% if company.president_share|float >= 30 %}highlight-value{% endif %}">
+                                        {{ company.president_share }}%
+                                    </span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if company.market_cap is defined and company.market_cap is not none %}
+                                <div class="info-item"><span class="info-label">時価総額:</span> 
+                                    <span class="info-value {% if company.market_cap <= 30000000000 %}highlight-value{% endif %}">
+                                    {% if company.market_cap >= 10000000000000 %}
+                                        {{ "{:,.0f}".format(company.market_cap / 1000000000000) }}兆円
+                                    {% else %}
+                                        {{ "{:,.0f}".format(company.market_cap / 100000000) }}億円
+                                    {% endif %}
+                                    </span>
+                                </div>
+                                {% endif %}
+
+                                {% if company.attention_rate is defined and company.attention_rate is not none %}
+                                <div class="info-item"><span class="info-label">注目度:</span> 
+                                    <span class="info-value {% if company.attention_rate in ['S', 'A'] %}highlight-attention{% endif %}">
+                                        {{ company.attention_rate }}
+                                    </span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if company.years_since_ipo is defined and company.years_since_ipo is not none %}
+                                <div class="info-item"><span class="info-label">上場までの年数:</span> 
+                                    <span class="info-value {% if company.years_since_ipo|int <= 10 %}highlight-attention{% endif %}">
+                                        {{ company.years_since_ipo }}年
+                                    </span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if company.industry is defined and company.industry is not none %}
+                                <div class="info-item"><span class="info-label">業種:</span> <span class="info-value">{{ company.industry }}</span></div>
+                                {% endif %}
+                                
+                                {% if company.market is defined and company.market is not none %}
+                                <div class="info-item"><span class="info-label">市場:</span> <span class="info-value">{{ company.market }}</span></div>
+                                {% endif %}
+                            </div>
+                            
+                            <a href="/next_tenbagger/{{ company.code }}" target="_blank" class="btn btn-primary w-100 mt-2">詳細を見る</a>
+                        </div>
                     </div>
                 </div>
-            </div>
             {% endfor %}
-        </div>
+            </div>
+        {% endif %}
         
         {% if not companies %}
         <div class="alert alert-info text-center">
