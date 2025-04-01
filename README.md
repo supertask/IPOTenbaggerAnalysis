@@ -49,7 +49,7 @@ python3 -m collectors combiner
 python3 -m collectors all
 ```
 
-## データの可視化
+## ローカルでの可視化
 
 可視化ツールは以下のコマンドで起動できます：
 
@@ -93,6 +93,14 @@ IPODataCollectors/
 
 - データ収集には各種APIキーが必要な場合があります
 - データ収集には時間がかかる場合があります
+
+## Oracle Cloud Infrastructureでの環境構築
+
+[Free Tier: Ubuntu VMへのFlaskのインストール
+](https://docs.oracle.com/ja-jp/iaas/developer-tutorials/tutorials/flask-on-ubuntu/01oci-ubuntu-flask-summary.htm)を参考に環境構築してね。
+
+Nginxを構築し、サーバでのキャッシュができるようにする
+https://gemini.google.com/app/eda7023cb013421a
 
 
 ## Memo
