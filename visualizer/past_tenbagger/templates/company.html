@@ -1939,8 +1939,43 @@
                 // 全テキストを結合
                 var fullText = promptText + businessText + competitorsText;
                 
-                // クリップボードにコピー
-                navigator.clipboard.writeText(fullText).then(function() {
+                try {
+                    // まず新しいAPIを試す
+                    navigator.clipboard.writeText(fullText).then(function() {
+                        copySuccess();
+                    }).catch(function(err) {
+                        // 新しいAPIが失敗した場合、従来の方法を試す
+                        fallbackCopy(fullText);
+                    });
+                } catch (err) {
+                    // navigator.clipboardが利用できない場合、従来の方法を試す
+                    fallbackCopy(fullText);
+                }
+                
+                function fallbackCopy(text) {
+                    // 一時的なテキストエリアを作成
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-9999px';
+                    textArea.style.top = '0';
+                    document.body.appendChild(textArea);
+                    
+                    try {
+                        // テキストを選択してコピー
+                        textArea.select();
+                        document.execCommand('copy');
+                        copySuccess();
+                    } catch (err) {
+                        console.error('クリップボードへのコピーに失敗しました:', err);
+                        copyFailed();
+                    } finally {
+                        // 一時的なテキストエリアを削除
+                        document.body.removeChild(textArea);
+                    }
+                }
+                
+                function copySuccess() {
                     // ローディング状態を解除
                     button.classList.remove('loading');
                     
@@ -1961,14 +1996,15 @@
                             button.classList.remove('recovering');
                         }, 500);
                     }, 1000);
-                }).catch(function(err) {
+                }
+                
+                function copyFailed() {
                     // ローディング状態を解除
                     button.classList.remove('loading');
                     button.innerHTML = originalHtml;
                     
-                    console.error('クリップボードへのコピーに失敗しました:', err);
                     alert('クリップボードへのコピーに失敗しました。');
-                });
+                }
             }
         </script>
     </body>
