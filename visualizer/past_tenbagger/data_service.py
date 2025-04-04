@@ -357,16 +357,10 @@ class DataService:
         oldest_report = report_files[0]
         
         try:
-            # ファイルのエンコーディングを確認
-            result = subprocess.run(['file', oldest_report], capture_output=True, text=True)
-            file_info = result.stdout
-            
-            encoding = 'utf-8'
-            if 'UTF-16' in file_info:
-                encoding = 'utf-16-le' if 'little-endian' in file_info else 'utf-16-be'
-            
             # TSVファイルを読み込む
-            df = pd.read_csv(oldest_report, sep='\t', encoding=encoding, on_bad_lines='skip')
+            df = DataService._read_tsv_with_fallback_encodings(oldest_report)
+            if df is None:
+                return None
             
             # 役員情報を検索
             officers_row = df[df['要素ID'] == 'jpcrp_cor:InformationAboutOfficersTextBlock']
@@ -414,16 +408,10 @@ class DataService:
         oldest_report = report_files[0]
         
         try:
-            # ファイルのエンコーディングを確認
-            result = subprocess.run(['file', oldest_report], capture_output=True, text=True)
-            file_info = result.stdout
-            
-            encoding = 'utf-8'
-            if 'UTF-16' in file_info:
-                encoding = 'utf-16-le' if 'little-endian' in file_info else 'utf-16-be'
-            
             # TSVファイルを読み込む
-            df = pd.read_csv(oldest_report, sep='\t', encoding=encoding, on_bad_lines='skip')
+            df = DataService._read_tsv_with_fallback_encodings(oldest_report)
+            if df is None:
+                return None
             
             # 事業の内容を検索
             business_row = df[df['要素ID'] == 'jpcrp_cor:DescriptionOfBusinessTextBlock']
@@ -443,3 +431,21 @@ class DataService:
         except Exception as e:
             logger.error(f"事業の内容の取得中にエラー: {e}", exc_info=True)
             return None
+
+    @staticmethod
+    def _read_tsv_with_fallback_encodings(file_path: str) -> Optional[pd.DataFrame]:
+        """複数のエンコーディングを試行してTSVファイルを読み込む"""
+        encodings_to_try = ['utf-8', 'utf-16-le', 'utf-16-be', 'shift-jis', 'cp932']
+        
+        for encoding in encodings_to_try:
+            try:
+                df = pd.read_csv(file_path, sep='\t', encoding=encoding, on_bad_lines='skip')
+                return df
+            except UnicodeDecodeError:
+                continue
+            except Exception as e:
+                logger.warning(f"エンコーディング {encoding} での読み込み中にエラー: {e}")
+                continue
+        
+        logger.error(f"すべてのエンコーディングで読み込みに失敗しました: {file_path}")
+        return None

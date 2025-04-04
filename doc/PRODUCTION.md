@@ -1,6 +1,13 @@
 gnicorn setting
         /etc/systemd/system/gunicorn.service
         cat config/gunicorn_settings.py
+        journalctl -u gunicorn.service -f #realtime log
+
+        sudo systemctl restart gunicorn
+        sudo systemctl status gunicorn
+        sudo systemctl start gunicorn
+        sudo systemctl stop gunicorn
+
 
 flask
         nohup python flask_app.py &
