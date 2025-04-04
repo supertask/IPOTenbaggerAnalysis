@@ -126,34 +126,34 @@ class DataService:
     @staticmethod
     def _read_financial_file(file_path: str) -> Optional[pd.DataFrame]:
         """財務データファイルを読み込む"""
-        try:
-            # ファイルのエンコーディングを確認
-            result = subprocess.run(['file', file_path], capture_output=True, text=True)
-            file_info = result.stdout
-            
-            encoding = 'utf-8'
-            if 'UTF-16' in file_info:
-                encoding = 'utf-16-le' if 'little-endian' in file_info else 'utf-16-be'
-            
-            df = pd.read_csv(file_path, sep='\t', encoding=encoding, on_bad_lines='skip')
-            
-            # カラム名を標準化
-            standard_columns = ['要素ID', '項目名', 'コンテキストID', '相対年度', '連結・個別',
-                              '期間・時点', 'ユニットID', '単位', '値']
-            
-            if len(df.columns) >= len(standard_columns):
-                df.columns = standard_columns + list(df.columns[len(standard_columns):])
-            else:
-                df = df.reindex(columns=standard_columns)
-            
-            # ファイル名から年度を抽出して追加
-            year = os.path.basename(file_path).split('_')[0][:4]
-            df['年度'] = year
-            
-            return df
-        except Exception as e:
-            logger.error(f"ファイル読み込みエラー {file_path}: {e}", exc_info=True)
-            return None
+        encodings_to_try = ['utf-8', 'utf-16-le', 'utf-16-be', 'shift-jis', 'cp932']
+        
+        for encoding in encodings_to_try:
+            try:
+                df = pd.read_csv(file_path, sep='\t', encoding=encoding, on_bad_lines='skip')
+                
+                # カラム名を標準化
+                standard_columns = ['要素ID', '項目名', 'コンテキストID', '相対年度', '連結・個別',
+                                  '期間・時点', 'ユニットID', '単位', '値']
+                
+                if len(df.columns) >= len(standard_columns):
+                    df.columns = standard_columns + list(df.columns[len(standard_columns):])
+                else:
+                    df = df.reindex(columns=standard_columns)
+                
+                # ファイル名から年度を抽出して追加
+                year = os.path.basename(file_path).split('_')[0][:4]
+                df['年度'] = year
+                
+                return df
+            except UnicodeDecodeError:
+                continue
+            except Exception as e:
+                logger.error(f"ファイル読み込みエラー {file_path}: {e}", exc_info=True)
+                continue
+        
+        logger.error(f"すべてのエンコーディングで読み込みに失敗しました {file_path}")
+        return None
 
     @staticmethod
     def extract_metrics(data: Optional[pd.DataFrame], metrics_list: List[str] = None) -> Dict[str, Dict[str, float]]:
