@@ -582,7 +582,8 @@
             }
             
             function copyOfficersComparisonPrompt() {
-                var button = document.querySelector('.copy-button');
+                // セレクタを具体的に指定
+                var button = document.querySelector('.copy-button[onclick="copyOfficersComparisonPrompt()"]');
                 
                 // ボタンの元のテキストを保存
                 var originalHtml = button.innerHTML;
@@ -591,11 +592,12 @@
                 button.classList.add('loading');
                 button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
                 
+                try {
                 // ターゲット企業の役員情報を取得
                 var targetOfficers = document.querySelector('#target-company').textContent.trim();
                 
-                // 競合企業の役員情報を取得
-                var competitorElements = document.querySelectorAll('[id^="competitor-"]:not([id$="-tab"])');
+                    // 競合企業の役員情報を取得（business-を含まないものに限定）
+                    var competitorElements = document.querySelectorAll('[id^="competitor-"]:not([id$="-tab"]):not([id*="business"])');
                 var competitorInfo = Array.from(competitorElements).map(function(el) {
                     return el.textContent.trim();
                 });
@@ -613,8 +615,48 @@
                 // 全テキストを結合
                 var fullText = promptText + officersText + competitorsText;
                 
-                // クリップボードにコピー
-                navigator.clipboard.writeText(fullText).then(function() {
+                    // クリップボードコピーの処理
+                try {
+                    // まず新しいAPIを試す
+                    navigator.clipboard.writeText(fullText).then(function() {
+                        copySuccess();
+                    }).catch(function(err) {
+                        // 新しいAPIが失敗した場合、従来の方法を試す
+                        fallbackCopy(fullText);
+                    });
+                } catch (err) {
+                    // navigator.clipboardが利用できない場合、従来の方法を試す
+                    fallbackCopy(fullText);
+                    }
+                } catch (err) {
+                    console.error('データの取得中にエラー:', err);
+                    copyFailed();
+                }
+                
+                function fallbackCopy(text) {
+                    // 一時的なテキストエリアを作成
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-9999px';
+                    textArea.style.top = '0';
+                    document.body.appendChild(textArea);
+                    
+                    try {
+                        // テキストを選択してコピー
+                        textArea.select();
+                        document.execCommand('copy');
+                        copySuccess();
+                    } catch (err) {
+                        console.error('クリップボードへのコピーに失敗しました:', err);
+                        copyFailed();
+                    } finally {
+                        // 一時的なテキストエリアを削除
+                        document.body.removeChild(textArea);
+                    }
+                }
+                
+                function copySuccess() {
                     // ローディング状態を解除
                     button.classList.remove('loading');
                     
@@ -635,14 +677,15 @@
                             button.classList.remove('recovering');
                         }, 500);
                     }, 1000);
-                }).catch(function(err) {
+                }
+                
+                function copyFailed() {
                     // ローディング状態を解除
                     button.classList.remove('loading');
                     button.innerHTML = originalHtml;
                     
-                    console.error('クリップボードへのコピーに失敗しました:', err);
                     alert('クリップボードへのコピーに失敗しました。');
-                });
+                }
             }
             
             // 指標比較プロンプトをコピーする関数
