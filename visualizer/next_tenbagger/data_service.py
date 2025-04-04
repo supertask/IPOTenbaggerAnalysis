@@ -202,12 +202,36 @@ class DataService:
                 report_files = sorted(glob.glob(f"{securities_registration_statement_dir}/*.tsv"))
                 
                 if report_files:
-                    # 最新の有価証券届出書を使用
-                    latest_report = report_files[-1]
-                    securities_registration_file_path = latest_report
+                    # ファイルを日付の新しい順に並べ替え
+                    def extract_date(file_path):
+                        file_name = os.path.basename(file_path)
+                        date_match = re.search(r'(\d{4}-\d{2}-\d{2})', file_name)
+                        return date_match.group(1) if date_match else "0000-00-00"
                     
-                    # 財務データを読み込む
-                    securities_registration_data = DataService._read_financial_file(latest_report)
+                    sorted_files = sorted(report_files, key=extract_date, reverse=True)
+                    
+                    # 財務データを含むファイルを探す
+                    securities_registration_data = None
+                    for file_path in sorted_files:
+                        file_name = os.path.basename(file_path)
+                        logger.info(f"ファイル確認中: {file_name}")
+                        
+                        # ファイルを読み込む
+                        df = DataService._read_financial_file(file_path)
+                        
+                        # 財務指標データが含まれているか確認
+                        if DataService._check_financial_data(df):
+                            logger.info(f"財務指標データが含まれているファイルを使用: {file_name}")
+                            securities_registration_file_path = file_path
+                            securities_registration_data = df
+                            break
+                    
+                    # 財務データが見つからなかった場合は最新のファイルを使用
+                    if securities_registration_data is None and sorted_files:
+                        latest_report = sorted_files[0]
+                        logger.info(f"財務指標データが含まれているファイルが見つからないため、最新のファイルを使用: {os.path.basename(latest_report)}")
+                        securities_registration_file_path = latest_report
+                        securities_registration_data = DataService._read_financial_file(latest_report)
             
             # 有価証券報告書を探す
             annual_report_file_paths = []
@@ -398,6 +422,32 @@ class DataService:
             metrics_data['１株当たり四半期純利益（EPS）'] = metrics_data['１株当たり当期純利益（EPS）']
         
         return metrics_data
+
+
+    @staticmethod
+    def _check_financial_data(df):
+        """財務指標データが含まれているか確認"""
+        if df is None:
+            return False
+        
+        # 財務指標のリスト
+        metrics = [
+            "NetSalesSummaryOfBusinessResults",  # 売上高
+            "OperatingIncome",                   # 営業利益
+            "OrdinaryIncome"                     # 経常利益
+        ]
+        
+        # 少なくとも1つの指標が含まれているか確認
+        for metric in metrics:
+            if "要素ID" in df.columns:
+                rows = df[df["要素ID"].str.contains(metric, na=False, regex=True)]
+                if not rows.empty:
+                    logger.info(f"指標 {metric} のデータが {len(rows)}行 見つかりました")
+                    return True
+        
+        logger.info("財務指標データが見つかりません")
+        return False
+    
 
     @staticmethod
     def _extract_single_metric(data: pd.DataFrame, metric_ids: List[str]) -> Dict[str, float]:
