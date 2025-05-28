@@ -96,11 +96,41 @@ IPODataCollectors/
 
 ## Oracle Cloud Infrastructureでの環境構築
 
+install tools
+    sudo apt update
+    sudo apt install -y python3-pip
+    sudo apt install python3-venv
+    sudo apt install nginx
+    sudo apt install firewalld
+    sudo apt install iptables-persistent
+
+install python tools
+    python3 -m venv .venv           # 任意の場所・名前で OK
+    source .venv/bin/activate       # ← 仮想環境に入る
+    pip install --upgrade pip
+    pip install -r requirements.txt
+    
+save routing
+    sudo iptables -I INPUT 5 -p tcp --dport 80 -m conntrack --ctstate NEW -j ACCEPT #ALLOW 80
+    sudo iptables -L INPUT -n --line-numbers | grep ':80'
+
+    sudo netfilter-persistent save            # 既存ルールを /etc/iptables/* に保存
+
 [Free Tier: Ubuntu VMへのFlaskのインストール
 ](https://docs.oracle.com/ja-jp/iaas/developer-tutorials/tutorials/flask-on-ubuntu/01oci-ubuntu-flask-summary.htm)を参考に環境構築してね。
 
 Nginxを構築し、サーバでのキャッシュができるようにする
 https://gemini.google.com/app/eda7023cb013421a
+
+
+Firewall setting
+
+    sudo firewall-cmd --permanent --add-port=80/tcp
+    sudo firewall-cmd --list-ports
+    sudo firewall-cmd --reload
+    sudo firewall-cmd --list-ports
+
+
 
 
 ## Memo
