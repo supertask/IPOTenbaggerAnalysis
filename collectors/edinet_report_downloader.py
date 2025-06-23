@@ -293,6 +293,8 @@ class EdinetReportDownloader:
 
         # Process each company to get the latest reports
         for edinet_code, company_doc_info in full_data.groupby('edinet_code'):
+            if edinet_code not in edinet_to_company_dict:
+                continue  # 辞書に存在しないedinet_codeはスキップ
             company = edinet_to_company_dict[edinet_code]
             company_code5 = company['company_code']
             company_name = company['company_name']

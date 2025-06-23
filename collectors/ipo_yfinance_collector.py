@@ -127,10 +127,14 @@ class IPOYFinanceAnalyzer(IPOAnalyzerCore):
             buy_price = min_price_row['Close']
             buy_date = min_price_row['Date']
 
-            three_bagger_years = self.calculate_bagger_years(hist.to_dict('records'), buy_date, buy_price, 3)
-            five_bagger_years = self.calculate_bagger_years(hist.to_dict('records'), buy_date, buy_price, 5)
-            seven_bagger_years = self.calculate_bagger_years(hist.to_dict('records'), buy_date, buy_price, 7)
-            ten_bagger_years = self.calculate_bagger_years(hist.to_dict('records'), buy_date, buy_price, 10)
+            # 2倍から10倍まで個別に計算
+            bagger_results = {}
+            for n in range(2, 11):  # 2倍から10倍まで
+                years = self.calculate_bagger_years(hist.to_dict('records'), buy_date, buy_price, n)
+                if years == "None":
+                    bagger_results[f"Years_to_{n}_Bagger"] = -1
+                else:
+                    bagger_results[f"Years_to_{n}_Bagger"] = years
 
             max_price_row = hist.loc[hist['Close'].idxmax()]
             max_n_bagger = round(max_price_row['Close'] / buy_price, 1)
@@ -138,15 +142,14 @@ class IPOYFinanceAnalyzer(IPOAnalyzerCore):
 
             current_n_bagger = round(hist['Close'].iloc[-1] / buy_price, 1)
 
-            return {
+            result = {
                 "Current_N_Bagger": current_n_bagger,
                 "Max_N_Bagger": max_n_bagger,
-                "Years_to_3_Bagger": three_bagger_years,
-                "Years_to_5_Bagger": five_bagger_years,
-                "Years_to_7_Bagger": seven_bagger_years,
-                "Years_to_10_Bagger": ten_bagger_years,
                 "Max_N_Bagger_Years": max_n_bagger_years,
             }
+            result.update(bagger_results)
+            
+            return result
         except Exception as e:
             print(f"Error retrieving bagger data for {code}: {e}")
             return None
@@ -166,11 +169,20 @@ class IPOYFinanceAnalyzer(IPOAnalyzerCore):
         if baggers:
             data['現在何倍株'] = baggers["Current_N_Bagger"]
             data['最大何倍株'] = baggers["Max_N_Bagger"]
-            data['3,5,7,10,N倍まで何年'] = f"{baggers['Years_to_3_Bagger']}\n{baggers['Years_to_5_Bagger']}\n{baggers['Years_to_7_Bagger']}\n{baggers['Years_to_10_Bagger']}\n{baggers['Max_N_Bagger_Years']}" 
+            
+            # 元の統合項目も残す
+            data['3,5,7,10,N倍まで何年'] = f"{baggers['Years_to_3_Bagger']}\n{baggers['Years_to_5_Bagger']}\n{baggers['Years_to_7_Bagger']}\n{baggers['Years_to_10_Bagger']}\n{baggers['Max_N_Bagger_Years']}"
+            
+            # 2倍から10倍まで個別の項目として追加
+            for n in range(2, 11):
+                data[f'{n}倍まで何年'] = baggers[f"Years_to_{n}_Bagger"]
         else:
             data['現在何倍株'] = None
             data['最大何倍株'] = None
             data['3,5,7,10,N倍まで何年'] = None
+            # 2倍から10倍まで個別の項目として追加（エラー時は-1）
+            for n in range(2, 11):
+                data[f'{n}倍まで何年'] = -1
 
         return data
 
