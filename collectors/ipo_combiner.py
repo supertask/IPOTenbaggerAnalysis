@@ -7,6 +7,7 @@ from skopt import gp_minimize
 from skopt.space import Real
 
 from collectors.ipo_analyzer_core import IPOAnalyzerCore
+from collectors.ipo_combiner_calc import IPOCombinerCalc
 
 class NBaggerFinder:
     def __init__(self, data, n_bagger=5):
@@ -251,12 +252,30 @@ class IPOCombiner(IPOAnalyzerCore):
             print(f"最大何倍株 >= {condition} の分布計算結果を {condition_dir} に保存しました")
 
 
+    def combine_all_files(self):
+        """
+        設定されたすべての年のTSVファイルを結合する
+        """
+        for year in self.combiner_settings.years:
+            #print(f"Processing year: {year}")
+            combined_df = self.combine_files(year)
+            #if year > 2019:
+            #if year <= 2019:
+            self.all_combined_df = pd.concat([self.all_combined_df, combined_df], ignore_index=True)  # 結果を連結
+        output_file = os.path.join(self.combiner_settings.output_dir, f"all_companies.tsv")
+        self.all_combined_df.to_csv(output_file, sep='\t', index=False)
+
     def run(self):
-        for year in self.scraper_settings.years:
+        for year in self.combiner_settings.years:
             self.combine_files(year)
-        self.combine_all_files(self.combiner_settings.output_dir)
+        self.combine_all_files()
         #self.calculate_and_save_distributions()
         #self.static()
+        
+        # IPOCombinerCalcを実行
+        print("X倍株確率計算を開始します...")
+        calc = IPOCombinerCalc()
+        calc.run_calculation()
 
 # 使用例
 if __name__ == "__main__":
