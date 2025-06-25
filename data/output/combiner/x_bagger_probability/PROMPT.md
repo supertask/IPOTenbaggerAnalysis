@@ -1,0 +1,3 @@
+@x_bagger_conditions.tsv @x_bagger_probability.tsv 
+こちらのTSVなどを使って、
+visualizer/の中で新たにページを作り、どの条件がXバガーの可能性があるのかをユーザが知れて投資に活かせるようにしたいです。

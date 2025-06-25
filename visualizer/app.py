@@ -86,6 +86,19 @@ def create_root_app():
                         </div>
                     </div>
                 </div>
+                <div class="row justify-content-center mt-4">
+                    <div class="col-md-8">
+                        <div class="card">
+                            <div class="card-header" style="background-color: #28a745;">
+                                <h3 class="card-title mb-0">X倍株の条件分析</h3>
+                            </div>
+                            <div class="card-body text-center">
+                                <p class="card-text mb-4">どの条件がX倍株（多倍株）になりやすいかを分析し、投資判断に活かせるツールです。</p>
+                                <a href="/x_bagger/" class="btn btn-success btn-lg">分析ツールを開く</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
         </body>
@@ -200,6 +213,60 @@ def create_past_tenbagger_app():
     
     return app
 
+def create_x_bagger_app():
+    """x_baggerアプリケーションを作成する関数"""
+    # プロジェクトのルートディレクトリを取得
+    base_dir = Path(__file__).parent
+    
+    # x_baggerのテンプレートディレクトリを指定してアプリケーションを作成
+    template_dir = os.path.join(base_dir, 'x_bagger', 'templates')
+    app = Flask(__name__, template_folder=template_dir)
+    
+    # x_baggerのビジネスロジックをインポート
+    from visualizer.x_bagger.root import (
+        index as x_bagger_index,
+        get_chart_data as x_bagger_get_chart_data,
+        get_combination_data as x_bagger_get_combination_data
+    )
+    
+    @app.route('/')
+    def index():
+        """X-bagger分析のメインページ"""
+        data, error, status_code = x_bagger_index()
+        if error:
+            return error, status_code
+        return render_template('index.html', **data)
+    
+    @app.route('/api/chart_data')
+    def get_chart_data():
+        """チャートデータを取得するAPI"""
+        x_bagger = request.args.get('x_bagger', 5, type=int)
+        data, error, status_code = x_bagger_get_chart_data(x_bagger)
+        if error:
+            return jsonify({"error": error}), status_code
+        return jsonify(data), status_code
+    
+    @app.route('/api/combination_data')
+    def get_combination_data():
+        """組み合わせデータを取得するAPI（3段階ソート対応）"""
+        x_bagger = request.args.get('x_bagger', 10, type=int)
+        sort_by1 = request.args.get('sort_by1', '何年かかったかの中央値')
+        sort_order1 = request.args.get('sort_order1', 'asc')
+        sort_by2 = request.args.get('sort_by2', 'X倍以上の%')
+        sort_order2 = request.args.get('sort_order2', 'desc')
+        sort_by3 = request.args.get('sort_by3', '対象企業数')
+        sort_order3 = request.args.get('sort_order3', 'desc')
+        limit = request.args.get('limit', 50, type=int)
+        
+        data, error, status_code = x_bagger_get_combination_data(
+            sort_by1, sort_order1, sort_by2, sort_order2, sort_by3, sort_order3, x_bagger, limit
+        )
+        if error:
+            return jsonify({"error": error}), status_code
+        return jsonify(data), status_code
+    
+    return app
+
 def create_app():
     """アプリケーションを作成する関数"""
     # ルートアプリケーションを作成
@@ -211,10 +278,14 @@ def create_app():
     # past_tenbaggerアプリケーションを作成
     past_tenbagger_app = create_past_tenbagger_app()
     
+    # x_baggerアプリケーションを作成
+    x_bagger_app = create_x_bagger_app()
+    
     # DispatcherMiddlewareを使用して、各アプリケーションをマウント
     app = DispatcherMiddleware(root_app, {
         '/next_tenbagger': next_tenbagger_app,
-        '/past_tenbagger': past_tenbagger_app
+        '/past_tenbagger': past_tenbagger_app,
+        '/x_bagger': x_bagger_app
     })
     
     return app

@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X倍株の条件分析</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .nav-tabs .nav-link.active {
+            background-color: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+        .nav-tabs .nav-link {
+            color: #28a745;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-bottom: 30px;
+        }
+        .condition-card {
+            margin-bottom: 20px;
+        }
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .slider-container {
+            margin: 20px 0;
+        }
+        .x-bagger-display {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+        
+        /* メッセンジャー風フローティングメニュー */
+        .floating-menu {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .menu-toggle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #28a745, #20c997);
+            border: none;
+            box-shadow: 0 4px 20px rgba(40, 167, 69, 0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 18px;
+        }
+        
+        .menu-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(40, 167, 69, 0.6);
+        }
+        
+        .menu-panel {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            width: 280px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            padding: 20px;
+            transform: translateY(20px) scale(0.8);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .menu-panel.active {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .menu-panel::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: 25px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            transform: rotate(45deg);
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .menu-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .x-bagger-slider {
+            margin-bottom: 15px;
+        }
+        
+        .x-bagger-slider label {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 8px;
+            display: block;
+        }
+        
+        .x-bagger-display-mini {
+            font-size: 20px;
+            font-weight: bold;
+            color: #28a745;
+            text-align: center;
+            margin-top: 10px;
+        }
+        
+        .slider-mini {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #e9ecef;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider-mini::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #28a745;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+        }
+        
+        .slider-mini::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #28a745;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(40, 167, 69, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">X倍株の条件分析</h1>
+                <p class="text-center text-muted">どの条件がX倍株（多倍株）になりやすいかを分析し、投資判断に活かせるツールです。</p>
+                
+                <!-- タブナビゲーション -->
+                <ul class="nav nav-tabs" id="analysisTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="single-condition-tab" data-bs-toggle="tab" data-bs-target="#single-condition" type="button" role="tab">
+                            単一条件分析
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="combination-tab" data-bs-toggle="tab" data-bs-target="#combination" type="button" role="tab">
+                            複数条件組み合わせ
+                        </button>
+                    </li>
+                </ul>
+                
+                <!-- タブコンテンツ -->
+                <div class="tab-content" id="analysisTabContent">
+                    <!-- タブ1: 単一条件分析 -->
+                    <div class="tab-pane fade show active" id="single-condition" role="tabpanel">
+                        
+                        <!-- チャート表示エリア -->
+                        <div id="chartsContainer" class="mt-4">
+                            <div class="loading">
+                                <div class="spinner-border text-success" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p>データを読み込み中...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- タブ2: 複数条件組み合わせ -->
+                    <div class="tab-pane fade" id="combination" role="tabpanel">
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h5>複数条件組み合わせ分析</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <!-- X倍選択は非表示にしてフローティングメニューからのみ制御 -->
+                                        <select class="form-select d-none" id="combXBagger">
+                                            {% for x in x_range %}
+                                            <option value="{{ x }}" {% if x == 10 %}selected{% endif %}>{{ x }}倍</option>
+                                            {% endfor %}
+                                        </select>
+                                        <div class="alert alert-info mb-0">
+                                            <i class="fas fa-info-circle"></i>
+                                            X倍の設定は右下のメニューから変更できます
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="limit" class="form-label">表示件数:</label>
+                                        <select class="form-select" id="limit">
+                                            <option value="20">20件</option>
+                                            <option value="50" selected>50件</option>
+                                            <option value="100">100件</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- 3段階ソート設定 -->
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <label for="sortBy1" class="form-label">ソート基準1:</label>
+                                        <select class="form-select" id="sortBy1">
+                                            <option value="何年かかったかの中央値" selected>中央値（年）</option>
+                                            <option value="X倍以上の%">X倍以上の%</option>
+                                            <option value="X倍以上の企業数">X倍以上の企業数</option>
+                                            <option value="対象企業数">対象企業数</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="sortOrder1" class="form-label">順序1:</label>
+                                        <select class="form-select" id="sortOrder1">
+                                            <option value="asc" selected>昇順</option>
+                                            <option value="desc">降順</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label for="sortBy2" class="form-label">ソート基準2:</label>
+                                        <select class="form-select" id="sortBy2">
+                                            <option value="X倍以上の%" selected>X倍以上の%</option>
+                                            <option value="何年かかったかの中央値">中央値（年）</option>
+                                            <option value="X倍以上の企業数">X倍以上の企業数</option>
+                                            <option value="対象企業数">対象企業数</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="sortOrder2" class="form-label">順序2:</label>
+                                        <select class="form-select" id="sortOrder2">
+                                            <option value="desc" selected>降順</option>
+                                            <option value="asc">昇順</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-md-4">
+                                        <label for="sortBy3" class="form-label">ソート基準3:</label>
+                                        <select class="form-select" id="sortBy3">
+                                            <option value="対象企業数" selected>対象企業数</option>
+                                            <option value="X倍以上の%">X倍以上の%</option>
+                                            <option value="何年かかったかの中央値">中央値（年）</option>
+                                            <option value="X倍以上の企業数">X倍以上の企業数</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label for="sortOrder3" class="form-label">順序3:</label>
+                                        <select class="form-select" id="sortOrder3">
+                                            <option value="desc" selected>降順</option>
+                                            <option value="asc">昇順</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 組み合わせ結果テーブル -->
+                        <div class="card mt-3">
+                            <div class="card-header">
+                                <h5>組み合わせ分析結果</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-container">
+                                    <table class="table table-striped table-hover" id="combinationTable">
+                                        <thead class="table-success">
+                                            <tr>
+                                                <th>順位</th>
+                                                <th>条件内容</th>
+                                                <th>X倍以上の%</th>
+                                                <th>中央値（年）</th>
+                                                <th>X倍以上の企業数</th>
+                                                <th>対象企業数</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="combinationTableBody">
+                                            <tr>
+                                                <td colspan="6" class="text-center">データを読み込み中...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- フローティングメニュー -->
+    <div class="floating-menu">
+        <div class="menu-panel" id="menuPanel">
+            <div class="menu-title">X倍株分析</div>
+            <div class="x-bagger-slider">
+                <label for="xBaggerSliderMini">X倍を選択:</label>
+                <input type="range" class="slider-mini" min="2" max="10" value="10" id="xBaggerSliderMini">
+                <div class="x-bagger-display-mini" id="xBaggerDisplayMini">10倍</div>
+            </div>
+        </div>
+        <button class="menu-toggle" id="menuToggle">
+            <i class="fas fa-chart-bar"></i>
+        </button>
+    </div>
+
+    <script>
+        // グローバル変数
+        let currentXBagger = 10; // 複数条件組み合わせ分析のデフォルトと合わせる
+        let chartInstances = {};
+
+        // ページ読み込み時の初期化
+        document.addEventListener('DOMContentLoaded', function() {
+            // フローティングメニューのイベントリスナー
+            const menuToggle = document.getElementById('menuToggle');
+            const menuPanel = document.getElementById('menuPanel');
+            const sliderMini = document.getElementById('xBaggerSliderMini');
+            const displayMini = document.getElementById('xBaggerDisplayMini');
+            
+            // メニューの開閉
+            menuToggle.addEventListener('click', function() {
+                menuPanel.classList.toggle('active');
+            });
+            
+            // メニュー外クリックで閉じる
+            document.addEventListener('click', function(event) {
+                if (!event.target.closest('.floating-menu')) {
+                    menuPanel.classList.remove('active');
+                }
+            });
+            
+            // スライダーイベントリスナー
+            sliderMini.addEventListener('input', function() {
+                currentXBagger = parseInt(this.value);
+                displayMini.textContent = currentXBagger + '倍';
+                
+                // 両方のタブのX倍設定を同期
+                document.getElementById('combXBagger').value = currentXBagger;
+                
+                // データを更新
+                loadChartData();
+                loadCombinationData();
+            });
+            
+            // 複数条件組み合わせ分析の自動実行のためのイベントリスナー
+            ['combXBagger', 'limit', 'sortBy1', 'sortOrder1', 'sortBy2', 'sortOrder2', 'sortBy3', 'sortOrder3'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.addEventListener('change', function() {
+                        // combXBaggerが変更された場合はフローティングメニューも同期
+                        if (id === 'combXBagger') {
+                            currentXBagger = parseInt(this.value);
+                            sliderMini.value = currentXBagger;
+                            displayMini.textContent = currentXBagger + '倍';
+                            loadChartData();
+                        }
+                        loadCombinationData();
+                    });
+                }
+            });
+            
+            // 初期データ読み込み
+            loadChartData();
+            loadCombinationData();
+        });
+
+        // チャートデータを読み込む
+        async function loadChartData() {
+            try {
+                const response = await fetch(`/x_bagger/api/chart_data?x_bagger=${currentXBagger}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    renderCharts(data);
+                } else {
+                    document.getElementById('chartsContainer').innerHTML = 
+                        `<div class="alert alert-danger">エラー: ${data.error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('chartsContainer').innerHTML = 
+                    `<div class="alert alert-danger">データの読み込みに失敗しました: ${error.message}</div>`;
+            }
+        }
+
+        // チャートを描画
+        function renderCharts(data) {
+            const container = document.getElementById('chartsContainer');
+            container.innerHTML = '';
+            
+            // 既存のチャートインスタンスを破棄
+            Object.values(chartInstances).forEach(chart => chart.destroy());
+            chartInstances = {};
+            
+            // 2列グリッドコンテナを作成
+            const gridContainer = document.createElement('div');
+            gridContainer.className = 'charts-grid';
+            container.appendChild(gridContainer);
+            
+            // カテゴリごとにチャートを作成
+            Object.keys(data).forEach(category => {
+                const categoryData = data[category];
+                
+                // カードを作成
+                const card = document.createElement('div');
+                card.className = 'card condition-card';
+                card.innerHTML = `
+                    <div class="card-header">
+                        <h5>${category}</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="chart-${category.replace(/[^a-zA-Z0-9]/g, '')}"></canvas>
+                        </div>
+                    </div>
+                `;
+                gridContainer.appendChild(card);
+                
+                // チャートを作成
+                const canvas = card.querySelector('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                const chartId = category.replace(/[^a-zA-Z0-9]/g, '');
+                chartInstances[chartId] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: categoryData.map(item => item.condition),
+                        datasets: [
+                            {
+                                label: `${currentXBagger}倍以上件数`,
+                                data: categoryData.map(item => item.count),
+                                backgroundColor: 'rgba(54, 162, 235, 0.8)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: '全体件数',
+                                data: categoryData.map(item => item.total),
+                                backgroundColor: 'rgba(255, 159, 64, 0.8)',
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                borderWidth: 1,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: '割合 (%)',
+                                data: categoryData.map(item => item.percentage),
+                                type: 'line',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 3,
+                                fill: false,
+                                yAxisID: 'y1',
+                                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                                pointBorderColor: 'rgba(75, 192, 192, 1)',
+                                pointRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    afterBody: function(context) {
+                                        const index = context[0].dataIndex;
+                                        const item = categoryData[index];
+                                        return [
+                                            `中央値: ${item.median_years ? item.median_years + '年' : '-'}`
+                                        ];
+                                    }
+                                }
+                            },
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: '条件'
+                                }
+                            },
+                            y: {
+                                type: 'linear',
+                                display: true,
+                                position: 'left',
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: '件数'
+                                }
+                            },
+                            y1: {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                beginAtZero: true,
+                                max: 100,
+                                title: {
+                                    display: true,
+                                    text: '割合 (%)'
+                                },
+                                grid: {
+                                    drawOnChartArea: false,
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        // 組み合わせデータを読み込む
+        async function loadCombinationData() {
+            const xBagger = document.getElementById('combXBagger').value;
+            const sortBy1 = document.getElementById('sortBy1').value;
+            const sortOrder1 = document.getElementById('sortOrder1').value;
+            const sortBy2 = document.getElementById('sortBy2').value;
+            const sortOrder2 = document.getElementById('sortOrder2').value;
+            const sortBy3 = document.getElementById('sortBy3').value;
+            const sortOrder3 = document.getElementById('sortOrder3').value;
+            const limit = document.getElementById('limit').value;
+            
+            const tableBody = document.getElementById('combinationTableBody');
+            tableBody.innerHTML = '<tr><td colspan="6" class="text-center">読み込み中...</td></tr>';
+            
+            try {
+                const params = new URLSearchParams({
+                    x_bagger: xBagger,
+                    sort_by1: sortBy1,
+                    sort_order1: sortOrder1,
+                    sort_by2: sortBy2,
+                    sort_order2: sortOrder2,
+                    sort_by3: sortBy3,
+                    sort_order3: sortOrder3,
+                    limit: limit
+                });
+                
+                const response = await fetch(`/x_bagger/api/combination_data?${params}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    renderCombinationTable(data);
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">エラー: ${data.error}</td></tr>`;
+                }
+            } catch (error) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">データの読み込みに失敗しました: ${error.message}</td></tr>`;
+            }
+        }
+
+        // 組み合わせテーブルを描画
+        function renderCombinationTable(data) {
+            const tableBody = document.getElementById('combinationTableBody');
+            
+            if (data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="text-center">データがありません</td></tr>';
+                return;
+            }
+            
+            tableBody.innerHTML = data.map((item, index) => `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.条件内容}</td>
+                    <td>${item['X倍以上の%']}%</td>
+                    <td>${item['何年かかったかの中央値'] || '-'}</td>
+                    <td>${item['X倍以上の企業数']}</td>
+                    <td>${item['対象企業数']}</td>
+                </tr>
+            `).join('');
+        }
+    </script>
+</body>
+</html> 
