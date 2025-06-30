@@ -1,0 +1,176 @@
+name: IPO Data Collection (Split Jobs)
+
+on:
+  # 毎週日曜日午前1時（JST 10時）から段階的に実行
+  schedule:
+    # 基礎データ収集（日曜日 1:00 UTC = JST 10:00）
+    - cron: '0 1 * * 0'
+  
+  push:
+    tags:
+      - 'data-collection-split-*'
+  
+  workflow_dispatch:
+    inputs:
+      job_type:
+        description: 'Job type to run'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - basic
+          - analysis
+          - reports
+
+jobs:
+  basic-collection:
+    if: github.event.inputs.job_type == 'all' || github.event.inputs.job_type == 'basic' || github.event_name == 'schedule' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install playwright
+        playwright install chromium
+        playwright install-deps
+    
+    - name: Create directories
+      run: |
+        mkdir -p data/cache/{kiso,traders,yfinance,comparison}
+        mkdir -p data/output
+        mkdir -p etc/tmp
+    
+    - name: Run basic collection
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+        EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      run: |
+        python3 -m collectors list
+        python3 -m collectors details
+        python3 -m collectors traders
+        python3 -m collectors yfinance
+    
+    - name: Cache basic data
+      uses: actions/cache@v3
+      with:
+        path: |
+          data/cache/kiso
+          data/cache/traders
+          data/cache/yfinance
+        key: basic-data-${{ github.run_number }}
+        restore-keys: basic-data-
+    
+    - name: Upload basic results
+      uses: actions/upload-artifact@v4
+      with:
+        name: basic-collection-${{ github.run_number }}
+        path: |
+          data/cache/kiso
+          data/cache/traders
+          data/cache/yfinance
+        retention-days: 7
+
+  analysis-collection:
+    needs: basic-collection
+    if: always() && (github.event.inputs.job_type == 'all' || github.event.inputs.job_type == 'analysis' || github.event_name == 'schedule' || github.event_name == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+    
+    - name: Restore basic data
+      uses: actions/cache@v3
+      with:
+        path: |
+          data/cache/kiso
+          data/cache/traders
+          data/cache/yfinance
+        key: basic-data-${{ github.run_number }}
+        restore-keys: basic-data-
+    
+    - name: Download basic results
+      uses: actions/download-artifact@v4
+      with:
+        name: basic-collection-${{ github.run_number }}
+        path: data/cache
+    
+    - name: Run analysis
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+        EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      run: |
+        python3 -m collectors comparison
+    
+    - name: Upload analysis results
+      uses: actions/upload-artifact@v4
+      with:
+        name: analysis-collection-${{ github.run_number }}
+        path: data/cache/comparison
+        retention-days: 7
+
+  reports-collection:
+    needs: [basic-collection, analysis-collection]
+    if: always() && (github.event.inputs.job_type == 'all' || github.event.inputs.job_type == 'reports' || github.event_name == 'schedule' || github.event_name == 'push')
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+    
+    - name: Install dependencies
+      run: pip install -r requirements.txt
+    
+    - name: Download all previous results
+      uses: actions/download-artifact@v4
+      with:
+        pattern: '*-collection-${{ github.run_number }}'
+        path: data/cache
+        merge-multiple: true
+    
+    - name: Run reports and combination
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+        EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
+        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      run: |
+        python3 -m collectors edinet
+        python3 -m collectors combiner
+    
+    - name: Upload final results
+      uses: actions/upload-artifact@v4
+      with:
+        name: final-results-${{ github.run_number }}
+        path: |
+          data/output/
+          data/cache/
+        retention-days: 30
+    
+    - name: Create final summary
+      run: |
+        echo "## Final Data Collection Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- Completed at: $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "- Total output files: $(find data/output -type f 2>/dev/null | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- Cache size: $(du -sh data/cache 2>/dev/null || echo 'N/A')" >> $GITHUB_STEP_SUMMARY 
