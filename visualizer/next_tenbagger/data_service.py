@@ -355,8 +355,8 @@ class DataService:
             return None, f"企業データの取得中にエラー: {str(e)}"
 
     @staticmethod
-    def _read_financial_file(file_path: str) -> Optional[pd.DataFrame]:
-        """財務データファイルを読み込む（堅牢なエンコーディング検出付き）"""
+    def _detect_file_encoding(file_path: str) -> str:
+        """ファイルのエンコーディングを検出する（堅牢版）"""
         try:
             import chardet
             
@@ -370,10 +370,10 @@ class DataService:
                         logger.info(f"chardetで検出されたエンコーディング: {detected['encoding']} (信頼度: {detected['confidence']:.2f})")
                         return detected['encoding']
                 except Exception as e:
-                    logger.debug(f"chardetでのエンコーディング検出に失敗: {e}")
+                    logger.debug(f"chardetでエンコーディング検出失敗: {e}")
                 return None
             
-            # 方法2: ファイルの先頭バイトからBOMを検出
+            # 方法2: BOM（Byte Order Mark）を確認
             def detect_encoding_from_bom(file_path):
                 try:
                     with open(file_path, 'rb') as f:
@@ -388,109 +388,108 @@ class DataService:
                     elif bom.startswith(b'\xfe\xff'):
                         return 'utf-16-be'
                     elif bom.startswith(b'\xef\xbb\xbf'):
-                        return 'utf-8-sig'  # UTF-8 with BOM
+                        return 'utf-8-sig'
+                    
+                    logger.debug(f"BOM検出結果: {bom.hex()}")
                 except Exception as e:
-                    logger.debug(f"BOMでのエンコーディング検出に失敗: {e}")
+                    logger.debug(f"BOM検出中にエラー: {e}")
                 return None
             
-            # 方法3: fileコマンドを使用
+            # 方法3: fileコマンドを使用（利用可能な場合のみ）
             def detect_encoding_with_file_command(file_path):
                 try:
-                    result = os.popen(f'file "{file_path}"').read()
-                    if 'UTF-16' in result:
-                        if 'little-endian' in result:
-                            return 'utf-16-le'
-                        elif 'big-endian' in result:
-                            return 'utf-16-be'
-                        else:
-                            return 'utf-16'
-                    elif 'UTF-8' in result:
-                        return 'utf-8'
-                    elif 'ASCII' in result:
-                        return 'ascii'
+                    import subprocess
+                    result = subprocess.run(['file', '--mime-encoding', file_path], 
+                                          capture_output=True, text=True, timeout=5)
+                    if result.returncode == 0:
+                        encoding = result.stdout.strip().split(': ')[-1]
+                        logger.info(f"fileコマンドで検出されたエンコーディング: {encoding}")
+                        return encoding
                 except Exception as e:
-                    logger.debug(f"fileコマンドでのエンコーディング検出に失敗: {e}")
+                    logger.debug(f"fileコマンドでエンコーディング検出失敗: {e}")
                 return None
             
-            # エンコーディング候補のリスト（優先順位順）
-            encoding_candidates = []
+            # 検出順序：BOM → chardet → fileコマンド → デフォルト試行
+            logger.info(f"ファイルエンコーディング検出開始: {file_path}")
             
-            # 1. BOM検出
+            # 1. BOM確認
             bom_encoding = detect_encoding_from_bom(file_path)
             if bom_encoding:
-                encoding_candidates.append(bom_encoding)
+                logger.info(f"BOMから検出されたエンコーディング: {bom_encoding}")
+                return bom_encoding
             
-            # 2. chardet検出
+            # 2. chardet自動検出
             chardet_encoding = detect_encoding_with_chardet(file_path)
             if chardet_encoding:
-                encoding_candidates.append(chardet_encoding)
+                return chardet_encoding
             
             # 3. fileコマンド検出
             file_encoding = detect_encoding_with_file_command(file_path)
-            if file_encoding:
-                encoding_candidates.append(file_encoding)
+            if file_encoding and file_encoding not in ['binary', 'unknown']:
+                return file_encoding
             
-            # 4. 一般的なエンコーディングを追加
-            common_encodings = ['utf-8', 'utf-16', 'utf-16-le', 'utf-16-be', 'shift_jis', 'cp932', 'euc-jp', 'iso-2022-jp']
-            for enc in common_encodings:
-                if enc not in encoding_candidates:
-                    encoding_candidates.append(enc)
-            
-            # エンコーディングを順番に試行
-            for encoding in encoding_candidates:
-                try:
-                    logger.info(f"エンコーディング '{encoding}' で読み込み試行中: {os.path.basename(file_path)}")
-                    
-                    # ファイルを読み込む
-                    df = pd.read_csv(file_path, delimiter="\t", encoding=encoding, dtype=str, on_bad_lines='skip')
-                    
-                    # 必要な列が存在するか確認
-                    required_columns = ["要素ID", "項目名", "値"]
-                    if not all(col in df.columns for col in required_columns):
-                        missing_columns = [col for col in required_columns if col not in df.columns]
-                        logger.warning(f"必要な列がありません (エンコーディング: {encoding}): {missing_columns}")
-                        continue
-                    
-                    # 読み込み成功
-                    logger.info(f"ファイル読み込み成功 (エンコーディング: {encoding}): {os.path.basename(file_path)}")
-                    return df
-                    
-                except UnicodeDecodeError as e:
-                    logger.debug(f"エンコーディング '{encoding}' で読み込み失敗: {e}")
-                    continue
-                except Exception as e:
-                    logger.debug(f"エンコーディング '{encoding}' で予期しないエラー: {e}")
-                    continue
-            
-            # すべてのエンコーディングで失敗した場合
-            logger.error(f"すべてのエンコーディングで読み込みに失敗しました: {file_path}")
-            return None
+            # 4. デフォルト値
+            logger.info("エンコーディング自動検出失敗、UTF-8を使用")
+            return 'utf-8'
             
         except ImportError:
-            # chardetがインストールされていない場合の旧来の方法
-            logger.warning("chardetライブラリがインストールされていません。基本的なエンコーディング検出を使用します。")
+            logger.warning("chardetライブラリがインストールされていません。基本的な検出のみ使用")
+            # chardetなしでBOMとfileコマンドのみ使用
+            bom_encoding = detect_encoding_from_bom(file_path)
+            if bom_encoding:
+                return bom_encoding
             
-            try:
-                # ファイルのエンコーディングを確認
-                encoding = 'utf-16' if 'UTF-16' in os.popen(f'file "{file_path}"').read() else 'utf-8'
-                
-                # ファイルを読み込む
-                df = pd.read_csv(file_path, delimiter="\t", encoding=encoding, dtype=str, on_bad_lines='skip')
-                
-                # 必要な列が存在するか確認
-                required_columns = ["要素ID", "項目名", "値"]
-                if not all(col in df.columns for col in required_columns):
-                    missing_columns = [col for col in required_columns if col not in df.columns]
-                    logger.warning(f"必要な列がありません: {missing_columns}")
-                    return None
-                
-                return df
-            except Exception as e:
-                logger.error(f"財務データファイルの読み込み中にエラー (fallback): {e}", exc_info=True)
-                return None
+            file_encoding = detect_encoding_with_file_command(file_path)
+            if file_encoding and file_encoding not in ['binary', 'unknown']:
+                return file_encoding
+            
+            return 'utf-8'
+        except Exception as e:
+            logger.error(f"エンコーディング検出中に予期しないエラー: {e}")
+            return 'utf-8'
+
+    @staticmethod
+    def _read_financial_file(file_path: str) -> Optional[pd.DataFrame]:
+        """財務データファイルを読み込む"""
+        try:
+            # エンコーディングを検出
+            encoding = DataService._detect_file_encoding(file_path)
+            
+            # 複数のエンコーディングで試行
+            encodings_to_try = [encoding]
+            if encoding not in ['utf-8', 'utf-16-le', 'utf-16-be', 'shift-jis', 'cp932']:
+                encodings_to_try.extend(['utf-8', 'utf-16-le', 'utf-16-be', 'shift-jis', 'cp932'])
+            
+            for enc in encodings_to_try:
+                try:
+                    logger.info(f"エンコーディング {enc} でファイル読み込み試行: {file_path}")
+                    df = pd.read_csv(file_path, sep='\t', encoding=enc, on_bad_lines='skip')
+                    
+                    # カラム名を標準化
+                    standard_columns = ['要素ID', '項目名', 'コンテキストID', '相対年度', '連結・個別',
+                                      '期間・時点', 'ユニットID', '単位', '値']
+                    
+                    if len(df.columns) >= len(standard_columns):
+                        df.columns = standard_columns + list(df.columns[len(standard_columns):])
+                        logger.info(f"ファイル読み込み成功 (エンコーディング: {enc}, 行数: {len(df)})")
+                        return df
+                    else:
+                        df = df.reindex(columns=standard_columns)
+                        logger.info(f"ファイル読み込み成功 (エンコーディング: {enc}, 行数: {len(df)}, カラム不足)")
+                        return df
+                        
+                except UnicodeDecodeError as e:
+                    logger.debug(f"エンコーディング {enc} でUnicodeDecodeError: {e}")
+                    continue
+                except Exception as e:
+                    logger.debug(f"エンコーディング {enc} で読み込みエラー: {e}")
+                    continue
+            
+            logger.error(f"全てのエンコーディングで読み込みに失敗: {file_path}")
+            return None
             
         except Exception as e:
-            logger.error(f"財務データファイルの読み込み中に予期しないエラー: {e}", exc_info=True)
+            logger.error(f"ファイル読み込み中に予期しないエラー: {e}", exc_info=True)
             return None
 
     @staticmethod
@@ -539,7 +538,6 @@ class DataService:
             metrics_data['１株当たり四半期純利益（EPS）'] = metrics_data['１株当たり当期純利益（EPS）']
         
         return metrics_data
-
 
     @staticmethod
     def _check_financial_data(df):
@@ -850,22 +848,40 @@ class DataService:
     def _extract_officers_info(report_file: str) -> Optional[str]:
         """報告書ファイルから役員情報を抽出"""
         try:
-            # ファイルのエンコーディングを確認
-            encoding = 'utf-16' if 'UTF-16' in os.popen(f'file "{report_file}"').read() else 'utf-8'
+            # 堅牢なエンコーディング検出を使用
+            encoding = DataService._detect_file_encoding(report_file)
             
-            # ファイルを読み込む
-            df = pd.read_csv(report_file, delimiter="\t", encoding=encoding, dtype=str, on_bad_lines='skip')
+            # 複数のエンコーディングで試行
+            encodings_to_try = [encoding, 'utf-16-le', 'utf-8', 'shift-jis', 'cp932']
             
-            # 役員情報を抽出
-            officers_rows = df[df["要素ID"] == "jpcrp_cor:InformationAboutOfficersTextBlock"]
+            for enc in encodings_to_try:
+                try:
+                    logger.debug(f"役員情報抽出でエンコーディング {enc} を試行")
+                    df = pd.read_csv(report_file, delimiter="\t", encoding=enc, dtype=str, on_bad_lines='skip')
+                    
+                    # 役員情報を抽出
+                    officers_rows = df[df["要素ID"] == "jpcrp_cor:InformationAboutOfficersTextBlock"]
+                    
+                    if not officers_rows.empty:
+                        officers_info = officers_rows.iloc[0].get("値", "")
+                        # HTMLとして整形
+                        officers_html = officers_info.replace('\n', '<br>')
+                        logger.info(f"役員情報の抽出成功 (エンコーディング: {enc})")
+                        return officers_html
+                    else:
+                        logger.debug(f"役員情報の要素IDが見つかりません (エンコーディング: {enc})")
+                        break  # エンコーディングは正しいが、データがない
+                        
+                except UnicodeDecodeError:
+                    logger.debug(f"役員情報抽出でUnicodeDecodeError (エンコーディング: {enc})")
+                    continue
+                except Exception as e:
+                    logger.debug(f"役員情報抽出でエラー (エンコーディング: {enc}): {e}")
+                    continue
             
-            if not officers_rows.empty:
-                officers_info = officers_rows.iloc[0].get("値", "")
-                # HTMLとして整形
-                officers_html = officers_info.replace('\n', '<br>')
-                return officers_html
-            
+            logger.warning(f"役員情報の抽出に失敗: {report_file}")
             return None
+            
         except Exception as e:
             logger.error(f"役員情報の抽出中にエラー: {e}", exc_info=True)
             return None
@@ -922,22 +938,40 @@ class DataService:
     def _extract_business_description(report_file: str) -> Optional[str]:
         """報告書ファイルから事業内容を抽出"""
         try:
-            # ファイルのエンコーディングを確認
-            encoding = 'utf-16' if 'UTF-16' in os.popen(f'file "{report_file}"').read() else 'utf-8'
+            # 堅牢なエンコーディング検出を使用
+            encoding = DataService._detect_file_encoding(report_file)
             
-            # ファイルを読み込む
-            df = pd.read_csv(report_file, delimiter="\t", encoding=encoding, dtype=str, on_bad_lines='skip')
+            # 複数のエンコーディングで試行
+            encodings_to_try = [encoding, 'utf-16-le', 'utf-8', 'shift-jis', 'cp932']
             
-            # 事業の内容を抽出
-            business_rows = df[df["要素ID"] == "jpcrp_cor:DescriptionOfBusinessTextBlock"]
+            for enc in encodings_to_try:
+                try:
+                    logger.debug(f"事業内容抽出でエンコーディング {enc} を試行")
+                    df = pd.read_csv(report_file, delimiter="\t", encoding=enc, dtype=str, on_bad_lines='skip')
+                    
+                    # 事業の内容を抽出
+                    business_rows = df[df["要素ID"] == "jpcrp_cor:DescriptionOfBusinessTextBlock"]
+                    
+                    if not business_rows.empty:
+                        business_description = business_rows.iloc[0].get("値", "")
+                        # HTMLとして整形
+                        business_html = business_description.replace('\n', '<br>')
+                        logger.info(f"事業内容の抽出成功 (エンコーディング: {enc})")
+                        return business_html
+                    else:
+                        logger.debug(f"事業内容の要素IDが見つかりません (エンコーディング: {enc})")
+                        break  # エンコーディングは正しいが、データがない
+                        
+                except UnicodeDecodeError:
+                    logger.debug(f"事業内容抽出でUnicodeDecodeError (エンコーディング: {enc})")
+                    continue
+                except Exception as e:
+                    logger.debug(f"事業内容抽出でエラー (エンコーディング: {enc}): {e}")
+                    continue
             
-            if not business_rows.empty:
-                business_description = business_rows.iloc[0].get("値", "")
-                # HTMLとして整形
-                business_html = business_description.replace('\n', '<br>')
-                return business_html
-            
+            logger.warning(f"事業内容の抽出に失敗: {report_file}")
             return None
+            
         except Exception as e:
             logger.error(f"事業内容の抽出中にエラー: {e}", exc_info=True)
             return None 
