@@ -96,41 +96,207 @@ IPODataCollectors/
 
 ## Oracle Cloud Infrastructureでの環境構築
 
-install tools
-    sudo apt update
-    sudo apt install -y python3-pip
-    sudo apt install python3-venv
-    sudo apt install nginx
-    sudo apt install firewalld
-    sudo apt install iptables-persistent
+### 前提条件
+- Oracle Cloud Infrastructure（OCI）のUbuntu VMインスタンスが起動済み
+- SSH接続でVMにアクセス可能
+- sudoコマンドが使用可能なユーザーでログイン済み
 
-install python tools
-    python3 -m venv .venv           # 任意の場所・名前で OK
-    source .venv/bin/activate       # ← 仮想環境に入る
-    pip install --upgrade pip
-    pip install -r requirements.txt
+### 1. システム更新と基本ツールのインストール
+
+```bash
+# システムパッケージの更新
+sudo apt update
+
+# 必要な基本ツールのインストール
+sudo apt install -y python3-pip          # Python パッケージ管理ツール
+sudo apt install python3-venv            # Python 仮想環境作成ツール
+sudo apt install nginx                   # Webサーバー
+sudo apt install firewalld              # ファイアウォール管理ツール
+sudo apt install iptables-persistent    # iptablesルール永続化ツール
+```
+
+### 2. Python環境の構築
+
+```bash
+# プロジェクトディレクトリに移動（例：/home/ubuntu/Projects/IPODataCollectors）
+cd /home/ubuntu/Projects/IPODataCollectors
+
+# Python仮想環境の作成
+python3 -m venv .venv
+
+# 仮想環境の有効化
+source .venv/bin/activate
+
+# pipのアップグレード
+pip install --upgrade pip
+
+# プロジェクトの依存パッケージをインストール
+pip install -r requirements.txt
+```
+
+### 3. ファイアウォール設定
+
+#### iptablesでの設定
+```bash
+# HTTP（ポート80）のアクセスを許可
+sudo iptables -I INPUT 5 -p tcp --dport 80 -m conntrack --ctstate NEW -j ACCEPT
+
+# 設定内容の確認
+sudo iptables -L INPUT -n --line-numbers | grep ':80'
+
+# 設定を永続化（再起動後も有効）
+sudo netfilter-persistent save
+```
+
+#### firewalldでの設定（代替方法）
+```bash
+# HTTPポートの開放
+sudo firewall-cmd --permanent --add-port=80/tcp
+
+# 設定のリロード 
+sudo firewall-cmd --reload
+
+# 開放されているポートの確認
+sudo firewall-cmd --list-ports
+```
+
+### 4. Gunicornサービスの設定
+
+#### Gunicornサービスファイルの作成
+```bash
+sudo vim /etc/systemd/system/gunicorn.service
+```
+
+以下の内容を記述（etc/gunicorn.serviceファイルの内容を参照）：
+```ini
+[Unit]
+Description=Gunicorn instance to serve Flask application
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Projects/IPODataCollectors
+ExecStart=/home/ubuntu/.local/bin/gunicorn -w 4 -b 127.0.0.1:5000 "visualizer.app:create_app()"
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### サービスの有効化と起動
+```bash
+# systemdの設定をリロード
+sudo systemctl daemon-reload
+
+# Gunicornサービスの有効化（自動起動設定）
+sudo systemctl enable gunicorn
+
+# Gunicornサービスの開始
+sudo systemctl start gunicorn
+
+# サービス状態の確認
+sudo systemctl status gunicorn
+```
+
+### 5. Nginx設定
+
+#### Nginx設定ファイルの作成
+```bash
+sudo vim /etc/nginx/sites-available/ipo_visualizer
+```
+
+以下の内容を記述（etc/ipo_visualizer_nginx.confファイルの内容を参照）：
+```nginx
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ipo_visualizer;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # アクセスログとエラーログ
+    access_log /var/log/nginx/ipo_visualizer.access.log;
+    error_log /var/log/nginx/ipo_visualizer.error.log;
+}
+```
+
+#### Nginxサイトの有効化
+```bash
+# サイトの有効化（シンボリックリンク作成）
+sudo ln -s /etc/nginx/sites-available/ipo_visualizer /etc/nginx/sites-enabled/
+
+# Nginx設定の構文チェック
+sudo nginx -t
+
+# Nginxサービスの再起動
+sudo systemctl restart nginx
+
+# Nginxサービスの自動起動設定
+sudo systemctl enable nginx
+```
+
+### 6. サービス管理コマンド
+
+#### Gunicornサービス
+```bash
+# 再起動
+sudo systemctl restart gunicorn
+
+# 停止
+sudo systemctl stop gunicorn
+
+# 状態確認
+sudo systemctl status gunicorn
+```
+
+#### Nginxサービス
+```bash
+# 設定リロード
+sudo systemctl reload nginx
+
+# 再起動
+sudo systemctl restart nginx
+
+# 状態確認
+sudo systemctl status nginx
+```
+
+### 7. ログの確認方法
+
+#### Gunicornサービスのログ
+    # リアルタイムでログを表示
+    journalctl -u gunicorn.service -f
     
-save routing
-    sudo iptables -I INPUT 5 -p tcp --dport 80 -m conntrack --ctstate NEW -j ACCEPT #ALLOW 80
-    sudo iptables -L INPUT -n --line-numbers | grep ':80'
+    # 過去のログを表示
+    journalctl -u gunicorn.service
+    
+    # サービスの状態確認
+    sudo systemctl status gunicorn
 
-    sudo netfilter-persistent save            # 既存ルールを /etc/iptables/* に保存
+#### Nginxのログ
+    # アクセスログの確認
+    sudo tail -n 20 /var/log/nginx/access.log
+    sudo tail -f /var/log/nginx/ipo_visualizer.access.log
+    
+    # エラーログの確認
+    sudo tail -n 20 /var/log/nginx/error.log
+    sudo tail -f /var/log/nginx/ipo_visualizer.error.log
 
-[Free Tier: Ubuntu VMへのFlaskのインストール
-](https://docs.oracle.com/ja-jp/iaas/developer-tutorials/tutorials/flask-on-ubuntu/01oci-ubuntu-flask-summary.htm)を参考に環境構築してね。
+#### アプリケーションログ
+Flaskアプリケーションのログは以下の場所に記録されます：
+- **Gunicornサービス**: systemdジャーナル（`journalctl -u gunicorn.service -f`で確認）
+- **Nginx**: `/var/log/nginx/ipo_visualizer.access.log`と`/var/log/nginx/ipo_visualizer.error.log`
+- **アプリケーション**: デフォルトでコンソール出力（systemdジャーナルに記録）
 
-Nginxを構築し、サーバでのキャッシュができるようにする
-https://gemini.google.com/app/eda7023cb013421a
-
-
-Firewall setting
-
-    sudo firewall-cmd --permanent --add-port=80/tcp
-    sudo firewall-cmd --list-ports
-    sudo firewall-cmd --reload
-    sudo firewall-cmd --list-ports
-
-
+### 参考資料
+- [Oracle Cloud Infrastructure - Free Tier: Ubuntu VMへのFlaskのインストール](https://docs.oracle.com/ja-jp/iaas/developer-tutorials/tutorials/flask-on-ubuntu/01oci-ubuntu-flask-summary.htm)
+- [Nginxでのキャッシュ設定について](https://gemini.google.com/app/eda7023cb013421a)
 
 
 ## Memo
