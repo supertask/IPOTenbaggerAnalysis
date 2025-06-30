@@ -125,35 +125,158 @@ class DataService:
 
     @staticmethod
     def _read_financial_file(file_path: str) -> Optional[pd.DataFrame]:
-        """財務データファイルを読み込む"""
-        encodings_to_try = ['utf-8', 'utf-16-le', 'utf-16-be', 'shift-jis', 'cp932']
-        
-        for encoding in encodings_to_try:
-            try:
-                df = pd.read_csv(file_path, sep='\t', encoding=encoding, on_bad_lines='skip')
-                
-                # カラム名を標準化
-                standard_columns = ['要素ID', '項目名', 'コンテキストID', '相対年度', '連結・個別',
-                                  '期間・時点', 'ユニットID', '単位', '値']
-                
-                if len(df.columns) >= len(standard_columns):
-                    df.columns = standard_columns + list(df.columns[len(standard_columns):])
-                else:
-                    df = df.reindex(columns=standard_columns)
-                
-                # ファイル名から年度を抽出して追加
-                year = os.path.basename(file_path).split('_')[0][:4]
-                df['年度'] = year
-                
-                return df
-            except UnicodeDecodeError:
-                continue
-            except Exception as e:
-                logger.error(f"ファイル読み込みエラー {file_path}: {e}", exc_info=True)
-                continue
-        
-        logger.error(f"すべてのエンコーディングで読み込みに失敗しました {file_path}")
-        return None
+        """財務データファイルを読み込む（堅牢なエンコーディング検出付き）"""
+        try:
+            import chardet
+            
+            # 方法1: chardetを使用した自動検出
+            def detect_encoding_with_chardet(file_path):
+                try:
+                    with open(file_path, 'rb') as f:
+                        raw_data = f.read(10000)  # 最初の10KBを読み取り
+                    detected = chardet.detect(raw_data)
+                    if detected and detected['encoding'] and detected['confidence'] > 0.7:
+                        logger.info(f"chardetで検出されたエンコーディング: {detected['encoding']} (信頼度: {detected['confidence']:.2f})")
+                        return detected['encoding']
+                except Exception as e:
+                    logger.debug(f"chardetでのエンコーディング検出に失敗: {e}")
+                return None
+            
+            # 方法2: ファイルの先頭バイトからBOMを検出
+            def detect_encoding_from_bom(file_path):
+                try:
+                    with open(file_path, 'rb') as f:
+                        bom = f.read(4)
+                    
+                    if bom.startswith(b'\xff\xfe\x00\x00'):
+                        return 'utf-32-le'
+                    elif bom.startswith(b'\x00\x00\xfe\xff'):
+                        return 'utf-32-be'
+                    elif bom.startswith(b'\xff\xfe'):
+                        return 'utf-16-le'
+                    elif bom.startswith(b'\xfe\xff'):
+                        return 'utf-16-be'
+                    elif bom.startswith(b'\xef\xbb\xbf'):
+                        return 'utf-8-sig'  # UTF-8 with BOM
+                except Exception as e:
+                    logger.debug(f"BOMでのエンコーディング検出に失敗: {e}")
+                return None
+            
+            # 方法3: fileコマンドを使用
+            def detect_encoding_with_file_command(file_path):
+                try:
+                    result = os.popen(f'file "{file_path}"').read()
+                    if 'UTF-16' in result:
+                        if 'little-endian' in result:
+                            return 'utf-16-le'
+                        elif 'big-endian' in result:
+                            return 'utf-16-be'
+                        else:
+                            return 'utf-16'
+                    elif 'UTF-8' in result:
+                        return 'utf-8'
+                    elif 'ASCII' in result:
+                        return 'ascii'
+                except Exception as e:
+                    logger.debug(f"fileコマンドでのエンコーディング検出に失敗: {e}")
+                return None
+            
+            # エンコーディング候補のリスト（優先順位順）
+            encoding_candidates = []
+            
+            # 1. BOM検出
+            bom_encoding = detect_encoding_from_bom(file_path)
+            if bom_encoding:
+                encoding_candidates.append(bom_encoding)
+            
+            # 2. chardet検出
+            chardet_encoding = detect_encoding_with_chardet(file_path)
+            if chardet_encoding:
+                encoding_candidates.append(chardet_encoding)
+            
+            # 3. fileコマンド検出
+            file_encoding = detect_encoding_with_file_command(file_path)
+            if file_encoding:
+                encoding_candidates.append(file_encoding)
+            
+            # 4. 一般的なエンコーディングを追加
+            common_encodings = ['utf-8', 'utf-16', 'utf-16-le', 'utf-16-be', 'shift_jis', 'cp932', 'euc-jp', 'iso-2022-jp']
+            for enc in common_encodings:
+                if enc not in encoding_candidates:
+                    encoding_candidates.append(enc)
+            
+            # エンコーディングを順番に試行
+            for encoding in encoding_candidates:
+                try:
+                    logger.info(f"エンコーディング '{encoding}' で読み込み試行中: {os.path.basename(file_path)}")
+                    
+                    # ファイルを読み込む
+                    df = pd.read_csv(file_path, sep='\t', encoding=encoding, on_bad_lines='skip')
+                    
+                    # カラム名を標準化
+                    standard_columns = ['要素ID', '項目名', 'コンテキストID', '相対年度', '連結・個別',
+                                      '期間・時点', 'ユニットID', '単位', '値']
+                    
+                    if len(df.columns) >= len(standard_columns):
+                        df.columns = standard_columns + list(df.columns[len(standard_columns):])
+                    else:
+                        df = df.reindex(columns=standard_columns)
+                    
+                    # ファイル名から年度を抽出して追加
+                    year = os.path.basename(file_path).split('_')[0][:4]
+                    df['年度'] = year
+                    
+                    # 読み込み成功
+                    logger.info(f"ファイル読み込み成功 (エンコーディング: {encoding}): {os.path.basename(file_path)}")
+                    return df
+                    
+                except UnicodeDecodeError as e:
+                    logger.debug(f"エンコーディング '{encoding}' で読み込み失敗: {e}")
+                    continue
+                except Exception as e:
+                    logger.debug(f"エンコーディング '{encoding}' で予期しないエラー: {e}")
+                    continue
+            
+            # すべてのエンコーディングで失敗した場合
+            logger.error(f"すべてのエンコーディングで読み込みに失敗しました: {file_path}")
+            return None
+            
+        except ImportError:
+            # chardetがインストールされていない場合の旧来の方法
+            logger.warning("chardetライブラリがインストールされていません。基本的なエンコーディング検出を使用します。")
+            
+            encodings_to_try = ['utf-8', 'utf-16-le', 'utf-16-be', 'shift-jis', 'cp932']
+            
+            for encoding in encodings_to_try:
+                try:
+                    df = pd.read_csv(file_path, sep='\t', encoding=encoding, on_bad_lines='skip')
+                    
+                    # カラム名を標準化
+                    standard_columns = ['要素ID', '項目名', 'コンテキストID', '相対年度', '連結・個別',
+                                      '期間・時点', 'ユニットID', '単位', '値']
+                    
+                    if len(df.columns) >= len(standard_columns):
+                        df.columns = standard_columns + list(df.columns[len(standard_columns):])
+                    else:
+                        df = df.reindex(columns=standard_columns)
+                    
+                    # ファイル名から年度を抽出して追加
+                    year = os.path.basename(file_path).split('_')[0][:4]
+                    df['年度'] = year
+                    
+                    return df
+                except UnicodeDecodeError:
+                    continue
+                except Exception as e:
+                    logger.error(f"ファイル読み込みエラー {file_path}: {e}", exc_info=True)
+                    continue
+            
+            logger.error(f"すべてのエンコーディングで読み込みに失敗しました {file_path}")
+            return None
+            
+        except Exception as e:
+            logger.error(f"財務データファイルの読み込み中に予期しないエラー: {e}", exc_info=True)
+            return None
 
     @staticmethod
     def extract_metrics(data: Optional[pd.DataFrame], metrics_list: List[str] = None) -> Dict[str, Dict[str, float]]:

@@ -8,3 +8,4 @@ pandas
 matplotlib
 plotly
 gunicorn
+chardet
