@@ -1962,36 +1962,31 @@
             
             function copyBusinessComparisonPrompt() {
                 var button = document.querySelector('.copy-button[onclick="copyBusinessComparisonPrompt()"]');
-                
                 // ボタンの元のテキストを保存
                 var originalHtml = button.innerHTML;
-                
                 // ローディング状態に変更
                 button.classList.add('loading');
                 button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
-                
                 // ターゲット企業の事業の内容を取得
                 var targetBusiness = document.querySelector('#target-company-business').textContent.trim();
-                
                 // 競合企業の事業の内容を取得
                 var competitorElements = document.querySelectorAll('[id^="competitor-business-"]:not([id$="-tab"])');
                 var competitorInfo = Array.from(competitorElements).map(function(el) {
                     return el.textContent.trim();
                 });
-                
                 // プロンプトテキストを作成
                 var promptText = "下記は、それぞれの企業の事業の内容です。テンバガーの企業を選ぶ際にこれらの事業内容だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
                 var companyName = '{{ company_name }}';
                 var businessText = "【" + companyName + "の事業の内容】\n" + targetBusiness + "\n\n";
-                
                 // 競合企業の情報を追加
                 var competitorsText = competitorInfo.map(function(info, index) {
                     return "【" + competitorsData[index].name + "の事業の内容】\n" + info;
                 }).join('\n\n');
-                
                 // 全テキストを結合
                 var fullText = promptText + businessText + competitorsText;
-                
+                // デバッグ用ログ追加
+                console.log('navigator:', navigator);
+                console.log('navigator.clipboard:', navigator.clipboard);
                 try {
                     if (navigator.clipboard && navigator.clipboard.writeText) {
                         navigator.clipboard.writeText(fullText).then(function() {
@@ -2005,7 +2000,6 @@
                 } catch (err) {
                     fallbackCopy(fullText);
                 }
-                
                 function fallbackCopy(text) {
                     // 一時的なテキストエリアを作成
                     const textArea = document.createElement('textarea');
@@ -2014,7 +2008,6 @@
                     textArea.style.left = '-9999px';
                     textArea.style.top = '0';
                     document.body.appendChild(textArea);
-                    
                     try {
                         // テキストを選択してコピー
                         textArea.select();
@@ -2028,35 +2021,28 @@
                         document.body.removeChild(textArea);
                     }
                 }
-                
                 function copySuccess() {
                     // ローディング状態を解除
                     button.classList.remove('loading');
-                    
                     // 成功状態に変更
                     button.classList.add('clicked');
                     button.innerHTML = originalHtml;
-                    
                     // トースト表示
                     showToast('コピーしました！');
-                    
                     // 1秒後に元の状態に戻す
                     setTimeout(function() {
                         button.classList.remove('clicked');
                         button.classList.add('recovering');
-                        
                         // 復帰アニメーション完了後にクラスを削除
                         setTimeout(function() {
                             button.classList.remove('recovering');
                         }, 500);
                     }, 1000);
                 }
-                
                 function copyFailed() {
                     // ローディング状態を解除
                     button.classList.remove('loading');
                     button.innerHTML = originalHtml;
-                    
                     alert('クリップボードへのコピーに失敗しました。');
                 }
             }
