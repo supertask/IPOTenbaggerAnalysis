@@ -610,55 +610,47 @@
             function copyOfficersComparisonPrompt() {
                 // セレクタを具体的に指定
                 var button = document.querySelector('.copy-button[onclick="copyOfficersComparisonPrompt()"]');
-                
                 // ボタンの元のテキストを保存
                 var originalHtml = button.innerHTML;
-                
                 // ローディング状態に変更
                 button.classList.add('loading');
                 button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
-                
                 try {
-                // ターゲット企業の役員情報を取得
-                var targetOfficers = document.querySelector('#target-company').textContent.trim();
-                
+                    // ターゲット企業の役員情報を取得
+                    var targetOfficers = document.querySelector('#target-company').textContent.trim();
                     // 競合企業の役員情報を取得（business-を含まないものに限定）
                     var competitorElements = document.querySelectorAll('[id^="competitor-"]:not([id$="-tab"]):not([id*="business"])');
-                var competitorInfo = Array.from(competitorElements).map(function(el) {
-                    return el.textContent.trim();
-                });
-                
-                // プロンプトテキストを作成
-                var promptText = "下記は、それぞれの企業の役員の状況です。テンバガーの企業を選ぶ際にこれらの役員だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
-                var companyName = '{{ company_name }}';
-                var officersText = "【" + companyName + "の役員の状況】\n" + targetOfficers + "\n\n";
-                
-                // 競合企業の情報を追加
-                var competitorsText = competitorInfo.map(function(info, index) {
-                    return "【" + competitorsData[index].name + "の役員の状況】\n" + info;
-                }).join('\n\n');
-                
-                // 全テキストを結合
-                var fullText = promptText + officersText + competitorsText;
-                
-                    // クリップボードコピーの処理
-                try {
-                    // まず新しいAPIを試す
-                    navigator.clipboard.writeText(fullText).then(function() {
-                        copySuccess();
-                    }).catch(function(err) {
-                        // 新しいAPIが失敗した場合、従来の方法を試す
-                        fallbackCopy(fullText);
+                    var competitorInfo = Array.from(competitorElements).map(function(el) {
+                        return el.textContent.trim();
                     });
-                } catch (err) {
-                    // navigator.clipboardが利用できない場合、従来の方法を試す
-                    fallbackCopy(fullText);
+                    // プロンプトテキストを作成
+                    var promptText = "下記は、それぞれの企業の役員の状況です。テンバガーの企業を選ぶ際にこれらの役員だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
+                    var companyName = '{{ company_name }}';
+                    var officersText = "【" + companyName + "の役員の状況】\n" + targetOfficers + "\n\n";
+                    // 競合企業の情報を追加
+                    var competitorsText = competitorInfo.map(function(info, index) {
+                        return "【" + competitorsData[index].name + "の役員の状況】\n" + info;
+                    }).join('\n\n');
+                    // 全テキストを結合
+                    var fullText = promptText + officersText + competitorsText;
+                    // クリップボードコピーの処理
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(fullText).then(function() {
+                                copySuccess();
+                            }).catch(function(err) {
+                                fallbackCopy(fullText);
+                            });
+                        } else {
+                            fallbackCopy(fullText);
+                        }
+                    } catch (err) {
+                        fallbackCopy(fullText);
                     }
                 } catch (err) {
                     console.error('データの取得中にエラー:', err);
                     copyFailed();
                 }
-                
                 function fallbackCopy(text) {
                     // 一時的なテキストエリアを作成
                     const textArea = document.createElement('textarea');
@@ -667,7 +659,6 @@
                     textArea.style.left = '-9999px';
                     textArea.style.top = '0';
                     document.body.appendChild(textArea);
-                    
                     try {
                         // テキストを選択してコピー
                         textArea.select();
@@ -681,35 +672,28 @@
                         document.body.removeChild(textArea);
                     }
                 }
-                
                 function copySuccess() {
                     // ローディング状態を解除
                     button.classList.remove('loading');
-                    
                     // 成功状態に変更
                     button.classList.add('clicked');
                     button.innerHTML = originalHtml;
-                    
                     // トースト表示
                     showToast('コピーしました！');
-                    
                     // 1秒後に元の状態に戻す
                     setTimeout(function() {
                         button.classList.remove('clicked');
                         button.classList.add('recovering');
-                        
                         // 復帰アニメーション完了後にクラスを削除
                         setTimeout(function() {
                             button.classList.remove('recovering');
                         }, 500);
                     }, 1000);
                 }
-                
                 function copyFailed() {
                     // ローディング状態を解除
                     button.classList.remove('loading');
                     button.innerHTML = originalHtml;
-                    
                     alert('クリップボードへのコピーに失敗しました。');
                 }
             }
@@ -2009,15 +1993,16 @@
                 var fullText = promptText + businessText + competitorsText;
                 
                 try {
-                    // まず新しいAPIを試す
-                    navigator.clipboard.writeText(fullText).then(function() {
-                        copySuccess();
-                    }).catch(function(err) {
-                        // 新しいAPIが失敗した場合、従来の方法を試す
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(fullText).then(function() {
+                            copySuccess();
+                        }).catch(function(err) {
+                            fallbackCopy(fullText);
+                        });
+                    } else {
                         fallbackCopy(fullText);
-                    });
+                    }
                 } catch (err) {
-                    // navigator.clipboardが利用できない場合、従来の方法を試す
                     fallbackCopy(fullText);
                 }
                 
