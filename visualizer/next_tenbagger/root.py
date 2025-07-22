@@ -51,10 +51,36 @@ def handle_errors(func: Callable) -> Callable:
 def extract_diff(file_old, file_new, date_old, date_new):
     """四半期報告書の差分を抽出する関数"""
     try:
+        # ファイルのエンコーディングを自動検出する関数
+        def detect_encoding(file_path):
+            import chardet
+            try:
+                with open(file_path, 'rb') as f:
+                    raw_data = f.read()
+                    # バイナリファイル（PDFなど）かチェック
+                    if raw_data.startswith(b'%PDF'):
+                        return None, "PDF"
+                    result = chardet.detect(raw_data)
+                    encoding = result['encoding']
+                    if encoding is None:
+                        encoding = 'utf-8'
+                    return encoding, "TEXT"
+            except Exception as e:
+                logger.warning(f"エンコーディング検出エラー {file_path}: {e}")
+                return 'utf-8', "TEXT"
+        
+        # ファイルのエンコーディングを検出
+        encoding_old, file_type_old = detect_encoding(file_old)
+        encoding_new, file_type_new = detect_encoding(file_new)
+        
+        # バイナリファイルの場合はエラーメッセージを返す
+        if file_type_old == "PDF" or file_type_new == "PDF":
+            return "PDFファイルは差分比較できません。テキストファイルを使用してください。"
+        
         # ファイルの内容を読み込む
-        with open(file_old, 'r', encoding='utf-8') as f:
+        with open(file_old, 'r', encoding=encoding_old) as f:
             old_content = f.readlines()
-        with open(file_new, 'r', encoding='utf-8') as f:
+        with open(file_new, 'r', encoding=encoding_new) as f:
             new_content = f.readlines()
         
         # 差分を計算
