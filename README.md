@@ -18,7 +18,7 @@ pip install -r requirements.txt
 データ収集は以下のコマンドで実行できます：
 
 ```bash
-python -m collectors <collector_name>
+python3 -m collectors <collector_name>
 ```
 
 利用可能なコレクター:
@@ -55,7 +55,7 @@ python3 -m collectors all
 
 ```bash
 # 直接実行
-python -m visualizer.app
+python3 -m visualizer.app
 
 # または、Flask CLIを使用
 export FLASK_APP=visualizer.app
