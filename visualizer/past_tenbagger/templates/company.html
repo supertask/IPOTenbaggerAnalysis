@@ -222,6 +222,32 @@
                     
                     <h1 class="mb-3">{{ company_name }} <small class="text-muted">({{ company_code }})</small></h1>
                     
+                    <!-- 外部リンクセクション -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">外部リンク</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <a href="https://irbank.net/{{ company_code }}/ir?mw=2" target="_blank" class="btn btn-outline-primary w-100">
+                                        <i class="bi bi-graph-up"></i> IRバンク（IR情報）
+                                    </a>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <a href="https://irbank.net/{{ company_code }}/per?mw=2" target="_blank" class="btn btn-outline-primary w-100">
+                                        <i class="bi bi-bar-chart-line"></i> IRバンク（PER情報）
+                                    </a>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <a href="https://www.traders.co.jp/ipo/{{ company_code }}" target="_blank" class="btn btn-outline-primary w-100">
+                                        <i class="bi bi-building"></i> トレーダーズ（IPO情報）
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="card mb-4">
                         <div class="card-header">
                             <h5 class="mb-0">競合企業</h5>
@@ -332,9 +358,14 @@
                     
                     <!-- 事業の内容の比較プロンプトコピーボタン -->
                     <div class="text-center mb-4">
-                        <button class="btn copy-button" onclick="copyBusinessComparisonPrompt()">
-                            <i class="bi bi-clipboard"></i> 事業の内容の比較プロンプト（Copy）
-                        </button>
+                        <div class="btn-group" role="group">
+                            <button class="btn copy-button" onclick="copyBusinessComparisonPrompt()">
+                                <i class="bi bi-box-arrow-up-right"></i> 事業の内容の比較プロンプト
+                            </button>
+                            <button class="btn btn-success" onclick="openChatGPTWithBusinessPrompt()">
+                                <i class="bi bi-chat-dots"></i> ChatGPTで開く
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- 役員情報セクション -->
@@ -430,9 +461,14 @@
                     
                     <!-- 役員情報の比較プロンプトコピーボタン -->
                     <div class="text-center mb-4">
-                        <button class="btn copy-button" onclick="copyOfficersComparisonPrompt()">
-                            <i class="bi bi-clipboard"></i> 役員の状況の比較プロンプト（Copy）
-                        </button>
+                        <div class="btn-group" role="group">
+                            <button class="btn copy-button" onclick="copyOfficersComparisonPrompt()">
+                                <i class="bi bi-box-arrow-up-right"></i> 役員の状況の比較プロンプト
+                            </button>
+                            <button class="btn btn-success" onclick="openChatGPTWithOfficersPrompt()">
+                                <i class="bi bi-chat-dots"></i> ChatGPTで開く
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- トースト通知用のコンテナ -->
@@ -464,10 +500,10 @@
                             </div>
                             <div class="mt-3 d-flex flex-wrap">
                                 <button class="btn copy-button m-1" id="securities-single-company-all-years-btn">
-                                    <i class="bi bi-clipboard"></i> 全年
+                                    <i class="bi bi-box-arrow-up-right"></i> 全年
                                 </button>
                                 <button class="btn copy-button m-1" id="securities-all-companies-all-years-btn">
-                                    <i class="bi bi-clipboard"></i> 全年での<span class="competitor-count">{{ competitors|length + 1 }}</span>企業比較
+                                    <i class="bi bi-box-arrow-up-right"></i> 全年での<span class="competitor-count">{{ competitors|length + 1 }}</span>企業比較
                                 </button>
                             </div>
                         </div>
@@ -518,7 +554,7 @@
                                                             data-company-name="{{ company_name }}"
                                                             data-chart-index="{{ loop.index }}"
                                                             onclick="copySingleCompanyAllYearsPrompt(this)">
-                                                        <i class="bi bi-clipboard"></i> 全年
+                                                        <i class="bi bi-box-arrow-up-right"></i> 全年
                                                     </button>
                                                     
                                                 </div>
@@ -529,7 +565,7 @@
                                                     data-company-name="{{ company_name }}"
                                                     data-chart-index="{{ loop.index }}"
                                                     onclick="copyMetricComparisonPrompt(this)">
-                                                <i class="bi bi-clipboard"></i> 全年での<span class="competitor-count">{{ competitors|length + 1 }}</span>企業比較
+                                                <i class="bi bi-box-arrow-up-right"></i> 全年での<span class="competitor-count">{{ competitors|length + 1 }}</span>企業比較
                                             </button>
                                         </div>
                                     </div>
@@ -581,6 +617,37 @@
                 }, 2000);
             }
             
+            // ===== 追加: クリップボードAPIが使えない環境向けフォールバック =====
+            function openPromptWindow(text) {
+                const newWin = window.open('', '_blank');
+                if (!newWin) {
+                    alert('新しいタブを開けませんでした。ポップアップブロックを解除してください。');
+                    return;
+                }
+                const escaped = text
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+                newWin.document.write(`
+                    <html>
+                      <head><meta charset="utf-8"><title>Prompt</title></head>
+                      <body style="white-space:pre-wrap;font-family:monospace;padding:20px;">
+                        ${escaped}
+                      </body>
+                    </html>`);
+                newWin.document.close();
+            }
+            
+            // navigator.clipboard が未定義、または writeText が無い場合のポリフィル
+            if (!navigator.clipboard || !navigator.clipboard.writeText) {
+                navigator.clipboard = {
+                    writeText: function(text) {
+                        openPromptWindow(text);
+                        return Promise.resolve();
+                    }
+                };
+            }
+            
             function copyOfficersComparisonPrompt() {
                 // セレクタを具体的に指定
                 var button = document.querySelector('.copy-button[onclick="copyOfficersComparisonPrompt()"]');
@@ -590,73 +657,34 @@
                 
                 // ローディング状態に変更
                 button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
                 
                 try {
-                // ターゲット企業の役員情報を取得
-                var targetOfficers = document.querySelector('#target-company').textContent.trim();
-                
+                    // ターゲット企業の役員情報を取得
+                    var targetOfficers = document.querySelector('#target-company').textContent.trim();
+                    
                     // 競合企業の役員情報を取得（business-を含まないものに限定）
                     var competitorElements = document.querySelectorAll('[id^="competitor-"]:not([id$="-tab"]):not([id*="business"])');
-                var competitorInfo = Array.from(competitorElements).map(function(el) {
-                    return el.textContent.trim();
-                });
-                
-                // プロンプトテキストを作成
-                var promptText = "下記は、それぞれの企業の役員の状況です。テンバガーの企業を選ぶ際にこれらの役員だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
-                var companyName = '{{ company_name }}';
-                var officersText = "【" + companyName + "の役員の状況】\n" + targetOfficers + "\n\n";
-                
-                // 競合企業の情報を追加
-                var competitorsText = competitorInfo.map(function(info, index) {
-                    return "【" + competitorsData[index].name + "の役員の状況】\n" + info;
-                }).join('\n\n');
-                
-                // 全テキストを結合
-                var fullText = promptText + officersText + competitorsText;
-                
-                    // クリップボードコピーの処理
-                try {
-                    // まず新しいAPIを試す
-                    navigator.clipboard.writeText(fullText).then(function() {
-                        copySuccess();
-                    }).catch(function(err) {
-                        // 新しいAPIが失敗した場合、従来の方法を試す
-                        fallbackCopy(fullText);
+                    var competitorInfo = Array.from(competitorElements).map(function(el) {
+                        return el.textContent.trim();
                     });
-                } catch (err) {
-                    // navigator.clipboardが利用できない場合、従来の方法を試す
-                    fallbackCopy(fullText);
-                    }
-                } catch (err) {
-                    console.error('データの取得中にエラー:', err);
-                    copyFailed();
-                }
-                
-                function fallbackCopy(text) {
-                    // 一時的なテキストエリアを作成
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    textArea.style.position = 'fixed';
-                    textArea.style.left = '-9999px';
-                    textArea.style.top = '0';
-                    document.body.appendChild(textArea);
                     
-                    try {
-                        // テキストを選択してコピー
-                        textArea.select();
-                        document.execCommand('copy');
-                        copySuccess();
-                    } catch (err) {
-                        console.error('クリップボードへのコピーに失敗しました:', err);
-                        copyFailed();
-                    } finally {
-                        // 一時的なテキストエリアを削除
-                        document.body.removeChild(textArea);
-                    }
-                }
-                
-                function copySuccess() {
+                    // プロンプトテキストを作成
+                    var promptText = "下記は、それぞれの企業の役員の状況です。テンバガーの企業を選ぶ際にこれらの役員だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
+                    var companyName = '{{ company_name }}';
+                    var officersText = "【" + companyName + "の役員の状況】\n" + targetOfficers + "\n\n";
+                    
+                    // 競合企業の情報を追加
+                    var competitorsText = competitorInfo.map(function(info, index) {
+                        return "【" + competitorsData[index].name + "の役員の状況】\n" + info;
+                    }).join('\n\n');
+                    
+                    // 全テキストを結合
+                    var fullText = promptText + officersText + competitorsText;
+                    
+                    // 直接タブを開く
+                    openPromptWindow(fullText);
+                    
                     // ローディング状態を解除
                     button.classList.remove('loading');
                     
@@ -665,7 +693,7 @@
                     button.innerHTML = originalHtml;
                     
                     // トースト表示
-                    showToast('コピーしました！');
+                    showToast('タブを開きました！');
                     
                     // 1秒後に元の状態に戻す
                     setTimeout(function() {
@@ -677,14 +705,12 @@
                             button.classList.remove('recovering');
                         }, 500);
                     }, 1000);
-                }
-                
-                function copyFailed() {
+                } catch (err) {
+                    console.error('データの取得中にエラー:', err);
                     // ローディング状態を解除
                     button.classList.remove('loading');
                     button.innerHTML = originalHtml;
-                    
-                    alert('クリップボードへのコピーに失敗しました。');
+                    alert('エラーが発生しました。');
                 }
             }
             
@@ -699,7 +725,7 @@
                 
                 // ローディング状態に変更
                 button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
                 
                 // データからプロンプトを生成
                 const chartData = window['chartData_' + chartIndex];
@@ -950,28 +976,24 @@
                     button.classList.remove('loading');
                     button.innerHTML = originalHtml;
                     
-                    // クリップボードにコピー
-                    navigator.clipboard.writeText(fullText).then(function() {
-                        // 成功状態に変更
-                        button.classList.add('clicked');
+                    // 直接タブを開く
+                    openPromptWindow(fullText);
+                    // 成功状態に変更
+                    button.classList.add('clicked');
+                    
+                    // トースト表示
+                    showToast('タブを開きました！');
+                    
+                    // 1秒後に元の状態に戻す
+                    setTimeout(function() {
+                        button.classList.remove('clicked');
+                        button.classList.add('recovering');
                         
-                        // トースト表示
-                        showToast('コピーしました！');
-                        
-                        // 1秒後に元の状態に戻す
+                        // 復帰アニメーション完了後にクラスを削除
                         setTimeout(function() {
-                            button.classList.remove('clicked');
-                            button.classList.add('recovering');
-                            
-                            // 復帰アニメーション完了後にクラスを削除
-                            setTimeout(function() {
-                                button.classList.remove('recovering');
-                            }, 500);
-                        }, 1000);
-                    }).catch(function(err) {
-                        console.error('クリップボードへのコピーに失敗しました:', err);
-                        alert('クリップボードへのコピーに失敗しました。');
-                    });
+                            button.classList.remove('recovering');
+                        }, 500);
+                    }, 1000);
                 }).catch(error => {
                     // ローディング状態を解除
                     button.classList.remove('loading');
@@ -983,12 +1005,8 @@
                     // エラーが発生した場合でも、データ部分だけでもコピーする
                     const fallbackText = `${promptIntro}\n\n${dataText}\n上記データを分析し、${companyName}の強みと弱み、今後の見通しについて詳細に解説してください。`;
                     
-                    navigator.clipboard.writeText(fallbackText).then(function() {
-                        showToast('データ部分のみコピーしました（差分の取得に失敗）');
-                    }).catch(function(err) {
-                        console.error('クリップボードへのコピーに失敗しました:', err);
-                        alert('クリップボードへのコピーに失敗しました。');
-                    });
+                                            openPromptWindow(fallbackText);
+                        showToast('データ部分のみタブを開きました（差分の取得に失敗）');
                 });
             }
             
@@ -1002,7 +1020,7 @@
                 
                 // ローディング状態に変更
                 button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
                 
                 // 選択された企業を取得
                 const cardBody = button.closest('.card-body');
@@ -1126,28 +1144,24 @@
                         button.classList.remove('loading');
                         button.innerHTML = originalHtml;
                         
-                        // クリップボードにコピー
-                        navigator.clipboard.writeText(fullText).then(function() {
-                            // 成功状態に変更
-                            button.classList.add('clicked');
+                        // 直接タブを開く
+                        openPromptWindow(fullText);
+                        // 成功状態に変更
+                        button.classList.add('clicked');
+                        
+                        // トースト表示
+                        showToast('タブを開きました！');
+                        
+                        // 1秒後に元の状態に戻す
+                        setTimeout(function() {
+                            button.classList.remove('clicked');
+                            button.classList.add('recovering');
                             
-                            // トースト表示
-                            showToast('コピーしました！');
-                            
-                            // 1秒後に元の状態に戻す
+                            // 復帰アニメーション完了後にクラスを削除
                             setTimeout(function() {
-                                button.classList.remove('clicked');
-                                button.classList.add('recovering');
-                                
-                                // 復帰アニメーション完了後にクラスを削除
-                                setTimeout(function() {
-                                    button.classList.remove('recovering');
-                                }, 500);
-                            }, 1000);
-                        }).catch(function(err) {
-                            console.error('クリップボードへのコピーに失敗しました:', err);
-                            alert('クリップボードへのコピーに失敗しました。');
-                        });
+                                button.classList.remove('recovering');
+                            }, 500);
+                        }, 1000);
                     })
                     .catch(error => {
                         console.error('有価証券報告書の差分の取得中にエラー:', error);
@@ -1156,12 +1170,8 @@
                         // エラーが発生した場合でも、データ部分だけでもコピーする
                         const fallbackText = `${promptIntro}\n\n${dataText}\n上記データを分析し、${selectedCompanyName}の${chartTitle}の推移から見える傾向、強みと弱み、今後の見通しについて詳細に解説してください。`;
                         
-                        navigator.clipboard.writeText(fallbackText).then(function() {
-                            showToast('データ部分のみコピーしました（差分の取得に失敗）');
-                        }).catch(function(err) {
-                            console.error('クリップボードへのコピーに失敗しました:', err);
-                            alert('クリップボードへのコピーに失敗しました。');
-                        });
+                        openPromptWindow(fallbackText);
+                        showToast('データ部分のみタブを開きました（差分の取得に失敗）');
                     });
             }
             
@@ -1172,7 +1182,7 @@
                 
                 // ローディング状態に変更
                 button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
                 
                 const oldYear = button.dataset.oldYear;
                 const newYear = button.dataset.newYear;
@@ -1256,28 +1266,24 @@
                     button.classList.remove('loading');
                     button.innerHTML = originalHtml;
                     
-                    // クリップボードにコピー
-                    navigator.clipboard.writeText(promptText).then(function() {
-                        // 成功状態に変更
-                        button.classList.add('clicked');
+                    // 直接タブを開く
+                    openPromptWindow(promptText);
+                    // 成功状態に変更
+                    button.classList.add('clicked');
+                    
+                    // トースト表示
+                    showToast('タブを開きました！');
+                    
+                    // 1秒後に元の状態に戻す
+                    setTimeout(function() {
+                        button.classList.remove('clicked');
+                        button.classList.add('recovering');
                         
-                        // トースト表示
-                        showToast('コピーしました！');
-                        
-                        // 1秒後に元の状態に戻す
+                        // 復帰アニメーション完了後にクラスを削除
                         setTimeout(function() {
-                            button.classList.remove('clicked');
-                            button.classList.add('recovering');
-                            
-                            // 復帰アニメーション完了後にクラスを削除
-                            setTimeout(function() {
-                                button.classList.remove('recovering');
-                            }, 500);
-                        }, 1000);
-                    }).catch(function(err) {
-                        console.error('クリップボードへのコピーに失敗しました:', err);
-                        alert('クリップボードへのコピーに失敗しました。');
-                    });
+                            button.classList.remove('recovering');
+                        }, 500);
+                    }, 1000);
                 })
                 .catch(error => {
                     // ローディング状態を解除
@@ -1333,7 +1339,7 @@
                             // ボタンを作成
                             const button = document.createElement('button');
                             button.className = 'btn copy-button m-1';
-                            button.innerHTML = `<i class="bi bi-clipboard"></i> ${oldYear}年～${newYear}年`;
+                            button.innerHTML = `<i class="bi bi-box-arrow-up-right"></i> ${oldYear}年～${newYear}年`;
                             button.dataset.oldYear = oldYear;
                             button.dataset.newYear = newYear;
                             button.dataset.oldReport = reportsByYear[oldYear][0].file;
@@ -1398,7 +1404,7 @@
                             // ボタンを作成
                             const button = document.createElement('button');
                             button.className = 'btn copy-button m-1 btn-sm';
-                            button.innerHTML = `<i class="bi bi-clipboard"></i> ${oldYear}～${newYear}`;
+                            button.innerHTML = `<i class="bi bi-box-arrow-up-right"></i> ${oldYear}～${newYear}`;
                             button.dataset.oldYear = oldYear;
                             button.dataset.newYear = newYear;
                             button.dataset.oldReport = reportsByYear[oldYear][0].file;
@@ -1430,7 +1436,7 @@
                 
                 // ローディング状態に変更
                 button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
                 
                 const oldReport = button.dataset.oldReport;
                 const newReport = button.dataset.newReport;
@@ -1475,28 +1481,24 @@
                     button.classList.remove('loading');
                     button.innerHTML = originalHtml;
                     
-                    // クリップボードにコピー
-                    navigator.clipboard.writeText(promptText).then(function() {
-                        // 成功状態に変更
-                        button.classList.add('clicked');
+                    // 直接タブを開く
+                    openPromptWindow(promptText);
+                    // 成功状態に変更
+                    button.classList.add('clicked');
+                    
+                    // トースト表示
+                    showToast('タブを開きました！');
+                    
+                    // 1秒後に元の状態に戻す
+                    setTimeout(function() {
+                        button.classList.remove('clicked');
+                        button.classList.add('recovering');
                         
-                        // トースト表示
-                        showToast('コピーしました！');
-                        
-                        // 1秒後に元の状態に戻す
+                        // 復帰アニメーション完了後にクラスを削除
                         setTimeout(function() {
-                            button.classList.remove('clicked');
-                            button.classList.add('recovering');
-                            
-                            // 復帰アニメーション完了後にクラスを削除
-                            setTimeout(function() {
-                                button.classList.remove('recovering');
-                            }, 500);
-                        }, 1000);
-                    }).catch(function(err) {
-                        console.error('クリップボードへのコピーに失敗しました:', err);
-                        alert('クリップボードへのコピーに失敗しました。');
-                    });
+                            button.classList.remove('recovering');
+                        }, 500);
+                    }, 1000);
                 })
                 .catch(error => {
                     // ローディング状態を解除
@@ -1517,7 +1519,7 @@
                 
                 // ローディング状態に変更
                 button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
                 
                 // 選択された企業を取得
                 const select = document.getElementById('company-select');
@@ -1619,15 +1621,16 @@
                         button.classList.remove('loading');
                         button.innerHTML = originalHtml;
                         
-                        // クリップボードにコピー
-                        return navigator.clipboard.writeText(promptText);
+                        // 直接タブを開く
+                        openPromptWindow(promptText);
+                        return Promise.resolve();
                     })
                     .then(() => {
                         // 成功状態に変更
                         button.classList.add('clicked');
                         
                         // トースト表示
-                        showToast('コピーしました！');
+                        showToast('タブを開きました！');
                         
                         // 1秒後に元の状態に戻す
                         setTimeout(function() {
@@ -1655,7 +1658,7 @@
                 
                 // ローディング状態に変更
                 button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
                 
                 const mainCompanyCode = '{{ company_code }}';
                 const mainCompanyName = '{{ company_name }}';
@@ -1879,8 +1882,9 @@
                     button.classList.remove('loading');
                     button.innerHTML = originalHtml;
                     
-                    // クリップボードにコピー
-                    return navigator.clipboard.writeText(promptText);
+                    // 直接タブを開く
+                    openPromptWindow(promptText);
+                    return Promise.resolve();
                 })
                 .then(() => {
                     // 成功状態に変更
@@ -1950,6 +1954,10 @@
                 });
             });
             
+            // グローバルへ公開
+            window.copyBusinessComparisonPrompt = copyBusinessComparisonPrompt;
+            window.copyOfficersComparisonPrompt = copyOfficersComparisonPrompt;
+            
             function copyBusinessComparisonPrompt() {
                 var button = document.querySelector('.copy-button[onclick="copyBusinessComparisonPrompt()"]');
                 
@@ -1958,7 +1966,7 @@
                 
                 // ローディング状態に変更
                 button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">コピー中...</span><span class="original-text">' + originalHtml + '</span>';
+                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
                 
                 // ターゲット企業の事業の内容を取得
                 var targetBusiness = document.querySelector('#target-company-business').textContent.trim();
@@ -1982,73 +1990,224 @@
                 // 全テキストを結合
                 var fullText = promptText + businessText + competitorsText;
                 
-                try {
-                    // まず新しいAPIを試す
-                    navigator.clipboard.writeText(fullText).then(function() {
-                        copySuccess();
-                    }).catch(function(err) {
-                        // 新しいAPIが失敗した場合、従来の方法を試す
-                        fallbackCopy(fullText);
-                    });
-                } catch (err) {
-                    // navigator.clipboardが利用できない場合、従来の方法を試す
-                    fallbackCopy(fullText);
-                }
+                // 直接新しいタブを開いて内容を表示
+                openPromptWindow(fullText);
                 
-                function fallbackCopy(text) {
-                    // 一時的なテキストエリアを作成
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    textArea.style.position = 'fixed';
-                    textArea.style.left = '-9999px';
-                    textArea.style.top = '0';
-                    document.body.appendChild(textArea);
-                    
-                    try {
-                        // テキストを選択してコピー
-                        textArea.select();
-                        document.execCommand('copy');
-                        copySuccess();
-                    } catch (err) {
-                        console.error('クリップボードへのコピーに失敗しました:', err);
-                        copyFailed();
-                    } finally {
-                        // 一時的なテキストエリアを削除
-                        document.body.removeChild(textArea);
-                    }
-                }
+                // ローディング状態を解除
+                button.classList.remove('loading');
                 
-                function copySuccess() {
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
+                // 成功状態に変更
+                button.classList.add('clicked');
+                button.innerHTML = originalHtml;
+                
+                // トースト表示
+                showToast('タブを開きました！');
+                
+                // 1秒後に元の状態に戻す
+                setTimeout(function() {
+                    button.classList.remove('clicked');
+                    button.classList.add('recovering');
                     
-                    // 成功状態に変更
-                    button.classList.add('clicked');
-                    button.innerHTML = originalHtml;
-                    
-                    // トースト表示
-                    showToast('コピーしました！');
-                    
-                    // 1秒後に元の状態に戻す
+                    // 復帰アニメーション完了後にクラスを削除
                     setTimeout(function() {
-                        button.classList.remove('clicked');
-                        button.classList.add('recovering');
-                        
-                        // 復帰アニメーション完了後にクラスを削除
-                        setTimeout(function() {
-                            button.classList.remove('recovering');
-                        }, 500);
-                    }, 1000);
-                }
-                
-                function copyFailed() {
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
-                    button.innerHTML = originalHtml;
-                    
-                    alert('クリップボードへのコピーに失敗しました。');
-                }
+                        button.classList.remove('recovering');
+                    }, 500);
+                }, 1000);
             }
+            
+            // ChatGPTで事業の内容の比較プロンプトを開く関数
+            function openChatGPTWithBusinessPrompt() {
+                // ターゲット企業の事業の内容を取得
+                var targetBusiness = document.querySelector('#target-company-business').textContent.trim();
+                
+                // 競合企業の事業の内容を取得
+                var competitorElements = document.querySelectorAll('[id^="competitor-business-"]:not([id$="-tab"])');
+                var competitorInfo = Array.from(competitorElements).map(function(el) {
+                    return el.textContent.trim();
+                });
+                
+                // プロンプトテキストを作成
+                var promptText = "下記は、それぞれの企業の事業の内容です。テンバガーの企業を選ぶ際にこれらの事業内容だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
+                var companyName = '{{ company_name }}';
+                var businessText = "【" + companyName + "の事業の内容】\n" + targetBusiness + "\n\n";
+                
+                // 競合企業の情報を追加
+                var competitorsText = competitorInfo.map(function(info, index) {
+                    return "【" + competitorsData[index].name + "の事業の内容】\n" + info;
+                }).join('\n\n');
+                
+                // 全テキストを結合
+                var fullText = promptText + businessText + competitorsText;
+                
+                // ChatGPTを開いて浮動ボタンを作成
+                var chatWindow = window.open('https://chatgpt.com/', '_blank');
+                
+                // ページが読み込まれるのを待ってから浮動ボタンを追加
+                setTimeout(function() {
+                    if (chatWindow && !chatWindow.closed) {
+                        try {
+                            // 浮かせるdiv要素を作成
+                            var toggleDiv = chatWindow.document.createElement("div");
+                            toggleDiv.id = "floatingPromptDiv";
+                            toggleDiv.style.position = "fixed";
+                            toggleDiv.style.display = "flex";
+                            toggleDiv.style.top = "20px";
+                            toggleDiv.style.right = "20px";
+                            toggleDiv.style.width = "60px";
+                            toggleDiv.style.height = "60px";
+                            toggleDiv.style.backgroundColor = "rgba(16, 163, 127, 0.9)";
+                            toggleDiv.style.color = "white";
+                            toggleDiv.style.borderRadius = "50%";
+                            toggleDiv.style.alignItems = "center";
+                            toggleDiv.style.justifyContent = "center";
+                            toggleDiv.style.cursor = "pointer";
+                            toggleDiv.style.zIndex = "10000";
+                            toggleDiv.style.fontSize = "24px";
+                            toggleDiv.innerHTML = "📝";
+                            toggleDiv.title = "プロンプトを入力";
+                            
+                            // クリックイベントを追加
+                            toggleDiv.addEventListener("click", function() {
+                                try {
+                                    // ChatGPTの入力欄を特定
+                                    var inputField = chatWindow.document.getElementById("prompt-textarea") || 
+                                                   chatWindow.document.querySelector(".ProseMirror") ||
+                                                   chatWindow.document.querySelector('textarea[placeholder*="Message"]') ||
+                                                   chatWindow.document.querySelector('div[contenteditable="true"]');
+                                    
+                                    if (inputField) {
+                                        // フォーカスを設定
+                                        inputField.focus();
+                                        
+                                        if (inputField.tagName === 'TEXTAREA') {
+                                            inputField.value = fullText;
+                                            inputField.dispatchEvent(new Event("input", { bubbles: true }));
+                                        } else {
+                                            inputField.textContent = fullText;
+                                            inputField.dispatchEvent(new Event("input", { bubbles: true }));
+                                        }
+                                        
+                                        // ボタンを削除
+                                        toggleDiv.remove();
+                                    } else {
+                                        alert("入力欄が見つかりませんでした。ページが完全に読み込まれるまでお待ちください。");
+                                    }
+                                } catch (error) {
+                                    console.error("プロンプト入力エラー:", error);
+                                    alert("プロンプトの入力に失敗しました。");
+                                }
+                            });
+                            
+                            // divをページに追加
+                            chatWindow.document.body.appendChild(toggleDiv);
+                        } catch (error) {
+                            console.error("浮動ボタンの作成に失敗:", error);
+                        }
+                    }
+                }, 3000);
+                
+                // トースト表示
+                showToast('ChatGPTを開きました！');
+            }
+            
+            // ChatGPTで役員の状況の比較プロンプトを開く関数
+            function openChatGPTWithOfficersPrompt() {
+                // ターゲット企業の役員情報を取得
+                var targetOfficers = document.querySelector('#target-company').textContent.trim();
+                
+                // 競合企業の役員情報を取得
+                var competitorElements = document.querySelectorAll('[id^="competitor-"]:not([id$="-tab"]):not([id*="business"])');
+                var competitorInfo = Array.from(competitorElements).map(function(el) {
+                    return el.textContent.trim();
+                });
+                
+                // プロンプトテキストを作成
+                var promptText = "下記は、それぞれの企業の役員の状況です。テンバガーの企業を選ぶ際にこれらの役員だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
+                var companyName = '{{ company_name }}';
+                var officersText = "【" + companyName + "の役員の状況】\n" + targetOfficers + "\n\n";
+                
+                // 競合企業の情報を追加
+                var competitorsText = competitorInfo.map(function(info, index) {
+                    return "【" + competitorsData[index].name + "の役員の状況】\n" + info;
+                }).join('\n\n');
+                
+                // 全テキストを結合
+                var fullText = promptText + officersText + competitorsText;
+                
+                // ChatGPTを開いて浮動ボタンを作成
+                var chatWindow = window.open('https://chatgpt.com/', '_blank');
+                
+                // ページが読み込まれるのを待ってから浮動ボタンを追加
+                setTimeout(function() {
+                    if (chatWindow && !chatWindow.closed) {
+                        try {
+                            // 浮かせるdiv要素を作成
+                            var toggleDiv = chatWindow.document.createElement("div");
+                            toggleDiv.id = "floatingPromptDiv";
+                            toggleDiv.style.position = "fixed";
+                            toggleDiv.style.display = "flex";
+                            toggleDiv.style.top = "20px";
+                            toggleDiv.style.right = "20px";
+                            toggleDiv.style.width = "60px";
+                            toggleDiv.style.height = "60px";
+                            toggleDiv.style.backgroundColor = "rgba(16, 163, 127, 0.9)";
+                            toggleDiv.style.color = "white";
+                            toggleDiv.style.borderRadius = "50%";
+                            toggleDiv.style.alignItems = "center";
+                            toggleDiv.style.justifyContent = "center";
+                            toggleDiv.style.cursor = "pointer";
+                            toggleDiv.style.zIndex = "10000";
+                            toggleDiv.style.fontSize = "24px";
+                            toggleDiv.innerHTML = "📝";
+                            toggleDiv.title = "プロンプトを入力";
+                            
+                            // クリックイベントを追加
+                            toggleDiv.addEventListener("click", function() {
+                                try {
+                                    // ChatGPTの入力欄を特定
+                                    var inputField = chatWindow.document.getElementById("prompt-textarea") || 
+                                                   chatWindow.document.querySelector(".ProseMirror") ||
+                                                   chatWindow.document.querySelector('textarea[placeholder*="Message"]') ||
+                                                   chatWindow.document.querySelector('div[contenteditable="true"]');
+                                    
+                                    if (inputField) {
+                                        // フォーカスを設定
+                                        inputField.focus();
+                                        
+                                        if (inputField.tagName === 'TEXTAREA') {
+                                            inputField.value = fullText;
+                                            inputField.dispatchEvent(new Event("input", { bubbles: true }));
+                                        } else {
+                                            inputField.textContent = fullText;
+                                            inputField.dispatchEvent(new Event("input", { bubbles: true }));
+                                        }
+                                        
+                                        // ボタンを削除
+                                        toggleDiv.remove();
+                                    } else {
+                                        alert("入力欄が見つかりませんでした。ページが完全に読み込まれるまでお待ちください。");
+                                    }
+                                } catch (error) {
+                                    console.error("プロンプト入力エラー:", error);
+                                    alert("プロンプトの入力に失敗しました。");
+                                }
+                            });
+                            
+                            // divをページに追加
+                            chatWindow.document.body.appendChild(toggleDiv);
+                        } catch (error) {
+                            console.error("浮動ボタンの作成に失敗:", error);
+                        }
+                    }
+                }, 3000);
+                
+                // トースト表示
+                showToast('ChatGPTを開きました！');
+            }
+            
+            // グローバルへ公開
+            window.openChatGPTWithBusinessPrompt = openChatGPTWithBusinessPrompt;
+            window.openChatGPTWithOfficersPrompt = openChatGPTWithOfficersPrompt;
         </script>
     </body>
     </html>

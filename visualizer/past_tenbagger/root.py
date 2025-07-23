@@ -95,9 +95,31 @@ def load_companies_data() -> Tuple[list, bool]:
 def extract_diff(file_old, file_new, date_old, date_new):
     """四半期報告書の差分を抽出する関数"""
     try:
-        # ファイルのエンコーディングを確認
-        encoding_old = 'utf-16' if 'UTF-16' in os.popen(f'file "{file_old}"').read() else 'utf-8'
-        encoding_new = 'utf-16' if 'UTF-16' in os.popen(f'file "{file_new}"').read() else 'utf-8'
+        # ファイルのエンコーディングを自動検出する関数
+        def detect_encoding(file_path):
+            import chardet
+            try:
+                with open(file_path, 'rb') as f:
+                    raw_data = f.read()
+                    # バイナリファイル（PDFなど）かチェック
+                    if raw_data.startswith(b'%PDF'):
+                        return None, "PDF"
+                    result = chardet.detect(raw_data)
+                    encoding = result['encoding']
+                    if encoding is None:
+                        encoding = 'utf-8'
+                    return encoding, "TEXT"
+            except Exception as e:
+                logger.warning(f"エンコーディング検出エラー {file_path}: {e}")
+                return 'utf-8', "TEXT"
+        
+        # ファイルのエンコーディングを検出
+        encoding_old, file_type_old = detect_encoding(file_old)
+        encoding_new, file_type_new = detect_encoding(file_new)
+        
+        # バイナリファイルの場合はエラーメッセージを返す
+        if file_type_old == "PDF" or file_type_new == "PDF":
+            return "PDFファイルは差分比較できません。テキストファイルを使用してください。"
         
         # ファイルを読み込む
         df_old = pd.read_csv(file_old, delimiter="\t", encoding=encoding_old, dtype=str, on_bad_lines='skip')

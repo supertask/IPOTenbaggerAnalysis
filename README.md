@@ -9,6 +9,16 @@ IPO関連の各種データを収集・分析し、可視化するツール群�
 ## セットアップ
 
 ```bash
+brew install pyenv
+# pyenv設定
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
+
+pyenv install 3.12.3
+pyenv global 3.12.3
+
 # 必要なパッケージをインストール
 pip install -r requirements.txt
 ```
@@ -36,17 +46,17 @@ python -m collectors <collector_name>
 例：
 ```bash
 # 特定のコレクターを実行
-python3 -m collectors list
-python3 -m collectors details
-python3 -m collectors traders
-python3 -m collectors yfinance
-python3 -m collectors edinet
-python3 -m collectors comparison 
-#python3 -m collectors ai
-python3 -m collectors combiner
+python -m collectors list
+python -m collectors details
+python -m collectors traders
+python -m collectors yfinance
+python -m collectors edinet
+python -m collectors comparison 
+#python -m collectors ai
+python -m collectors combiner
 
 # すべてのコレクターを実行
-python3 -m collectors all
+python -m collectors all
 ```
 
 ## ローカルでの可視化
@@ -108,8 +118,8 @@ IPODataCollectors/
 sudo apt update
 
 # 必要な基本ツールのインストール
-sudo apt install -y python3-pip          # Python パッケージ管理ツール
-sudo apt install python3-venv            # Python 仮想環境作成ツール
+sudo apt install -y python-pip          # Python パッケージ管理ツール
+sudo apt install python-venv            # Python 仮想環境作成ツール
 sudo apt install nginx                   # Webサーバー
 sudo apt install firewalld              # ファイアウォール管理ツール
 sudo apt install iptables-persistent    # iptablesルール永続化ツール
@@ -122,7 +132,7 @@ sudo apt install iptables-persistent    # iptablesルール永続化ツール
 cd /home/ubuntu/Projects/IPODataCollectors
 
 # Python仮想環境の作成
-python3 -m venv .venv
+python -m venv .venv
 
 # 仮想環境の有効化
 source .venv/bin/activate

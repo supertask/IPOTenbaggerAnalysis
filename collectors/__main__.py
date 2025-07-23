@@ -7,6 +7,7 @@ from .ipo_combiner import IPOCombiner
 from .ipo_ai_summary import AISummaryGenerator
 from .comparision_collector import ComparisonCollector
 from .edinet_report_downloader import EdinetReportDownloader
+from .tdnet_disclosure_scraper import TDnetDisclosureScraper
 
 def main():
     if len(sys.argv) < 2:
@@ -40,6 +41,9 @@ def main():
         num = int(sys.argv[2]) if len(sys.argv) == 3 else None
         collector = AISummaryGenerator(num)
         collector.run()
+    elif collector_name == "tdnet":
+        scraper = TDnetDisclosureScraper()
+        scraper.scrape_and_save()
     elif collector_name == "all":
         list_collector = IPOKisoListCollector()
         details_collector = IPOKisoDetailsCollector()

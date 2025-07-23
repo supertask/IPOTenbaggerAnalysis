@@ -18,8 +18,7 @@ class EdinetReportDownloader:
 
     def __init__(self):
         self.use_cache = True
-        # インクリメンタル更新設定
-        self.incremental_mode = True  # インクリメンタル更新を有効化
+        # インクリメンタル更新専用
         self.incremental_cache_file = "incremental_doc_indexes.tsv.gz"
 
         self.meta_begin_x_year_ago = 10
@@ -255,22 +254,7 @@ class EdinetReportDownloader:
                 print(f"\033[91mError: No valid '{doc_name}' found for {company_name} ({company_code4}) on {document['date']}\033[0m")
 
 
-    def download_and_save_document_metadata(self, doc_meta_path, tracking_days, edinet_to_company_dict):
-        all_data = []
-        end_datetime = datetime.today() - timedelta(days = self.meta_end_x_year_ago * 365)
-        start_datetime = end_datetime - timedelta(days = self.meta_begin_x_year_ago * 365)  # ここからデータが存在しない
-        for d in range(tracking_days):
-            current_date = end_datetime - timedelta(days=d)
-            if current_date < start_datetime:
-                break
-            date_str = current_date.strftime('%Y-%m-%d')
-            #print("date_str", date_str)
-            day_data = self.save_securities_reports_in_one_day(date_str, edinet_to_company_dict)
-            all_data.extend(day_data)
 
-        if all_data:
-            with gzip.open(doc_meta_path, 'wt', encoding='utf-8') as f:
-                pd.DataFrame(all_data, columns=['date', 'edinet_code', 'docTypeCode', 'docID']).to_csv(f, sep='\t', index=False)
 
     def get_last_cached_date(self, cache_path):
         """
@@ -437,47 +421,21 @@ class EdinetReportDownloader:
         else:
             edinet_to_company_dict = self.get_company_dict()
 
-        # インクリメンタル更新モードの分岐
-        if self.incremental_mode:
-            # インクリメンタル更新用のキャッシュパス
-            doc_meta_path = os.path.join(self.EDINET_CODE_DIR, self.incremental_cache_file)
-            print(f"DEBUG: インクリメンタルモード - cache_path: {doc_meta_path}")
-            
-            # インクリメンタル更新実行
-            try:
-                self.run_incremental_update(doc_meta_path, edinet_to_company_dict)
-                
-                # データ整合性チェック
-                is_valid, message = self.validate_incremental_update(doc_meta_path)
-                if not is_valid:
-                    print(f"⚠️  データ整合性エラー: {message}")
-                    print("🔄 フォールバック: 従来の全期間更新を実行")
-                    # フォールバックとして従来の方式で実行
-                    doc_meta_path = f"{self.EDINET_CODE_DIR}/{self.meta_begin_x_year_ago}years_ago_to_{self.meta_end_x_year_ago}years_ago__doc_indexes.tsv.gz"
-                    if os.path.exists(doc_meta_path):
-                        os.remove(doc_meta_path)
-                    self.download_and_save_document_metadata(doc_meta_path, tracking_days, edinet_to_company_dict)
-                else:
-                    if self.is_debug:
-                        print(f"✅ {message}")
-            except Exception as e:
-                print(f"⚠️  インクリメンタル更新エラー: {e}")
-                print("🔄 フォールバック: 従来の全期間更新を実行")
-                # フォールバックとして従来の方式で実行
-                doc_meta_path = f"{self.EDINET_CODE_DIR}/{self.meta_begin_x_year_ago}years_ago_to_{self.meta_end_x_year_ago}years_ago__doc_indexes.tsv.gz"
-                if os.path.exists(doc_meta_path):
-                    os.remove(doc_meta_path)
-                self.download_and_save_document_metadata(doc_meta_path, tracking_days, edinet_to_company_dict)
-        else:
-            # 従来の方式（全期間更新）
-            doc_meta_path = f"{self.EDINET_CODE_DIR}/{self.meta_begin_x_year_ago}years_ago_to_{self.meta_end_x_year_ago}years_ago__doc_indexes.tsv.gz"
-            print(f"DEBUG: 従来モード - doc_meta_path: {doc_meta_path}")
-            if os.path.exists(doc_meta_path):
-                if not self.use_cache:
-                    os.remove(doc_meta_path)
-                    self.download_and_save_document_metadata(doc_meta_path, tracking_days, edinet_to_company_dict)
-            else:
-                self.download_and_save_document_metadata(doc_meta_path, tracking_days, edinet_to_company_dict)
+        # インクリメンタル更新専用
+        doc_meta_path = os.path.join(self.EDINET_CODE_DIR, self.incremental_cache_file)
+        print(f"DEBUG: インクリメンタルモード - cache_path: {doc_meta_path}")
+        
+        # インクリメンタル更新実行
+        self.run_incremental_update(doc_meta_path, edinet_to_company_dict)
+        
+        # データ整合性チェック
+        is_valid, message = self.validate_incremental_update(doc_meta_path)
+        if not is_valid:
+            print(f"⚠️  データ整合性エラー: {message}")
+            raise RuntimeError(f"インクリメンタル更新でエラーが発生しました: {message}")
+        
+        if self.is_debug:
+            print(f"✅ {message}")
 
         # Load the single TSV file
         with gzip.open(doc_meta_path, 'rt', encoding='utf-8') as f:
@@ -521,23 +479,9 @@ class EdinetReportDownloader:
     def save_companies_info_list(self):
         pass
 
-    # インクリメンタル更新の便利メソッド
-    def enable_incremental_mode(self):
-        """インクリメンタル更新モードを有効化"""
-        self.incremental_mode = True
-        if self.is_debug:
-            print("✅ インクリメンタル更新モードを有効化しました")
-    
-    def disable_incremental_mode(self):
-        """インクリメンタル更新モードを無効化（従来の全期間更新）"""
-        self.incremental_mode = False
-        if self.is_debug:
-            print("✅ 従来の全期間更新モードに切り替えました")
-    
     def show_cache_status(self):
         """キャッシュの状態を表示"""
         print("📊 キャッシュ状態:")
-        print(f"  インクリメンタルモード: {'有効' if self.incremental_mode else '無効'}")
         
         # インクリメンタルキャッシュの状態
         incremental_cache = os.path.join(self.EDINET_CODE_DIR, self.incremental_cache_file)
@@ -560,37 +504,6 @@ class EdinetReportDownloader:
                 print(f"  キャッシュ解析エラー: {e}")
         else:
             print("  インクリメンタルキャッシュ: 存在しません（初回実行時に作成）")
-        
-        # 従来キャッシュの状態
-        traditional_cache = f"{self.EDINET_CODE_DIR}/{self.meta_begin_x_year_ago}years_ago_to_{self.meta_end_x_year_ago}years_ago__doc_indexes.tsv.gz"
-        if os.path.exists(traditional_cache):
-            mtime = datetime.fromtimestamp(os.path.getmtime(traditional_cache))
-            print(f"  従来キャッシュ: 存在 (更新日時: {mtime.strftime('%Y-%m-%d %H:%M:%S')})")
-        else:
-            print("  従来キャッシュ: 存在しません")
-    
-    def force_full_update(self):
-        """強制的に全期間更新を実行（キャッシュをクリア）"""
-        print("🔄 強制全期間更新を実行...")
-        
-        # 両方のキャッシュをクリア
-        incremental_cache = os.path.join(self.EDINET_CODE_DIR, self.incremental_cache_file)
-        traditional_cache = f"{self.EDINET_CODE_DIR}/{self.meta_begin_x_year_ago}years_ago_to_{self.meta_end_x_year_ago}years_ago__doc_indexes.tsv.gz"
-        
-        for cache_path in [incremental_cache, traditional_cache]:
-            if os.path.exists(cache_path):
-                os.remove(cache_path)
-                print(f"  削除: {cache_path}")
-        
-        # 一時的に従来モードで実行
-        original_mode = self.incremental_mode
-        self.incremental_mode = False
-        
-        try:
-            self.save_securities_reports()
-            print("✅ 強制全期間更新完了")
-        finally:
-            self.incremental_mode = original_mode
 
 
 
