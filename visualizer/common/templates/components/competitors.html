@@ -1,0 +1,17 @@
+<!-- 競合企業セクション -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">競合企業</h5>
+    </div>
+    <div class="card-body">
+        {% if competitors %}
+            {% for competitor in competitors %}
+            <span class="badge bg-secondary competitor-badge">{{ competitor.name }} ({{ competitor.code }})</span>
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-info">
+                この企業の競合企業情報はまだ登録されていません。以下のグラフでは、この企業の財務指標のみを表示しています。
+            </div>
+        {% endif %}
+    </div>
+</div> 

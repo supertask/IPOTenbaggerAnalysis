@@ -113,12 +113,20 @@ def create_next_tenbagger_app():
     # プロジェクトのルートディレクトリを取得
     base_dir = Path(__file__).parent
     
-    # next_tenbaggerのテンプレートディレクトリを指定してアプリケーションを作成
+    # テンプレートディレクトリを複数指定（common/templatesと専用ディレクトリ）
     template_dir = os.path.join(base_dir, 'next_tenbagger', 'templates')
     static_dir = os.path.join(base_dir, 'next_tenbagger', 'static')
     app = Flask(__name__, 
                 template_folder=template_dir,
                 static_folder=static_dir)
+    
+    # 共通テンプレートディレクトリを追加
+    from jinja2 import ChoiceLoader, FileSystemLoader
+    common_template_dir = os.path.join(base_dir, 'common', 'templates')
+    app.jinja_loader = ChoiceLoader([
+        FileSystemLoader(template_dir),
+        FileSystemLoader(common_template_dir)
+    ])
     
     # next_tenbaggerのビジネスロジックをインポート
     from visualizer.next_tenbagger.root import (
@@ -167,12 +175,20 @@ def create_past_tenbagger_app():
     # プロジェクトのルートディレクトリを取得
     base_dir = Path(__file__).parent
     
-    # past_tenbaggerのテンプレートディレクトリを指定してアプリケーションを作成
+    # テンプレートディレクトリを複数指定（common/templatesと専用ディレクトリ）
     template_dir = os.path.join(base_dir, 'past_tenbagger', 'templates')
     static_dir = os.path.join(base_dir, 'past_tenbagger', 'static')
     app = Flask(__name__, 
                 template_folder=template_dir,
                 static_folder=static_dir)
+    
+    # 共通テンプレートディレクトリを追加
+    from jinja2 import ChoiceLoader, FileSystemLoader
+    common_template_dir = os.path.join(base_dir, 'common', 'templates')
+    app.jinja_loader = ChoiceLoader([
+        FileSystemLoader(template_dir),
+        FileSystemLoader(common_template_dir)
+    ])
     
     # past_tenbaggerのビジネスロジックをインポート
     from visualizer.past_tenbagger.root import (

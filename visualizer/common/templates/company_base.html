@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company_name }} ({{ company_code }}) - 分析{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-xl-10">
+            <!-- パンくずリスト -->
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/{{ app_type }}/">ホーム</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ company_name }}</li>
+                </ol>
+            </nav>
+            
+            <h1 class="mb-3">{{ company_name }} <small class="text-muted">({{ company_code }})</small></h1>
+            
+            <!-- 外部リンクセクション -->
+            {% include 'components/external_links.html' %}
+            
+            <!-- 競合企業セクション -->
+            {% include 'components/competitors.html' %}
+            
+            <!-- 事業の内容セクション -->
+            {% include 'components/business_section.html' %}
+            
+            <!-- 役員情報セクション -->
+            {% include 'components/officers_section.html' %}
+            
+            <!-- アプリ固有の追加セクション -->
+            {% block extra_sections %}{% endblock %}
+            
+            <!-- トースト通知用のコンテナ -->
+            <div class="toast-container"></div>
+        </div>
+    </div>
+    
+    <!-- 財務指標の比較セクション -->
+    {% block financial_section %}{% endblock %}
+</div>
+
+<!-- 共通JavaScript -->
+{% include 'components/common_scripts.html' %}
+
+<!-- アプリ固有のJavaScript -->
+{% block app_specific_js %}{% endblock %}
+{% endblock %} 
