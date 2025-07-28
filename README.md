@@ -206,6 +206,9 @@ sudo systemctl start gunicorn
 
 # サービス状態の確認
 sudo systemctl status gunicorn
+
+# Gunicornサービスの再起動
+sudo systemctl restart gunicorn
 ```
 
 ### 5. Nginx設定

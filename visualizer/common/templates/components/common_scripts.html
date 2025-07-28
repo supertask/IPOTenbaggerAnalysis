@@ -340,4 +340,258 @@
         // トースト表示
         showToast('ChatGPTを開きました！');
     }
+
+    // ハンバーガーメニューの機能
+    function initHamburgerMenu() {
+        const hamburgerToggle = document.getElementById('hamburger-toggle');
+        const hamburgerDropdown = document.getElementById('hamburger-dropdown');
+        const tenBaggerBtn = document.getElementById('tenbagger-prompt-btn');
+        const saveChatGPTBtn = document.getElementById('save-chatgpt-url-btn');
+        const chatgptUrlInput = document.getElementById('chatgpt-url-input');
+        const chatgptUrlError = document.getElementById('chatgpt-url-error');
+        const hamburgerMenu = document.querySelector('.hamburger-menu');
+
+        if (!hamburgerToggle || !hamburgerDropdown) return;
+
+        // ハンバーガーメニューの開閉
+        hamburgerToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            hamburgerToggle.classList.toggle('active');
+            hamburgerDropdown.classList.toggle('show');
+        });
+
+        // メニュー外をクリックしたら閉じる
+        document.addEventListener('click', function(e) {
+            if (!hamburgerToggle.contains(e.target) && !hamburgerDropdown.contains(e.target)) {
+                hamburgerToggle.classList.remove('active');
+                hamburgerDropdown.classList.remove('show');
+            }
+        });
+
+        // テンバガープロンプト機能
+        if (tenBaggerBtn && hamburgerMenu) {
+            tenBaggerBtn.addEventListener('click', function() {
+                const companyName = hamburgerMenu.dataset.companyName || '企業名';
+                const companyCode = hamburgerMenu.dataset.companyCode || '0000';
+                
+                const prompt = companyName + ' (' + companyCode + ') がテンバガー（10倍株）になる可能性を以下の観点から分析してください：\n\n' +
+                    '1. 事業の成長性・革新性\n' +
+                    '2. 財務面での健全性と成長力\n' +
+                    '3. 市場環境・競合分析\n' +
+                    '4. 経営陣・ガバナンス\n' +
+                    '5. バリュエーション\n' +
+                    '6. リスク要因\n\n' +
+                    '結論として、テンバガーになる確率を5段階で評価してください。';
+                
+                // 新規タブでプロンプトを表示
+                const newWindow = window.open('', '_blank');
+                if (newWindow) {
+                    newWindow.document.write('<html><head><title>テンバガー分析プロンプト - ' + companyName + '</title>');
+                    newWindow.document.write('<style>body{font-family:sans-serif;max-width:800px;margin:0 auto;padding:20px;line-height:1.6;}');
+                    newWindow.document.write('.prompt{background:#f8f9fa;padding:20px;border-left:4px solid #007bff;white-space:pre-wrap;}</style>');
+                    newWindow.document.write('</head><body>');
+                    newWindow.document.write('<h1>テンバガー分析プロンプト</h1>');
+                    newWindow.document.write('<p><strong>対象企業:</strong> ' + companyName + ' (' + companyCode + ')</p>');
+                    newWindow.document.write('<div class="prompt">' + prompt + '</div>');
+                    newWindow.document.write('<button onclick="navigator.clipboard.writeText(document.querySelector(\'.prompt\').textContent)">コピー</button>');
+                    newWindow.document.write('</body></html>');
+                    newWindow.document.close();
+                }
+                
+                showToast('テンバガープロンプトを生成しました！');
+            });
+        }
+
+        // ChatGPTリンク保存機能
+        if (saveChatGPTBtn && chatgptUrlInput && hamburgerMenu) {
+            saveChatGPTBtn.addEventListener('click', function() {
+                const url = chatgptUrlInput.value.trim();
+                const linkName = document.getElementById('link-name-input').value.trim();
+                const companyCode = hamburgerMenu.dataset.companyCode;
+                
+                // バリデーション
+                if (!url) {
+                    showError('URLを入力してください。');
+                    return;
+                }
+                
+                if (!linkName) {
+                    showError('リンクの名称を入力してください。');
+                    return;
+                }
+                
+                // ChatGPTまたはGeminiのリンクかチェック
+                const isChatGPT = url.match(/^https:\/\/chatgpt\.com\/share\/.+/);
+                const isGemini = url.match(/^https:\/\/g\.co\/.+/) || url.match(/^https:\/\/gemini\.google\.com\/share\/.+/);
+                
+                if (!isChatGPT && !isGemini) {
+                    showError('ChatGPTまたはGeminiのリンクを入力してください。');
+                    return;
+                }
+                
+                // APIに保存リクエストを送信
+                fetch('/api/save-chatgpt-link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        company_code: companyCode,
+                        url: url,
+                        name: linkName,
+                        timestamp: new Date().toISOString()
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        chatgptUrlInput.value = '';
+                        document.getElementById('link-name-input').value = '';
+                        hideError();
+                        showToast('AI分析リンクを保存しました！');
+                        loadSavedLinks();
+                    } else {
+                        showError(data.message || '保存に失敗しました。');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('保存中にエラーが発生しました。');
+                });
+            });
+        }
+
+        // エラー表示・非表示関数
+        function showError(message) {
+            if (chatgptUrlError) {
+                chatgptUrlError.textContent = message;
+                chatgptUrlError.classList.add('show');
+                chatgptUrlInput.classList.add('is-invalid');
+            }
+        }
+
+        function hideError() {
+            if (chatgptUrlError) {
+                chatgptUrlError.classList.remove('show');
+                chatgptUrlInput.classList.remove('is-invalid');
+            }
+        }
+
+        // 保存済みリンクの読み込み
+        function loadSavedLinks() {
+            if (!hamburgerMenu) return;
+            const companyCode = hamburgerMenu.dataset.companyCode;
+            
+            fetch('/api/get-chatgpt-links/' + companyCode)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.links && data.links.length > 0) {
+                        displaySavedLinks(data.links);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading saved links:', error);
+                });
+        }
+
+        // 保存済みリンクの表示
+        function displaySavedLinks(links) {
+            const savedLinksSection = document.getElementById('saved-links-section');
+            const savedLinksContainer = document.getElementById('saved-links-container');
+            
+            if (!savedLinksSection || !savedLinksContainer) return;
+            
+            savedLinksContainer.innerHTML = '';
+            
+            links.forEach(function(link, index) {
+                const linkContainer = document.createElement('div');
+                linkContainer.className = 'saved-link-item';
+                
+                const linkElement = document.createElement('a');
+                linkElement.href = link.url;
+                linkElement.target = '_blank';
+                linkElement.className = 'menu-item';
+                
+                // アイコンを判定（ChatGPTかGeminiか）
+                const isChatGPT = link.url.includes('chatgpt.com');
+                const icon = isChatGPT ? 'bi-chat-dots' : 'bi-google';
+                
+                // リンク名称を使用、なければ保存済み #数字
+                const displayName = link.name || ('保存済み #' + (index + 1));
+                
+                linkElement.innerHTML = '<i class="bi ' + icon + '"></i><span>' + displayName + '</span><i class="bi bi-box-arrow-up-right"></i>';
+                
+                // 削除ボタンを作成
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-outline-danger btn-sm delete-link-btn';
+                deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                deleteBtn.title = 'このリンクを削除';
+                deleteBtn.dataset.linkIndex = index;
+                deleteBtn.dataset.linkUrl = link.url;
+                deleteBtn.dataset.linkName = displayName;
+                
+                linkContainer.appendChild(linkElement);
+                linkContainer.appendChild(deleteBtn);
+                savedLinksContainer.appendChild(linkContainer);
+            });
+            
+            savedLinksSection.style.display = 'block';
+            
+            // 削除ボタンのイベントリスナーを設定
+            setupDeleteButtons();
+        }
+
+        // 削除ボタンのイベントリスナーを設定
+        function setupDeleteButtons() {
+            const deleteButtons = document.querySelectorAll('.delete-link-btn');
+            deleteButtons.forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const linkIndex = parseInt(btn.dataset.linkIndex);
+                    const linkName = btn.dataset.linkName;
+                    const companyCode = hamburgerMenu.dataset.companyCode;
+                    
+                    // 確認ダイアログ
+                    if (confirm('「' + linkName + '」を削除しますか？\nこの操作は取り消せません。')) {
+                        // 削除API呼び出し
+                        fetch('/api/delete-chatgpt-link', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                company_code: companyCode,
+                                link_index: linkIndex
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast('リンクを削除しました');
+                                loadSavedLinks(); // リストを再読み込み
+                            } else {
+                                showError(data.message || '削除に失敗しました。');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            showError('削除中にエラーが発生しました。');
+                        });
+                    }
+                });
+            });
+        }
+
+        // ページ読み込み時に保存済みリンクを読み込み
+        loadSavedLinks();
+    }
+
+    // ページ読み込み完了時にハンバーガーメニューを初期化
+    document.addEventListener('DOMContentLoaded', function() {
+        initHamburgerMenu();
+    });
 </script> 

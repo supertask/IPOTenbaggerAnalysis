@@ -1,6 +1,7 @@
 .tokens/
 .secrets/
 tmp/
+data/db/chatgpt_links/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,0 +1,292 @@
+<!-- ハンバーガーメニュー -->
+<div class="hamburger-menu" 
+     data-company-name="{{ company_name }}" 
+     data-company-code="{{ company_code }}">
+    <!-- ハンバーガーアイコン -->
+    <button class="hamburger-toggle" id="hamburger-toggle">
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+        <span class="hamburger-line"></span>
+    </button>
+    
+    <!-- メニューコンテンツ -->
+    <div class="hamburger-dropdown" id="hamburger-dropdown">
+        <div class="hamburger-content">
+            <!-- AI分析リンクセクション -->
+            <div class="menu-section">
+                <h6 class="menu-section-title">AI分析</h6>
+                <div class="menu-items">
+                    <a href="https://chatgpt.com" target="_blank" class="menu-item">
+                        <i class="bi bi-chat-dots"></i>
+                        <span>ChatGPT</span>
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    <a href="https://gemini.google.com/app" target="_blank" class="menu-item">
+                        <i class="bi bi-google"></i>
+                        <span>Gemini</span>
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- テンバガープロンプトセクション -->
+            <div class="menu-section">
+                <h6 class="menu-section-title">分析プロンプト</h6>
+                <div class="menu-items">
+                    <button class="menu-item" id="tenbagger-prompt-btn" 
+                            title="この企業がテンバガーになる可能性を分析するためのプロンプトを生成します">
+                        <i class="bi bi-lightning"></i>
+                        <span>テンバガーになり得るかプロンプト</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- ChatGPTリンク保存セクション -->
+            <div class="menu-section">
+                <h6 class="menu-section-title">AI分析リンク保存</h6>
+                <div class="menu-items">
+                    <div class="chatgpt-save-container">
+                        <div class="input-group mb-2">
+                            <input type="text" 
+                                   class="form-control form-control-sm" 
+                                   id="link-name-input" 
+                                   placeholder="リンクの名称を入力（例：市場分析）">
+                        </div>
+                        <div class="input-group">
+                            <input type="url" 
+                                   class="form-control form-control-sm" 
+                                   id="chatgpt-url-input" 
+                                   placeholder="ChatGPT/Geminiのリンクを入力">
+                            <button class="btn btn-primary btn-sm" 
+                                    type="button" 
+                                    id="save-chatgpt-url-btn">
+                                保存
+                            </button>
+                        </div>
+                        <div class="invalid-feedback" id="chatgpt-url-error"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 保存済みChatGPTリンクセクション -->
+            <div class="menu-section" id="saved-links-section" style="display: none;">
+                <h6 class="menu-section-title">保存済みリンク</h6>
+                <div class="menu-items" id="saved-links-container">
+                    <!-- 保存済みリンクが動的に追加される -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ハンバーガーメニューのスタイル -->
+<style>
+.hamburger-menu {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.hamburger-toggle {
+    background: #fff;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.hamburger-toggle:hover {
+    background: #007bff;
+    transform: scale(1.05);
+}
+
+.hamburger-toggle:hover .hamburger-line {
+    background: #fff;
+}
+
+.hamburger-line {
+    width: 20px;
+    height: 2px;
+    background: #007bff;
+    margin: 2px 0;
+    transition: all 0.3s ease;
+}
+
+.hamburger-toggle.active .hamburger-line:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+}
+
+.hamburger-toggle.active .hamburger-line:nth-child(2) {
+    opacity: 0;
+}
+
+.hamburger-toggle.active .hamburger-line:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
+}
+
+.hamburger-dropdown {
+    position: absolute;
+    top: 60px;
+    right: 0;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    min-width: 320px;
+    max-height: 500px;
+    overflow-y: auto;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.hamburger-dropdown.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.hamburger-content {
+    padding: 16px;
+}
+
+.menu-section {
+    margin-bottom: 16px;
+}
+
+.menu-section:last-child {
+    margin-bottom: 0;
+}
+
+.menu-section-title {
+    color: #6c757d;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f1f3f4;
+}
+
+.menu-items {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    color: #333;
+    text-decoration: none;
+    border-radius: 6px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.menu-item:hover {
+    background: #f8f9fa;
+    color: #007bff;
+    text-decoration: none;
+}
+
+.menu-item i:first-child {
+    width: 16px;
+    text-align: center;
+}
+
+.menu-item span {
+    flex: 1;
+    font-size: 0.9rem;
+}
+
+.menu-item i:last-child {
+    opacity: 0.6;
+    font-size: 0.8rem;
+}
+
+.chatgpt-save-container {
+    width: 100%;
+    margin-top: 8px;
+}
+
+.chatgpt-save-container .input-group {
+    margin-bottom: 4px;
+}
+
+.chatgpt-save-container .form-control {
+    font-size: 0.8rem;
+}
+
+.invalid-feedback {
+    display: none;
+    font-size: 0.75rem;
+    color: #dc3545;
+}
+
+.invalid-feedback.show {
+    display: block;
+}
+
+/* 保存リンクアイテムのスタイル */
+.saved-link-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.saved-link-item .menu-item {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.delete-link-btn {
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    background: transparent;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.delete-link-btn:hover {
+    background: #dc3545;
+    color: white;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .hamburger-menu {
+        top: 15px;
+        right: 15px;
+    }
+    
+    .hamburger-dropdown {
+        min-width: 280px;
+        right: -20px;
+    }
+}
+</style> 
