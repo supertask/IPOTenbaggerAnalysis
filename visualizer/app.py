@@ -32,6 +32,8 @@ def create_root_app():
             url = data.get('url')
             name = data.get('name', '')
             timestamp = data.get('timestamp', datetime.now().isoformat())
+            # アプリタイプ（past_tenbagger / next_tenbagger など）
+            app_type = data.get('app_type', 'common')
             
             if not company_code or not url or not name:
                 return jsonify({"success": False, "message": "企業コード、URL、名称は必須です"}), 400
@@ -45,7 +47,7 @@ def create_root_app():
                 return jsonify({"success": False, "message": "ChatGPTまたはGeminiのリンクではありません"}), 400
             
             # データディレクトリの確保
-            data_dir = Path(__file__).parent.parent / "data" / "db" / "chatgpt_links"
+            data_dir = Path(__file__).parent.parent / "data" / "db" / "chatgpt_links" / app_type
             data_dir.mkdir(parents=True, exist_ok=True)
             
             # 企業ごとのJSONファイルに保存
@@ -85,7 +87,9 @@ def create_root_app():
         try:
             import json
             
-            data_dir = Path(__file__).parent.parent / "data" / "db" / "chatgpt_links"
+            # クエリパラメータからアプリタイプを取得
+            app_type = request.args.get('app_type', 'common')
+            data_dir = Path(__file__).parent.parent / "data" / "db" / "chatgpt_links" / app_type
             json_file = data_dir / f"{company_code}.json"
             
             if not json_file.exists():
@@ -121,7 +125,8 @@ def create_root_app():
                 return jsonify({"success": False, "message": "企業コードとリンクインデックスは必須です"}), 400
             
             # データディレクトリの確保
-            data_dir = Path(__file__).parent.parent / "data" / "db" / "chatgpt_links"
+            app_type = data.get('app_type', 'common')
+            data_dir = Path(__file__).parent.parent / "data" / "db" / "chatgpt_links" / app_type
             json_file = data_dir / f"{company_code}.json"
             
             if not json_file.exists():

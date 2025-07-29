@@ -350,6 +350,8 @@
         const chatgptUrlInput = document.getElementById('chatgpt-url-input');
         const chatgptUrlError = document.getElementById('chatgpt-url-error');
         const hamburgerMenu = document.querySelector('.hamburger-menu');
+        // アプリタイプ（past_tenbagger / next_tenbagger など）
+        const appType = hamburgerMenu ? hamburgerMenu.dataset.appType : 'common';
 
         if (!hamburgerToggle || !hamburgerDropdown) return;
 
@@ -441,7 +443,8 @@
                         company_code: companyCode,
                         url: url,
                         name: linkName,
-                        timestamp: new Date().toISOString()
+                        timestamp: new Date().toISOString(),
+                        app_type: appType
                     })
                 })
                 .then(response => response.json())
@@ -484,7 +487,7 @@
             if (!hamburgerMenu) return;
             const companyCode = hamburgerMenu.dataset.companyCode;
             
-            fetch('/api/get-chatgpt-links/' + companyCode)
+            fetch('/api/get-chatgpt-links/' + companyCode + '?app_type=' + appType)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.links && data.links.length > 0) {
@@ -565,7 +568,8 @@
                             },
                             body: JSON.stringify({
                                 company_code: companyCode,
-                                link_index: linkIndex
+                                link_index: linkIndex,
+                                app_type: appType
                             })
                         })
                         .then(response => response.json())
