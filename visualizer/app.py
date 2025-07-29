@@ -277,7 +277,12 @@ def create_next_tenbagger_app():
         data, error, status_code = next_tenbagger_index()
         if error:
             return error, status_code
-        return render_template('index.html', **data)
+        return render_template('index.html', 
+                             companies=data.get('companies', []),
+                             show_year_grouping=True,
+                             show_detail_icon=True,
+                             show_detailed_labels=True,
+                             app_prefix="next_tenbagger")
     
     @app.route('/<company_code>')
     def company_view(company_code):
@@ -339,7 +344,14 @@ def create_past_tenbagger_app():
         companies, error, status_code = past_tenbagger_index()
         if error:
             return error, status_code
-        return render_template('index.html', companies=companies)
+        return render_template('index.html', 
+                             companies=companies,
+                             show_year_grouping=False,
+                             show_multiple_badge=True,
+                             show_code_subtitle=True,
+                             show_detail_button=True,
+                             show_detailed_labels=False,
+                             app_prefix="past_tenbagger")
     
     @app.route('/<company_code>')
     def company_view(company_code):
