@@ -5,7 +5,8 @@
                 {{ company.name }}{% if company.code %}（{{ company.code }}）{% endif %}
                 {% if show_multiple_badge and company.current_multiple is defined %}
                 <span class="multiple-badge bg-success text-white">{{ company.current_multiple }}倍</span>
-                {% elif show_detail_icon %}
+                {% endif %}
+                {% if show_detail_icon %}
                 <a href="/{{ app_prefix }}/{{ company.code }}" target="_blank" class="detail-icon">
                     <i class="bi bi-box-arrow-up-right"></i>
                 </a>

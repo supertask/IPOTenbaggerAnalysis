@@ -348,8 +348,9 @@ def create_past_tenbagger_app():
                              companies=companies,
                              show_year_grouping=False,
                              show_multiple_badge=True,
-                             show_code_subtitle=True,
-                             show_detail_button=True,
+                             show_code_subtitle=False,
+                             show_detail_button=False,
+                             show_detail_icon=True,
                              show_detailed_labels=False,
                              app_prefix="past_tenbagger")
     
