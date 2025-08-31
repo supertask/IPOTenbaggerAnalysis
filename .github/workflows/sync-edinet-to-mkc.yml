@@ -64,7 +64,7 @@ jobs:
           # 対象ディレクトリのみ取得して高速化
           sparse-checkout: |
             data/output/
-          sparse-checkout-cone: true
+          sparse-checkout-cone-mode: true
 
       - name: Ensure secret exists
         run: |
@@ -134,30 +134,60 @@ jobs:
             local cat_name="$3"
             
             echo "🔄 LARGE DIRECTORY DETECTED: Processing ${cat_name} using subdirectory batching"
+            echo "  Source directory: ${src_dir}"
+            echo "  Destination directory: ${dest_dir}"
+            
+            # Check if source directory exists
+            if [ ! -d "${src_dir}" ]; then
+              echo "❌ ERROR: Source directory does not exist: ${src_dir}"
+              return 1
+            fi
             
             # Create destination directory
-            mkdir -p "${dest_dir}"
+            echo "  Creating destination directory..."
+            mkdir -p "${dest_dir}" || {
+              echo "❌ ERROR: Failed to create destination directory: ${dest_dir}"
+              return 1
+            }
             
             # Get list of subdirectories
+            echo "  Scanning for subdirectories..."
             shopt -s nullglob
             local subdirs=("${src_dir}"/*/)
             
             if [ ${#subdirs[@]} -eq 0 ]; then
               echo "  No subdirectories found in ${src_dir}. Processing as single directory."
+              echo "  Starting rsync for entire directory..."
               # Process files in the root of the large directory
               rsync -avz --compress-level=6 --partial --inplace \
                 --delete --delete-excluded \
                 --exclude='.git/' --exclude='.DS_Store' --exclude='*.tmp' --exclude='*.temp' \
                 --timeout=300 \
-                "${src_dir}/" "${dest_dir}/" || return 1
+                "${src_dir}/" "${dest_dir}/" || {
+                  echo "❌ ERROR: rsync failed for ${src_dir}"
+                  return 1
+                }
+              echo "  ✅ Successfully synced entire directory"
               return 0
             fi
             
             echo "  Found ${#subdirs[@]} subdirectories to process"
+            echo "  First few subdirectories: $(for i in "${subdirs[@]:0:3}"; do basename "$i"; done | tr '\n' ' ')"
             
             # Process subdirectories in optimized batches
             local subdir_batch_size=50
             local processed_subdirs=0
+            
+            echo "  Using batch size: ${subdir_batch_size}"
+            
+            # Check disk space before starting
+            available_space=$(df . | tail -1 | awk '{print $4}')
+            echo "  Available disk space: ${available_space} KB"
+            if [ "$available_space" -lt 3000000 ]; then
+              echo "⚠️ WARNING: Low disk space detected. Running preventive cleanup..."
+              sudo apt-get clean
+              docker system prune -f 2>/dev/null || true
+            fi
             
             for ((k=0; k<${#subdirs[@]}; k+=subdir_batch_size)); do
               local subdir_batch_end=$((k + subdir_batch_size))
