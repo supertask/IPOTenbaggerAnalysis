@@ -19,6 +19,28 @@ jobs:
     permissions:
       contents: read   # IPOTenbaggerAnalysis の読み取りのみ。書き込みはPATで実施
     steps:
+      - name: Free up disk space
+        run: |
+          echo "=== Before cleanup ==="
+          df -h
+          
+          # Remove unnecessary software to free up space
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf /usr/local/graalvm/
+          sudo rm -rf /usr/local/.ghcup/
+          sudo rm -rf /usr/local/share/powershell
+          sudo rm -rf /usr/local/share/chromium
+          sudo rm -rf /usr/local/lib/node_modules
+          
+          # Clean apt cache
+          sudo apt-get clean
+          
+          echo "=== After cleanup ==="
+          df -h
       - name: Checkout IPOTenbaggerAnalysis (sparse)
         uses: actions/checkout@v4
         with:
@@ -64,19 +86,121 @@ jobs:
             exit 0
           fi
 
-          for src_dir in "${dirs[@]}"; do
-            cat_name="$(basename "${src_dir%/}")"
-            dest_dir="${DEST_BASE}/${cat_name}"
-            mkdir -p "${dest_dir}"
+          echo "Total directories to sync: ${#dirs[@]}"
+          echo "=== Disk space before sync ==="
+          df -h
 
-            # 各カテゴリ配下だけをミラー。除外は .git と .DS_Store
-            rsync -a -m --delete --delete-excluded \
-              --exclude='.git/' \
-              --exclude='.DS_Store' \
-              "${src_dir}" "${dest_dir}/"
+          # Process directories in smaller batches to manage disk usage
+          # Start with a smaller batch size to be more conservative with disk space
+          batch_size=20
+          total_success=0
+          total_failed=0
+          
+          for ((i=0; i<${#dirs[@]}; i+=batch_size)); do
+            batch_end=$((i + batch_size))
+            if [ $batch_end -gt ${#dirs[@]} ]; then
+              batch_end=${#dirs[@]}
+            fi
+            
+            echo "=== Processing batch $((i/batch_size + 1)): directories $((i+1)) to $batch_end ==="
+            
+            sync_success=0
+            sync_failed=0
+            
+            for ((j=i; j<batch_end; j++)); do
+              src_dir="${dirs[j]}"
+              cat_name="$(basename "${src_dir%/}")"
+              dest_dir="${DEST_BASE}/${cat_name}"
+              mkdir -p "${dest_dir}"
 
-            echo "Synced ${src_dir} -> ${dest_dir}"
+              echo "Syncing ${src_dir} -> ${dest_dir} ($(($j+1))/${#dirs[@]})"
+              
+              # 最適化されたrsyncオプション：圧縮、進捗表示、効率的な転送
+              if rsync -avz --compress-level=6 --partial --inplace \
+                --delete --delete-excluded \
+                --exclude='.git/' \
+                --exclude='.DS_Store' \
+                --exclude='*.tmp' \
+                --exclude='*.temp' \
+                --timeout=300 \
+                "${src_dir}" "${dest_dir}/"; then
+                echo "✓ Successfully synced ${src_dir}"
+                ((sync_success++))
+              else
+                echo "✗ Failed to sync ${src_dir} (error code: $?)"
+                ((sync_failed++))
+                
+                # If disk space is the issue, try to free up space and continue
+                available_space=$(df . | tail -1 | awk '{print $4}')
+                if [ "$available_space" -lt 500000 ]; then  # Less than 500MB
+                  echo "Critical: Very low disk space. Attempting emergency cleanup..."
+                  sudo apt-get clean
+                  docker system prune -af 2>/dev/null || true
+                  find /tmp -type f -name "*.tmp" -delete 2>/dev/null || true
+                  find /var/tmp -type f -name "*.tmp" -delete 2>/dev/null || true
+                  
+                  # Check if we have enough space to continue
+                  available_space=$(df . | tail -1 | awk '{print $4}')
+                  if [ "$available_space" -lt 500000 ]; then
+                    echo "Error: Still insufficient disk space after cleanup. Cannot continue."
+                    exit 1
+                  fi
+                fi
+              fi
+            done
+            
+            echo "Batch $((i/batch_size + 1)) summary: ${sync_success} successful, ${sync_failed} failed"
+            
+            # Update total counters
+            ((total_success += sync_success))
+            ((total_failed += sync_failed))
+            
+            # Check disk usage after each batch and clean up if needed
+            echo "=== Disk usage after batch $((i/batch_size + 1)) ==="
+            df -h
+            
+            # Clean up temporary files
+            find . -name "*.tmp" -type f -delete 2>/dev/null || true
+            find . -name "*.temp" -type f -delete 2>/dev/null || true
+            
+            # If disk usage is getting high, trigger garbage collection
+            available_space=$(df . | tail -1 | awk '{print $4}')
+            if [ "$available_space" -lt 1000000 ]; then  # Less than 1GB available
+              echo "Warning: Low disk space ($available_space KB available). Running cleanup..."
+              sudo apt-get clean
+              docker system prune -f 2>/dev/null || true
+            fi
           done
+          
+          # Final sync statistics
+          echo "=== SYNC COMPLETE ==="
+          echo "Total directories processed: ${#dirs[@]}"
+          echo "Successfully synced: ${total_success}"
+          echo "Failed to sync: ${total_failed}"
+          
+          if [ "$total_failed" -gt 0 ]; then
+            echo "⚠️  Warning: Some directories failed to sync. Check logs above for details."
+            if [ "$total_failed" -gt "$((${#dirs[@]} / 2))" ]; then
+              echo "❌ Error: More than half of the directories failed. Exiting with error."
+              exit 1
+            fi
+          else
+            echo "✅ All directories synced successfully!"
+          fi
+
+      - name: Final cleanup before commit
+        shell: bash
+        run: |
+          echo "=== Final disk status ==="
+          df -h
+          
+          # Final cleanup of temporary files in the entire workspace
+          find . -name "*.tmp" -type f -delete 2>/dev/null || true
+          find . -name "*.temp" -type f -delete 2>/dev/null || true
+          find . -name ".DS_Store" -type f -delete 2>/dev/null || true
+          
+          echo "=== After final cleanup ==="
+          df -h
 
       - name: Commit & Push to MillionareKnowledgeCenter
         shell: bash
@@ -88,6 +212,8 @@ jobs:
 
           # 念のため .DS_Store を一掃（同期範囲外に紛れた場合の保険）
           find knowledge/edinet_db -name '.DS_Store' -type f -delete || true
+          find knowledge/edinet_db -name '*.tmp' -type f -delete || true
+          find knowledge/edinet_db -name '*.temp' -type f -delete || true
 
           git add -A
           if git diff --staged --quiet; then
