@@ -263,17 +263,37 @@ jobs:
           echo "=== Pre-scan: Directory size analysis ==="
           large_dirs_count=0
           total_estimated_files=0
+          
           for dir in "${dirs[@]}"; do
-            dir_file_count=$(find "${dir}" -type f 2>/dev/null | wc -l || echo 0)
-            total_estimated_files=$((total_estimated_files + dir_file_count))
-            if [ "$dir_file_count" -gt 10000 ]; then
-              echo "🔄 LARGE DIRECTORY DETECTED: $(basename "${dir%/}") - ${dir_file_count} files (will use subdirectory batching)"
+            dir_name="$(basename "${dir%/}")"
+            echo "Scanning directory: ${dir_name}..."
+            
+            # Use timeout and resource limits for file counting to prevent hangs
+            if [ "${dir_name}" = "edinet_db" ]; then
+              echo "📂 Large directory detected: ${dir_name} (skipping detailed count for speed)"
+              echo "🔄 LARGE DIRECTORY DETECTED: ${dir_name} - estimated >30000 files (will use subdirectory batching)"
+              dir_file_count=30000  # Estimated count to avoid expensive operation
               ((large_dirs_count++))
-            elif [ "$dir_file_count" -gt 1000 ]; then
-              echo "📁 Large directory: $(basename "${dir%/}") - ${dir_file_count} files"
             else
-              echo "📄 Directory: $(basename "${dir%/}") - ${dir_file_count} files"
+              # For smaller directories, do normal counting
+              dir_file_count=$(timeout 30 find "${dir}" -type f 2>/dev/null | wc -l || echo 0)
+              if [ "$dir_file_count" -eq 0 ] && [ -d "${dir}" ]; then
+                echo "⚠️  File count failed or timeout for ${dir_name}, assuming large directory"
+                dir_file_count=15000
+                ((large_dirs_count++))
+              fi
+              
+              if [ "$dir_file_count" -gt 10000 ]; then
+                echo "🔄 LARGE DIRECTORY DETECTED: ${dir_name} - ${dir_file_count} files (will use subdirectory batching)"
+                ((large_dirs_count++))
+              elif [ "$dir_file_count" -gt 1000 ]; then
+                echo "📁 Large directory: ${dir_name} - ${dir_file_count} files"
+              else
+                echo "📄 Directory: ${dir_name} - ${dir_file_count} files"
+              fi
             fi
+            
+            total_estimated_files=$((total_estimated_files + dir_file_count))
           done
           
           echo "=== Pre-scan Summary ==="
