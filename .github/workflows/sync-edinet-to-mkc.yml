@@ -258,47 +258,7 @@ jobs:
           fi
 
           echo "Total directories to sync: ${#dirs[@]}"
-          
-          # Pre-check directory sizes and warn about large directories
-          echo "=== Pre-scan: Directory size analysis ==="
-          large_dirs_count=0
-          total_estimated_files=0
-          
-          for dir in "${dirs[@]}"; do
-            dir_name="$(basename "${dir%/}")"
-            echo "Scanning directory: ${dir_name}..."
-            
-            # Use timeout and resource limits for file counting to prevent hangs
-            if [ "${dir_name}" = "edinet_db" ]; then
-              echo "📂 Large directory detected: ${dir_name} (skipping detailed count for speed)"
-              echo "🔄 LARGE DIRECTORY DETECTED: ${dir_name} - estimated >30000 files (will use subdirectory batching)"
-              dir_file_count=30000  # Estimated count to avoid expensive operation
-              ((large_dirs_count++))
-            else
-              # For smaller directories, do normal counting
-              dir_file_count=$(timeout 30 find "${dir}" -type f 2>/dev/null | wc -l || echo 0)
-              if [ "$dir_file_count" -eq 0 ] && [ -d "${dir}" ]; then
-                echo "⚠️  File count failed or timeout for ${dir_name}, assuming large directory"
-                dir_file_count=15000
-                ((large_dirs_count++))
-              fi
-              
-              if [ "$dir_file_count" -gt 10000 ]; then
-                echo "🔄 LARGE DIRECTORY DETECTED: ${dir_name} - ${dir_file_count} files (will use subdirectory batching)"
-                ((large_dirs_count++))
-              elif [ "$dir_file_count" -gt 1000 ]; then
-                echo "📁 Large directory: ${dir_name} - ${dir_file_count} files"
-              else
-                echo "📄 Directory: ${dir_name} - ${dir_file_count} files"
-              fi
-            fi
-            
-            total_estimated_files=$((total_estimated_files + dir_file_count))
-          done
-          
-          echo "=== Pre-scan Summary ==="
-          echo "Total estimated files: ${total_estimated_files}"
-          echo "Large directories (>10k files) to process with subdirectory batching: ${large_dirs_count}"
+          echo "Will analyze directory sizes during processing for efficiency."
           
           echo "=== Disk space before sync ==="
           df -h
@@ -334,8 +294,20 @@ jobs:
               dest_dir="${DEST_BASE}/${cat_name}"
               mkdir -p "${dest_dir}"
 
-              # Count files in source directory
-              dir_file_count=$(find "${src_dir}" -type f 2>/dev/null | wc -l || echo 0)
+              # Count files in source directory (with safety measures)
+              echo "Processing directory: ${cat_name}"
+              if [ "${cat_name}" = "edinet_db" ]; then
+                echo "  Large directory detected, skipping file count for performance"
+                dir_file_count=30000  # Assume large directory
+              else
+                echo "  Counting files..."
+                dir_file_count=$(timeout 30 find "${src_dir}" -type f 2>/dev/null | wc -l || echo 0)
+                if [ "$dir_file_count" -eq 0 ] && [ -d "${src_dir}" ]; then
+                  echo "  File count failed/timeout, assuming large directory"
+                  dir_file_count=15000
+                fi
+              fi
+              echo "  Directory ${cat_name}: ${dir_file_count} files"
               
               # Handle extremely large directories using subdirectory batching
               if [ "$dir_file_count" -gt 10000 ]; then
