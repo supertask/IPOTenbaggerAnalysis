@@ -96,6 +96,9 @@ jobs:
           total_success=0
           total_failed=0
           
+          # Disable immediate exit on error for the sync loop to handle errors gracefully
+          set +e
+          
           for ((i=0; i<${#dirs[@]}; i+=batch_size)); do
             batch_end=$((i + batch_size))
             if [ $batch_end -gt ${#dirs[@]} ]; then
@@ -114,20 +117,28 @@ jobs:
               mkdir -p "${dest_dir}"
 
               echo "Syncing ${src_dir} -> ${dest_dir} ($(($j+1))/${#dirs[@]})"
+              echo "  Source contents: $(ls -la "${src_dir}" 2>/dev/null | wc -l) items"
               
               # 最適化されたrsyncオプション：圧縮、進捗表示、効率的な転送
-              if rsync -avz --compress-level=6 --partial --inplace \
+              echo "  About to execute rsync command..."
+              rsync_exit_code=0
+              rsync -avz --compress-level=6 --partial --inplace \
                 --delete --delete-excluded \
                 --exclude='.git/' \
                 --exclude='.DS_Store' \
                 --exclude='*.tmp' \
                 --exclude='*.temp' \
                 --timeout=300 \
-                "${src_dir}" "${dest_dir}/"; then
+                "${src_dir}/" "${dest_dir}/" || rsync_exit_code=$?
+              
+              echo "  rsync completed with exit code: ${rsync_exit_code}"
+              
+              if [ "${rsync_exit_code}" -eq 0 ]; then
                 echo "✓ Successfully synced ${src_dir}"
+                echo "  Destination contents: $(ls -la "${dest_dir}" 2>/dev/null | wc -l) items"
                 ((sync_success++))
               else
-                echo "✗ Failed to sync ${src_dir} (error code: $?)"
+                echo "✗ Failed to sync ${src_dir} (error code: ${rsync_exit_code})"
                 ((sync_failed++))
                 
                 # If disk space is the issue, try to free up space and continue
@@ -147,6 +158,8 @@ jobs:
                   fi
                 fi
               fi
+              
+              echo "  Completed processing directory $(($j+1))/${#dirs[@]}: ${cat_name}"
             done
             
             echo "Batch $((i/batch_size + 1)) summary: ${sync_success} successful, ${sync_failed} failed"
@@ -171,6 +184,9 @@ jobs:
               docker system prune -f 2>/dev/null || true
             fi
           done
+          
+          # Re-enable immediate exit on error after sync loop
+          set -e
           
           # Final sync statistics
           echo "=== SYNC COMPLETE ==="
