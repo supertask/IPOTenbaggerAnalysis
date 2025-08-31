@@ -224,6 +224,24 @@ jobs:
                 ((processed_subdirs++))
               done
               
+              # Commit and push this batch of subdirectories
+              echo "    📤 Committing batch $((k/subdir_batch_size + 1)) of ${cat_name} subdirectories..."
+              local batch_num=$((k/subdir_batch_size + 1))
+              local batch_size_actual=$((subdir_batch_end - k))
+              
+              # Create commit message for this subdirectory batch
+              if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+                TAG_NAME="${GITHUB_REF#refs/tags/}"
+                local commit_msg="chore(sync): ${cat_name} batch ${batch_num} (${batch_size_actual} companies) from IPOTenbaggerAnalysis (tag ${TAG_NAME})"
+              else
+                local commit_msg="chore(sync): ${cat_name} batch ${batch_num} (${batch_size_actual} companies) from IPOTenbaggerAnalysis ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))"
+              fi
+              
+              # Commit and push this batch
+              commit_and_push "$commit_msg" "$batch_size_actual"
+              
+              echo "    ✅ Successfully pushed ${cat_name} batch ${batch_num}"
+              
               # Check disk space after each batch
               available_space=$(df . | tail -1 | awk '{print $4}')
               echo "    Disk space after batch: ${available_space} KB available"
