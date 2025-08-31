@@ -126,6 +126,98 @@ jobs:
             cd ..
             return 0
           }
+          
+          # Function to handle large directories by processing subdirectories in batches
+          sync_large_directory() {
+            local src_dir="$1"
+            local dest_dir="$2"
+            local cat_name="$3"
+            
+            echo "🔄 LARGE DIRECTORY DETECTED: Processing ${cat_name} using subdirectory batching"
+            
+            # Create destination directory
+            mkdir -p "${dest_dir}"
+            
+            # Get list of subdirectories
+            shopt -s nullglob
+            local subdirs=("${src_dir}"/*/)
+            
+            if [ ${#subdirs[@]} -eq 0 ]; then
+              echo "  No subdirectories found in ${src_dir}. Processing as single directory."
+              # Process files in the root of the large directory
+              rsync -avz --compress-level=6 --partial --inplace \
+                --delete --delete-excluded \
+                --exclude='.git/' --exclude='.DS_Store' --exclude='*.tmp' --exclude='*.temp' \
+                --timeout=300 \
+                "${src_dir}/" "${dest_dir}/" || return 1
+              return 0
+            fi
+            
+            echo "  Found ${#subdirs[@]} subdirectories to process"
+            
+            # Process subdirectories in optimized batches
+            local subdir_batch_size=50
+            local processed_subdirs=0
+            
+            for ((k=0; k<${#subdirs[@]}; k+=subdir_batch_size)); do
+              local subdir_batch_end=$((k + subdir_batch_size))
+              if [ $subdir_batch_end -gt ${#subdirs[@]} ]; then
+                subdir_batch_end=${#subdirs[@]}
+              fi
+              
+              echo "  📦 Processing subdirectory batch $((k/subdir_batch_size + 1)): items $((k+1)) to $subdir_batch_end"
+              
+              # Sync this batch of subdirectories
+              for ((l=k; l<subdir_batch_end; l++)); do
+                local subdir="${subdirs[l]}"
+                local subdir_name="$(basename "${subdir%/}")"
+                local dest_subdir="${dest_dir}/${subdir_name}"
+                
+                echo "    Syncing ${subdir_name}..."
+                mkdir -p "${dest_subdir}"
+                
+                rsync -avz --compress-level=6 --partial --inplace \
+                  --delete --delete-excluded \
+                  --exclude='.git/' --exclude='.DS_Store' --exclude='*.tmp' --exclude='*.temp' \
+                  --timeout=300 \
+                  "${subdir}" "${dest_subdir}/" || {
+                    echo "    ❌ Failed to sync ${subdir_name}"
+                    return 1
+                  }
+                
+                echo "    ✓ Successfully synced ${subdir_name}"
+                
+                # Immediately delete the source subdirectory to save space
+                rm -rf "${subdir}" 2>/dev/null || true
+                echo "    🗑️  Cleaned up source: ${subdir}"
+                
+                ((processed_subdirs++))
+              done
+              
+              # Check disk space after each batch
+              available_space=$(df . | tail -1 | awk '{print $4}')
+              echo "    Disk space after batch: ${available_space} KB available"
+              
+              if [ "$available_space" -lt 2000000 ]; then
+                echo "    ⚠️  Running preventive cleanup..."
+                sudo apt-get clean
+                docker system prune -f 2>/dev/null || true
+                find /tmp -type f -delete 2>/dev/null || true
+                sync
+                echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+              fi
+            done
+            
+            echo "  ✅ Completed processing ${cat_name}: ${processed_subdirs} subdirectories synced"
+            
+            # Clean up any remaining files in the source directory
+            if [ -d "${src_dir}" ]; then
+              rm -rf "${src_dir}" 2>/dev/null || true
+              echo "  🗑️  Final cleanup: removed ${src_dir}"
+            fi
+            
+            return 0
+          }
 
           shopt -s nullglob
           # 直下の「フォルダ群」を列挙（ファイルは無視）
@@ -136,18 +228,40 @@ jobs:
           fi
 
           echo "Total directories to sync: ${#dirs[@]}"
+          
+          # Pre-check directory sizes and warn about large directories
+          echo "=== Pre-scan: Directory size analysis ==="
+          large_dirs_count=0
+          total_estimated_files=0
+          for dir in "${dirs[@]}"; do
+            dir_file_count=$(find "${dir}" -type f 2>/dev/null | wc -l || echo 0)
+            total_estimated_files=$((total_estimated_files + dir_file_count))
+            if [ "$dir_file_count" -gt 10000 ]; then
+              echo "🔄 LARGE DIRECTORY DETECTED: $(basename "${dir%/}") - ${dir_file_count} files (will use subdirectory batching)"
+              ((large_dirs_count++))
+            elif [ "$dir_file_count" -gt 1000 ]; then
+              echo "📁 Large directory: $(basename "${dir%/}") - ${dir_file_count} files"
+            else
+              echo "📄 Directory: $(basename "${dir%/}") - ${dir_file_count} files"
+            fi
+          done
+          
+          echo "=== Pre-scan Summary ==="
+          echo "Total estimated files: ${total_estimated_files}"
+          echo "Large directories (>10k files) to process with subdirectory batching: ${large_dirs_count}"
+          
           echo "=== Disk space before sync ==="
           df -h
 
           # Process directories in smaller batches to manage disk usage
-          # Use very small batch size to be extremely conservative with disk space
-          batch_size=10
+          # Use extremely small batch size to be ultra-conservative with disk space
+          batch_size=5
           total_success=0
           total_failed=0
           
           # File counting for split commits
           files_in_current_batch=0
-          max_files_per_push=150
+          max_files_per_push=300
           push_count=1
           
           # Disable immediate exit on error for the sync loop to handle errors gracefully
@@ -172,6 +286,24 @@ jobs:
 
               # Count files in source directory
               dir_file_count=$(find "${src_dir}" -type f 2>/dev/null | wc -l || echo 0)
+              
+              # Handle extremely large directories using subdirectory batching
+              if [ "$dir_file_count" -gt 10000 ]; then
+                echo "📂 LARGE DIRECTORY: ${src_dir} (${dir_file_count} files > 10,000)"
+                echo "    Using subdirectory batching approach..."
+                
+                if sync_large_directory "${src_dir}" "${dest_dir}" "${cat_name}"; then
+                  echo "✓ Successfully synced large directory: ${src_dir}"
+                  ((sync_success++))
+                  # Note: source directory already cleaned up by sync_large_directory function
+                else
+                  echo "✗ Failed to sync large directory: ${src_dir}"
+                  ((sync_failed++))
+                fi
+                
+                echo "  Completed processing large directory $(($j+1))/${#dirs[@]}: ${cat_name}"
+                continue
+              fi
               
               echo "Syncing ${src_dir} -> ${dest_dir} ($(($j+1))/${#dirs[@]}) - ${dir_file_count} files"
               echo "  Current batch total: $((files_in_current_batch + dir_file_count)) files"
@@ -221,26 +353,43 @@ jobs:
                 
                               # If disk space is the issue, try to free up space and continue
               available_space=$(df . | tail -1 | awk '{print $4}')
-              if [ "$available_space" -lt 1000000 ]; then  # Less than 1GB
-                echo "Critical: Low disk space. Attempting emergency cleanup..."
+                              if [ "$available_space" -lt 1500000 ]; then  # Less than 1.5GB
+                echo "Critical: Low disk space. Attempting aggressive emergency cleanup..."
+                
+                # More aggressive cleanup
                 sudo apt-get clean
                 sudo apt-get autoremove -y
+                sudo apt-get autoclean
+                
+                # Docker cleanup
                 docker system prune -af 2>/dev/null || true
                 docker volume prune -f 2>/dev/null || true
+                docker builder prune -af 2>/dev/null || true
+                docker network prune -f 2>/dev/null || true
+                
+                # System cleanup
                 find /tmp -type f -delete 2>/dev/null || true
                 find /var/tmp -type f -delete 2>/dev/null || true
                 find /var/cache -type f -delete 2>/dev/null || true
-                sudo journalctl --vacuum-time=1d
+                find /var/log -name "*.log" -type f -delete 2>/dev/null || true
+                sudo journalctl --vacuum-time=12h
                 
-                # Force memory cleanup
-                sudo sysctl -w vm.drop_caches=3
+                # Force aggressive memory cleanup
+                sync
+                echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+                
+                # Clean package caches
+                sudo rm -rf /var/cache/apt/archives/* 2>/dev/null || true
+                sudo rm -rf ~/.cache/* 2>/dev/null || true
                 
                 # Check if we have enough space to continue
                 available_space=$(df . | tail -1 | awk '{print $4}')
-                if [ "$available_space" -lt 800000 ]; then  # Less than 800MB
-                  echo "Error: Still insufficient disk space after cleanup. Cannot continue."
+                if [ "$available_space" -lt 1000000 ]; then  # Less than 1GB
+                  echo "Error: Still insufficient disk space after aggressive cleanup. Cannot continue."
                   exit 1
                 fi
+                
+                echo "Emergency cleanup completed. Available space: ${available_space} KB"
               fi
               fi
               
@@ -270,7 +419,7 @@ jobs:
             
             # More aggressive disk monitoring and cleanup
             available_space=$(df . | tail -1 | awk '{print $4}')
-            if [ "$available_space" -lt 2000000 ]; then  # Less than 2GB available
+            if [ "$available_space" -lt 3000000 ]; then  # Less than 3GB available
               echo "Warning: Low disk space ($available_space KB available). Running proactive cleanup..."
               sudo apt-get clean
               sudo apt-get autoremove -y
@@ -278,9 +427,11 @@ jobs:
               docker volume prune -f 2>/dev/null || true
               find /tmp -type f -delete 2>/dev/null || true
               find /var/tmp -type f -delete 2>/dev/null || true
+              find /var/cache -type f -delete 2>/dev/null || true
               sudo journalctl --vacuum-time=1d
-              sudo sysctl -w vm.drop_caches=3
-              echo "Cleanup completed. New available space: $(df . | tail -1 | awk '{print $4}') KB"
+              sync
+              echo 3 | sudo tee /proc/sys/vm/drop_caches > /dev/null
+              echo "Proactive cleanup completed. New available space: $(df . | tail -1 | awk '{print $4}') KB"
             fi
           done
           
