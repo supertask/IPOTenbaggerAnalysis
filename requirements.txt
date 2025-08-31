@@ -9,3 +9,9 @@ matplotlib
 plotly
 gunicorn
 chardet
+yfinance
+beautifulsoup4
+tqdm
+scikit-optimize
+numpy
+urllib3

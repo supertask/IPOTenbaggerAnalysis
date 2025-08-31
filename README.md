@@ -206,40 +206,30 @@ sudo systemctl start gunicorn
 
 # サービス状態の確認
 sudo systemctl status gunicorn
+
+# Gunicornサービスの再起動
+sudo systemctl restart gunicorn
 ```
 
 ### 5. Nginx設定
 
 #### Nginx設定ファイルの作成
 ```bash
-sudo vim /etc/nginx/sites-available/ipo_visualizer
-```
-
-以下の内容を記述（etc/ipo_visualizer_nginx.confファイルの内容を参照）：
-```nginx
-server {
-    listen 80;
-    listen [::]:80;
-    server_name ipo_visualizer;
-
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-
-    # アクセスログとエラーログ
-    access_log /var/log/nginx/ipo_visualizer.access.log;
-    error_log /var/log/nginx/ipo_visualizer.error.log;
-}
+sudo vim /etc/nginx/sites-available/ipo_visualizer.conf
 ```
 
 #### Nginxサイトの有効化
 ```bash
 # サイトの有効化（シンボリックリンク作成）
-sudo ln -s /etc/nginx/sites-available/ipo_visualizer /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/ipo_visualizer.conf /etc/nginx/sites-enabled/
+
+# キャッシュディレクトリの作成（必須）
+sudo mkdir -p /var/cache/nginx/ipo_visualizer
+sudo chown -R www-data:www-data /var/cache/nginx/ipo_visualizer
+sudo chmod 755 /var/cache/nginx/ipo_visualizer
+
+# ngx_cache_purge モジュールのインストール
+sudo apt-get install libnginx-mod-http-cache-purge   # または sudo apt-get install nginx-extras
 
 # Nginx設定の構文チェック
 sudo nginx -t
@@ -249,6 +239,9 @@ sudo systemctl restart nginx
 
 # Nginxサービスの自動起動設定
 sudo systemctl enable nginx
+
+# キャッシュの合計の容量をしれる
+sudo du -sh /var/cache/nginx/ipo_visualizer
 ```
 
 ### 6. サービス管理コマンド
@@ -303,6 +296,52 @@ Flaskアプリケーションのログは以下の場所に記録されます：
 - **Gunicornサービス**: systemdジャーナル（`journalctl -u gunicorn.service -f`で確認）
 - **Nginx**: `/var/log/nginx/ipo_visualizer.access.log`と`/var/log/nginx/ipo_visualizer.error.log`
 - **アプリケーション**: デフォルトでコンソール出力（systemdジャーナルに記録）
+
+### 8. トラブルシューティング
+
+#### NGINX設定エラーの対処
+
+**「unknown directive "proxy_cache_purge"」エラー**
+```bash
+# ngx_cache_purgeモジュールがインストールされていない場合
+# Ubuntu/Debian系の場合
+sudo apt-get install libnginx-mod-http-cache-purge
+# または
+sudo apt-get install nginx-extras
+
+# 設定ファイルから該当部分をコメントアウトする場合
+sudo vim /etc/nginx/sites-available/ipo_visualizer.conf
+# location /admin/clear-cache { ... } ブロックをコメントアウト
+```
+
+**「mkdir() "/var/cache/nginx/ipo_visualizer" failed」エラー**
+```bash
+# キャッシュディレクトリを手動作成
+sudo mkdir -p /var/cache/nginx/ipo_visualizer
+sudo chown -R www-data:www-data /var/cache/nginx/ipo_visualizer
+sudo chmod 755 /var/cache/nginx/ipo_visualizer
+```
+
+**「conflicting server name」警告**
+```bash
+# 重複する設定ファイルを確認
+sudo grep -r "server_name.*ipo_visualizer" /etc/nginx/
+
+# 重複ファイルがある場合は削除または無効化
+sudo rm /etc/nginx/sites-enabled/重複ファイル名
+```
+
+**設定確認の基本手順**
+```bash
+# 1. 構文チェック
+sudo nginx -t
+
+# 2. エラーがある場合は修正後に再チェック
+sudo nginx -t
+
+# 3. 問題なければリロード
+sudo systemctl reload nginx
+```
 
 ### 参考資料
 - [Oracle Cloud Infrastructure - Free Tier: Ubuntu VMへのFlaskのインストール](https://docs.oracle.com/ja-jp/iaas/developer-tutorials/tutorials/flask-on-ubuntu/01oci-ubuntu-flask-summary.htm)

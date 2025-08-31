@@ -1,0 +1,601 @@
+<script>
+    // 競合企業データをJavaScriptで利用できるようにする
+    const competitorsData = {{ competitors|tojson|safe }};
+    
+    // トースト表示関数
+    function showToast(message) {
+        const toastContainer = document.querySelector('.toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.innerHTML = message;
+        toastContainer.appendChild(toast);
+        
+        // 表示アニメーション
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+        
+        // 3秒後に非表示
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                toastContainer.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+
+    // クリップボードAPIが使えない環境向けフォールバック
+    function openPromptWindow(text) {
+        const newWin = window.open('', '_blank');
+        if (!newWin) {
+            alert('新しいタブを開けませんでした。ポップアップブロックを解除してください。');
+            return;
+        }
+        const escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        newWin.document.write('<html><head><meta charset="utf-8"><title>Prompt</title></head><body style="white-space:pre-wrap;font-family:monospace;padding:20px;">' + escaped + '</body></html>');
+        newWin.document.close();
+    }
+
+    // navigator.clipboard が未定義、または writeText が無い場合のポリフィル
+    if (!navigator.clipboard || !navigator.clipboard.writeText) {
+        navigator.clipboard = {
+            writeText: function(text) {
+                openPromptWindow(text);
+                return Promise.resolve();
+            }
+        };
+    }
+    
+    // 事業の内容の比較プロンプトをコピーする関数
+    function copyBusinessComparisonPrompt() {
+        var button = document.querySelector('.copy-button[onclick="copyBusinessComparisonPrompt()"]');
+        
+        // ボタンの元のテキストを保存
+        var originalHtml = button.innerHTML;
+        
+        // ローディング状態に変更
+        button.classList.add('loading');
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
+        
+        // ターゲット企業の事業の内容を取得
+        var targetBusiness = document.querySelector('#target-company-business').textContent.trim();
+        
+        // 競合企業の事業の内容を取得
+        var competitorElements = document.querySelectorAll('[id^="competitor-business-"]:not([id$="-tab"])');
+        var competitorInfo = Array.from(competitorElements).map(function(el) {
+            return el.textContent.trim();
+        });
+        
+        // プロンプトテキストを作成
+        var promptText = "下記は、それぞれの企業の事業の内容です。テンバガーの企業を選ぶ際にこれらの事業内容だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
+        var companyName = '{{ company_name }}';
+        var businessText = "【" + companyName + "の事業の内容】\n" + targetBusiness + "\n\n";
+        
+        // 競合企業の情報を追加
+        var competitorsText = competitorInfo.map(function(info, index) {
+            return "【" + competitorsData[index].name + "の事業の内容】\n" + info;
+        }).join('\n\n');
+        
+        // 全テキストを結合
+        var fullText = promptText + businessText + competitorsText;
+
+        // 直接タブを開く
+        openPromptWindow(fullText);
+        // ローディング状態を解除
+        button.classList.remove('loading');
+        // 成功状態に変更
+        button.classList.add('clicked');
+        button.innerHTML = originalHtml;
+        // トースト表示
+        showToast('タブを開きました！');
+        setTimeout(function() {
+            button.classList.remove('clicked');
+            button.classList.add('recovering');
+            setTimeout(function() {
+                button.classList.remove('recovering');
+            }, 500);
+        }, 1000);
+    }
+
+    // 役員情報の比較プロンプトをコピーする関数
+    function copyOfficersComparisonPrompt() {
+        var button = document.querySelector('.copy-button[onclick="copyOfficersComparisonPrompt()"]');
+        
+        // ボタンの元のテキストを保存
+        var originalHtml = button.innerHTML;
+        
+        // ローディング状態に変更
+        button.classList.add('loading');
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
+        
+        // ターゲット企業の役員情報を取得
+        var targetOfficers = document.querySelector('#target-company').textContent.trim();
+        
+        // 競合企業の役員情報を取得
+        var competitorElements = document.querySelectorAll('[id^="competitor-"]:not([id$="-tab"]):not([id^="competitor-business-"])');
+        var competitorInfo = Array.from(competitorElements).map(function(el) {
+            return el.textContent.trim();
+        });
+        
+        // プロンプトテキストを作成
+        var promptText = "下記は、それぞれの企業の役員の状況です。テンバガーの企業を選ぶ際にこれらの役員だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
+        var companyName = '{{ company_name }}';
+        var officersText = "【" + companyName + "の役員の状況】\n" + targetOfficers + "\n\n";
+        
+        // 競合企業の情報を追加
+        var competitorsText = competitorInfo.map(function(info, index) {
+            return "【" + competitorsData[index].name + "の役員の状況】\n" + info;
+        }).join('\n\n');
+        
+        // 全テキストを結合
+        var fullText = promptText + officersText + competitorsText;
+        
+        // 直接タブを開く
+        openPromptWindow(fullText);
+        // ローディング状態を解除
+        button.classList.remove('loading');
+        // 成功状態に変更
+        button.classList.add('clicked');
+        button.innerHTML = originalHtml;
+        // トースト表示
+        showToast('タブを開きました！');
+        setTimeout(function() {
+            button.classList.remove('clicked');
+            button.classList.add('recovering');
+            setTimeout(function() {
+                button.classList.remove('recovering');
+            }, 500);
+        }, 1000);
+    }
+    
+    // ChatGPTで事業の内容の比較プロンプトを開く関数
+    function openChatGPTWithBusinessPrompt() {
+        // ターゲット企業の事業の内容を取得
+        var targetBusiness = document.querySelector('#target-company-business').textContent.trim();
+        
+        // 競合企業の事業の内容を取得
+        var competitorElements = document.querySelectorAll('[id^="competitor-business-"]:not([id$="-tab"])');
+        var competitorInfo = Array.from(competitorElements).map(function(el) {
+            return el.textContent.trim();
+        });
+        
+        // プロンプトテキストを作成
+        var promptText = "下記は、それぞれの企業の事業の内容です。テンバガーの企業を選ぶ際にこれらの事業内容だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
+        var companyName = '{{ company_name }}';
+        var businessText = "【" + companyName + "の事業の内容】\n" + targetBusiness + "\n\n";
+        
+        // 競合企業の情報を追加
+        var competitorsText = competitorInfo.map(function(info, index) {
+            return "【" + competitorsData[index].name + "の事業の内容】\n" + info;
+        }).join('\n\n');
+        
+        // 全テキストを結合
+        var fullText = promptText + businessText + competitorsText;
+        
+        // ChatGPTを開いて浮動ボタンを作成
+        var chatWindow = window.open('https://chatgpt.com/', '_blank');
+        
+        // ページが読み込まれるのを待ってから浮動ボタンを追加
+        setTimeout(function() {
+            if (chatWindow && !chatWindow.closed) {
+                try {
+                    // 浮かせるdiv要素を作成
+                    var toggleDiv = chatWindow.document.createElement("div");
+                    toggleDiv.id = "floatingPromptDiv";
+                    toggleDiv.style.position = "fixed";
+                    toggleDiv.style.display = "flex";
+                    toggleDiv.style.top = "20px";
+                    toggleDiv.style.right = "20px";
+                    toggleDiv.style.width = "60px";
+                    toggleDiv.style.height = "60px";
+                    toggleDiv.style.backgroundColor = "rgba(16, 163, 127, 0.9)";
+                    toggleDiv.style.color = "white";
+                    toggleDiv.style.borderRadius = "50%";
+                    toggleDiv.style.alignItems = "center";
+                    toggleDiv.style.justifyContent = "center";
+                    toggleDiv.style.cursor = "pointer";
+                    toggleDiv.style.zIndex = "10000";
+                    toggleDiv.style.fontSize = "24px";
+                    toggleDiv.innerHTML = "📝";
+                    toggleDiv.title = "プロンプトを入力";
+                    
+                    // クリックイベントを追加
+                    toggleDiv.addEventListener("click", function() {
+                        try {
+                            // ChatGPTの入力欄を特定
+                            var inputField = chatWindow.document.getElementById("prompt-textarea") || 
+                                           chatWindow.document.querySelector(".ProseMirror") ||
+                                           chatWindow.document.querySelector('textarea[placeholder*="Message"]') ||
+                                           chatWindow.document.querySelector('div[contenteditable="true"]');
+                            
+                            if (inputField) {
+                                // フォーカスを設定
+                                inputField.focus();
+                                
+                                if (inputField.tagName === 'TEXTAREA') {
+                                    inputField.value = fullText;
+                                    inputField.dispatchEvent(new Event("input", { bubbles: true }));
+                                } else {
+                                    inputField.textContent = fullText;
+                                    inputField.dispatchEvent(new Event("input", { bubbles: true }));
+                                }
+                                
+                                // ボタンを削除
+                                toggleDiv.remove();
+                            } else {
+                                alert("入力欄が見つかりませんでした。ページが完全に読み込まれるまでお待ちください。");
+                            }
+                        } catch (error) {
+                            console.error("プロンプト入力エラー:", error);
+                            alert("プロンプトの入力に失敗しました。");
+                        }
+                    });
+                    
+                    // divをページに追加
+                    chatWindow.document.body.appendChild(toggleDiv);
+                } catch (error) {
+                    console.error("浮動ボタンの作成に失敗:", error);
+                }
+            }
+        }, 3000);
+        
+        // トースト表示
+        showToast('ChatGPTを開きました！');
+    }
+    
+    // ChatGPTで役員の状況の比較プロンプトを開く関数
+    function openChatGPTWithOfficersPrompt() {
+        // ターゲット企業の役員情報を取得
+        var targetOfficers = document.querySelector('#target-company').textContent.trim();
+        
+        // 競合企業の役員情報を取得
+        var competitorElements = document.querySelectorAll('[id^="competitor-"]:not([id$="-tab"]):not([id^="competitor-business-"])');
+        var competitorInfo = Array.from(competitorElements).map(function(el) {
+            return el.textContent.trim();
+        });
+        
+        // プロンプトテキストを作成
+        var promptText = "下記は、それぞれの企業の役員の状況です。テンバガーの企業を選ぶ際にこれらの役員だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
+        var companyName = '{{ company_name }}';
+        var officersText = "【" + companyName + "の役員の状況】\n" + targetOfficers + "\n\n";
+        
+        // 競合企業の情報を追加
+        var competitorsText = competitorInfo.map(function(info, index) {
+            return "【" + competitorsData[index].name + "の役員の状況】\n" + info;
+        }).join('\n\n');
+        
+        // 全テキストを結合
+        var fullText = promptText + officersText + competitorsText;
+        
+        // ChatGPTを開いて浮動ボタンを作成
+        var chatWindow = window.open('https://chatgpt.com/', '_blank');
+        
+        // ページが読み込まれるのを待ってから浮動ボタンを追加
+        setTimeout(function() {
+            if (chatWindow && !chatWindow.closed) {
+                try {
+                    // 浮かせるdiv要素を作成
+                    var toggleDiv = chatWindow.document.createElement("div");
+                    toggleDiv.id = "floatingPromptDiv";
+                    toggleDiv.style.position = "fixed";
+                    toggleDiv.style.display = "flex";
+                    toggleDiv.style.top = "20px";
+                    toggleDiv.style.right = "20px";
+                    toggleDiv.style.width = "60px";
+                    toggleDiv.style.height = "60px";
+                    toggleDiv.style.backgroundColor = "rgba(16, 163, 127, 0.9)";
+                    toggleDiv.style.color = "white";
+                    toggleDiv.style.borderRadius = "50%";
+                    toggleDiv.style.alignItems = "center";
+                    toggleDiv.style.justifyContent = "center";
+                    toggleDiv.style.cursor = "pointer";
+                    toggleDiv.style.zIndex = "10000";
+                    toggleDiv.style.fontSize = "24px";
+                    toggleDiv.innerHTML = "📝";
+                    toggleDiv.title = "プロンプトを入力";
+                    
+                    // クリックイベントを追加
+                    toggleDiv.addEventListener("click", function() {
+                        try {
+                            // ChatGPTの入力欄を特定
+                            var inputField = chatWindow.document.getElementById("prompt-textarea") || 
+                                           chatWindow.document.querySelector(".ProseMirror") ||
+                                           chatWindow.document.querySelector('textarea[placeholder*="Message"]') ||
+                                           chatWindow.document.querySelector('div[contenteditable="true"]');
+                            
+                            if (inputField) {
+                                // フォーカスを設定
+                                inputField.focus();
+                                
+                                if (inputField.tagName === 'TEXTAREA') {
+                                    inputField.value = fullText;
+                                    inputField.dispatchEvent(new Event("input", { bubbles: true }));
+                                } else {
+                                    inputField.textContent = fullText;
+                                    inputField.dispatchEvent(new Event("input", { bubbles: true }));
+                                }
+                                
+                                // ボタンを削除
+                                toggleDiv.remove();
+                            } else {
+                                alert("入力欄が見つかりませんでした。ページが完全に読み込まれるまでお待ちください。");
+                            }
+                        } catch (error) {
+                            console.error("プロンプト入力エラー:", error);
+                            alert("プロンプトの入力に失敗しました。");
+                        }
+                    });
+                    
+                    // divをページに追加
+                    chatWindow.document.body.appendChild(toggleDiv);
+                } catch (error) {
+                    console.error("浮動ボタンの作成に失敗:", error);
+                }
+            }
+        }, 3000);
+        
+        // トースト表示
+        showToast('ChatGPTを開きました！');
+    }
+
+    // ハンバーガーメニューの機能
+    function initHamburgerMenu() {
+        const hamburgerToggle = document.getElementById('hamburger-toggle');
+        const hamburgerDropdown = document.getElementById('hamburger-dropdown');
+        const tenBaggerBtn = document.getElementById('tenbagger-prompt-btn');
+        const saveChatGPTBtn = document.getElementById('save-chatgpt-url-btn');
+        const chatgptUrlInput = document.getElementById('chatgpt-url-input');
+        const chatgptUrlError = document.getElementById('chatgpt-url-error');
+        const hamburgerMenu = document.querySelector('.hamburger-menu');
+        // アプリタイプ（past_tenbagger / next_tenbagger など）
+        const appType = hamburgerMenu ? hamburgerMenu.dataset.appType : 'common';
+
+        if (!hamburgerToggle || !hamburgerDropdown) return;
+
+        // ハンバーガーメニューの開閉
+        hamburgerToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            hamburgerToggle.classList.toggle('active');
+            hamburgerDropdown.classList.toggle('show');
+        });
+
+        // メニュー外をクリックしたら閉じる
+        document.addEventListener('click', function(e) {
+            if (!hamburgerToggle.contains(e.target) && !hamburgerDropdown.contains(e.target)) {
+                hamburgerToggle.classList.remove('active');
+                hamburgerDropdown.classList.remove('show');
+            }
+        });
+
+        // テンバガープロンプト機能
+        if (tenBaggerBtn && hamburgerMenu) {
+            tenBaggerBtn.addEventListener('click', function() {
+                const companyName = hamburgerMenu.dataset.companyName || '企業名';
+                const companyCode = hamburgerMenu.dataset.companyCode || '0000';
+                
+                const prompt = companyName + ' (' + companyCode + ') がテンバガー（10倍株）になる可能性を以下の観点から分析してください：\n\n' +
+                    '1. 事業の成長性・革新性\n' +
+                    '2. 財務面での健全性と成長力\n' +
+                    '3. 市場環境・競合分析\n' +
+                    '4. 経営陣・ガバナンス\n' +
+                    '5. バリュエーション\n' +
+                    '6. リスク要因\n\n' +
+                    '結論として、テンバガーになる確率を5段階で評価してください。';
+                
+                // 新規タブでプロンプトを表示
+                const newWindow = window.open('', '_blank');
+                if (newWindow) {
+                    newWindow.document.write('<html><head><title>テンバガー分析プロンプト - ' + companyName + '</title>');
+                    newWindow.document.write('<style>body{font-family:sans-serif;max-width:800px;margin:0 auto;padding:20px;line-height:1.6;}');
+                    newWindow.document.write('.prompt{background:#f8f9fa;padding:20px;border-left:4px solid #007bff;white-space:pre-wrap;}</style>');
+                    newWindow.document.write('</head><body>');
+                    newWindow.document.write('<h1>テンバガー分析プロンプト</h1>');
+                    newWindow.document.write('<p><strong>対象企業:</strong> ' + companyName + ' (' + companyCode + ')</p>');
+                    newWindow.document.write('<div class="prompt">' + prompt + '</div>');
+                    newWindow.document.write('<button onclick="navigator.clipboard.writeText(document.querySelector(\'.prompt\').textContent)">コピー</button>');
+                    newWindow.document.write('</body></html>');
+                    newWindow.document.close();
+                }
+                
+                showToast('テンバガープロンプトを生成しました！');
+            });
+        }
+
+        // ChatGPTリンク保存機能
+        if (saveChatGPTBtn && chatgptUrlInput && hamburgerMenu) {
+            saveChatGPTBtn.addEventListener('click', function() {
+                const url = chatgptUrlInput.value.trim();
+                const linkName = document.getElementById('link-name-input').value.trim();
+                const companyCode = hamburgerMenu.dataset.companyCode;
+                
+                // バリデーション
+                if (!url) {
+                    showError('URLを入力してください。');
+                    return;
+                }
+                
+                if (!linkName) {
+                    showError('リンクの名称を入力してください。');
+                    return;
+                }
+                
+                // ChatGPTまたはGeminiのリンクかチェック
+                const isChatGPT = url.match(/^https:\/\/chatgpt\.com\/share\/.+/);
+                const isGemini = url.match(/^https:\/\/g\.co\/.+/) || url.match(/^https:\/\/gemini\.google\.com\/share\/.+/);
+                
+                if (!isChatGPT && !isGemini) {
+                    showError('ChatGPTまたはGeminiのリンクを入力してください。');
+                    return;
+                }
+                
+                // APIに保存リクエストを送信
+                fetch('/api/save-chatgpt-link', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        company_code: companyCode,
+                        url: url,
+                        name: linkName,
+                        timestamp: new Date().toISOString(),
+                        app_type: appType
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        chatgptUrlInput.value = '';
+                        document.getElementById('link-name-input').value = '';
+                        hideError();
+                        showToast('AI分析リンクを保存しました！');
+                        loadSavedLinks();
+                    } else {
+                        showError(data.message || '保存に失敗しました。');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('保存中にエラーが発生しました。');
+                });
+            });
+        }
+
+        // エラー表示・非表示関数
+        function showError(message) {
+            if (chatgptUrlError) {
+                chatgptUrlError.textContent = message;
+                chatgptUrlError.classList.add('show');
+                chatgptUrlInput.classList.add('is-invalid');
+            }
+        }
+
+        function hideError() {
+            if (chatgptUrlError) {
+                chatgptUrlError.classList.remove('show');
+                chatgptUrlInput.classList.remove('is-invalid');
+            }
+        }
+
+        // 保存済みリンクの読み込み
+        function loadSavedLinks() {
+            if (!hamburgerMenu) return;
+            const companyCode = hamburgerMenu.dataset.companyCode;
+            
+            fetch('/api/get-chatgpt-links/' + companyCode + '?app_type=' + appType)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.links && data.links.length > 0) {
+                        displaySavedLinks(data.links);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading saved links:', error);
+                });
+        }
+
+        // 保存済みリンクの表示
+        function displaySavedLinks(links) {
+            const savedLinksSection = document.getElementById('saved-links-section');
+            const savedLinksContainer = document.getElementById('saved-links-container');
+            
+            if (!savedLinksSection || !savedLinksContainer) return;
+            
+            savedLinksContainer.innerHTML = '';
+            
+            links.forEach(function(link, index) {
+                const linkContainer = document.createElement('div');
+                linkContainer.className = 'saved-link-item';
+                
+                const linkElement = document.createElement('a');
+                linkElement.href = link.url;
+                linkElement.target = '_blank';
+                linkElement.className = 'menu-item';
+                
+                // アイコンを判定（ChatGPTかGeminiか）
+                const isChatGPT = link.url.includes('chatgpt.com');
+                const icon = isChatGPT ? 'bi-chat-dots' : 'bi-google';
+                
+                // リンク名称を使用、なければ保存済み #数字
+                const displayName = link.name || ('保存済み #' + (index + 1));
+                
+                linkElement.innerHTML = '<i class="bi ' + icon + '"></i><span>' + displayName + '</span><i class="bi bi-box-arrow-up-right"></i>';
+                
+                // 削除ボタンを作成
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-outline-danger btn-sm delete-link-btn';
+                deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                deleteBtn.title = 'このリンクを削除';
+                deleteBtn.dataset.linkIndex = index;
+                deleteBtn.dataset.linkUrl = link.url;
+                deleteBtn.dataset.linkName = displayName;
+                
+                linkContainer.appendChild(linkElement);
+                linkContainer.appendChild(deleteBtn);
+                savedLinksContainer.appendChild(linkContainer);
+            });
+            
+            savedLinksSection.style.display = 'block';
+            
+            // 削除ボタンのイベントリスナーを設定
+            setupDeleteButtons();
+        }
+
+        // 削除ボタンのイベントリスナーを設定
+        function setupDeleteButtons() {
+            const deleteButtons = document.querySelectorAll('.delete-link-btn');
+            deleteButtons.forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const linkIndex = parseInt(btn.dataset.linkIndex);
+                    const linkName = btn.dataset.linkName;
+                    const companyCode = hamburgerMenu.dataset.companyCode;
+                    
+                    // 確認ダイアログ
+                    if (confirm('「' + linkName + '」を削除しますか？\nこの操作は取り消せません。')) {
+                        // 削除API呼び出し
+                        fetch('/api/delete-chatgpt-link', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                company_code: companyCode,
+                                link_index: linkIndex,
+                                app_type: appType
+                            })
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast('リンクを削除しました');
+                                loadSavedLinks(); // リストを再読み込み
+                            } else {
+                                showError(data.message || '削除に失敗しました。');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            showError('削除中にエラーが発生しました。');
+                        });
+                    }
+                });
+            });
+        }
+
+        // ページ読み込み時に保存済みリンクを読み込み
+        loadSavedLinks();
+    }
+
+    // ページ読み込み完了時にハンバーガーメニューを初期化
+    document.addEventListener('DOMContentLoaded', function() {
+        initHamburgerMenu();
+    });
+</script> 

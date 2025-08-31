@@ -258,6 +258,7 @@ def company_view(company_code):
         return None, error, 500
     
     data = {
+        'app_type': 'past_tenbagger',
         'company_code': company_code,
         'company_name': company_name,
         'company': company,

@@ -1,508 +1,98 @@
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>{{ company_name }} ({{ company_code }}) - 分析</title>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
-        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-        <style>
-            body { padding-top: 20px; }
-            .chart-container { margin-bottom: 30px; }
-            .competitor-badge { margin-right: 5px; margin-bottom: 5px; }
-            
-            /* コピーボタンのスタイル */
-            .copy-button {
-                background-color: #ffffff;  /* 白色の背景 */
-                border: 2px solid #2ecc71;  /* 緑色の枠線 */
-                color: #2ecc71;  /* テキストは緑色 */
-                position: relative;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                font-weight: 500;
-                padding: 10px 20px;
-                border-radius: 8px;
-                box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
-            }
-            
-            .copy-button:hover {
-                background-color: #f8f9fa;  /* 薄いグレー */
-                border-color: #27ae60;
-                color: #27ae60;
-                box-shadow: 0 4px 8px rgba(46, 204, 113, 0.3);
-            }
-            
-            .copy-button:active {
-                background-color: #2ecc71;  /* 緑色の背景 */
-                border-color: #e9ecef;  /* 灰色の枠線 */
-                color: #ffffff;  /* 白色のテキスト */
-                box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
-            }
-            
-            /* クリック後のアニメーション用クラス */
-            .copy-button.clicked {
-                background-color: #2ecc71;  /* 緑色の背景 */
-                border-color: #e9ecef;  /* 灰色の枠線 */
-                color: #ffffff;  /* 白色のテキスト */
-                box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2);
-            }
-            
-            /* ローディング状態のスタイル */
-            .copy-button.loading {
-                background-color: #f8f9fa;  /* 薄いグレー */
-                border-color: #2ecc71;  /* 緑色の枠線 */
-                color: #2ecc71;  /* テキストは緑色 */
-                pointer-events: none;  /* クリックを無効化 */
-                opacity: 0.8;
-            }
-            
-            .copy-button.loading .spinner-border {
-                width: 1rem;
-                height: 1rem;
-                margin-right: 8px;
-                vertical-align: middle;
-            }
-            
-            .copy-button.loading .original-text {
-                display: none;
-            }
-            
-            .copy-button.loading .loading-text {
-                display: inline;
-            }
-            
-            .copy-button .loading-text {
-                display: none;
-            }
-            
-            /* クリック後の復帰アニメーション用クラス */
-            .copy-button.recovering {
-                animation: buttonRecoveryEffect 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            }
-            
-            @keyframes buttonRecoveryEffect {
-                0% {
-                    background-color: #2ecc71;  /* 緑色の背景 */
-                    border-color: #e9ecef;  /* 灰色の枠線 */
-                    color: #ffffff;  /* 白色のテキスト */
-                }
-                100% {
-                    background-color: #ffffff;  /* 白色の背景 */
-                    border-color: #2ecc71;  /* 緑色の枠線 */
-                    color: #2ecc71;  /* 緑色のテキスト */
-                }
-            }
-            
-            .copy-button i {
-                margin-right: 8px;
-                font-size: 1.1em;
-            }
-            
-            /* トースト通知のスタイル */
-            .toast-container {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                z-index: 1000;
-            }
-            
-            .toast {
-                background-color: #2ecc71;  /* ボタンと同じ緑色 */
-                color: white;
-                padding: 15px 25px;
-                border-radius: 8px;
-                margin-bottom: 10px;
-                opacity: 0;
-                transition: all 0.3s ease-in-out;
-                box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
-                transform: translateY(-10px);
-            }
-            
-            .toast.show {
-                opacity: 1;
-                transform: translateY(0);
-            }
-            
-            /* 年度比較ボタンのスタイル */
-            .metric-year-buttons {
-                max-height: 300px;
-                overflow-y: auto;
-                margin-bottom: 10px;
-                padding-right: 5px;
-            }
-            
-            /* スクロールバーのスタイル */
-            .metric-year-buttons::-webkit-scrollbar {
-                width: 6px;
-            }
-            
-            .metric-year-buttons::-webkit-scrollbar-track {
-                background: #f1f1f1;
-                border-radius: 3px;
-            }
-            
-            .metric-year-buttons::-webkit-scrollbar-thumb {
-                background: #ccc;
-                border-radius: 3px;
-            }
-            
-            .metric-year-buttons::-webkit-scrollbar-thumb:hover {
-                background: #aaa;
-            }
-            
-            /* 年度比較ボタンの文字サイズを小さく */
-            .metric-year-buttons .btn {
-                font-size: 0.85rem;
-                padding: 0.25rem 0.5rem;
-                margin-bottom: 5px;
-            }
-            
-            /* 全年比較ボタンの文字サイズも小さく */
-            .all-years-btn {
-                font-size: 0.85rem;
-                padding: 0.25rem 0.5rem;
-            }
-            
-            /* カードの高さを固定して、内容がはみ出さないようにする */
-            .chart-card {
-                height: 100%;
-                display: flex;
-                flex-direction: column;
-            }
-            
-            .chart-card .card-body {
-                flex: 1 1 auto;
-                overflow: hidden;
-                display: flex;
-                flex-direction: column;
-                font-size: 0.85rem;
-            }
-            
-            /* チャート部分が縮まないようにする */
-            .chart-container {
-                flex: 0 0 auto;
-            }
-            
-            /* ボタン部分が必要に応じて縮むようにする */
-            .buttons-container {
-                flex: 1 1 auto;
-                overflow: hidden;
-                display: flex;
-                flex-direction: column;
-            }
-            
-            /* ヘルプアイコンのスタイル */
-            .help-icon {
-                cursor: pointer;
-                font-size: 0.9rem;
-            }
-            
-            /* ツールチップのカスタマイズ */
-            .tooltip {
-                font-size: 0.85rem;
-            }
-            
-            /* 比較プロンプト部分のスタイル */
-            .chart-card .form-select {
-                font-size: 0.85rem;
-                padding: 0.25rem 0.5rem;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container-fluid">
-            <div class="row justify-content-center">
-                <div class="col-xl-10">
-                    <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="/past_tenbagger/">ホーム</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">{{ company_name }}</li>
-                        </ol>
-                    </nav>
-                    
-                    <h1 class="mb-3">{{ company_name }} <small class="text-muted">({{ company_code }})</small></h1>
-                    
-                    <!-- 外部リンクセクション -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">外部リンク</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-4 mb-2">
-                                    <a href="https://irbank.net/{{ company_code }}/ir?mw=2" target="_blank" class="btn btn-outline-primary w-100">
-                                        <i class="bi bi-graph-up"></i> IRバンク（IR情報）
-                                    </a>
-                                </div>
-                                <div class="col-md-4 mb-2">
-                                    <a href="https://irbank.net/{{ company_code }}/per?mw=2" target="_blank" class="btn btn-outline-primary w-100">
-                                        <i class="bi bi-bar-chart-line"></i> IRバンク（PER情報）
-                                    </a>
-                                </div>
-                                <div class="col-md-4 mb-2">
-                                    <a href="https://www.traders.co.jp/ipo/{{ company_code }}" target="_blank" class="btn btn-outline-primary w-100">
-                                        <i class="bi bi-building"></i> トレーダーズ（IPO情報）
-                                    </a>
+{% extends "company_base.html" %}
+
+{% block extra_sections %}
+<!-- past_tenbagger固有の追加セクション：有価証券比較プロンプト -->
+<h2 class="mb-4">財務指標の比較</h2>
+
+<!-- 有価証券報告書の差分比較ボタンリスト -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">有価証券比較プロンプト</h5>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <select class="form-select" id="company-select">
+                    <option value="{{ company_code }}" selected>{{ company_name }}</option>
+                    {% for competitor in competitors %}
+                    <option value="{{ competitor.code }}">{{ competitor.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap" id="securities-report-buttons">
+            <!-- ボタンはJavaScriptで動的に生成されます -->
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">読み込み中...</span>
+            </div>
+        </div>
+        <div class="mt-3 d-flex flex-wrap">
+            <button class="btn copy-button m-1" id="securities-single-company-all-years-btn">
+                <i class="bi bi-box-arrow-up-right"></i> 全年
+            </button>
+            <button class="btn copy-button m-1" id="securities-all-companies-all-years-btn">
+                <i class="bi bi-box-arrow-up-right"></i> 全年での<span class="competitor-count">{{ competitors|length + 1 }}</span>企業比較
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block financial_section %}
+{% if charts %}
+    <div class="row">
+    {% for chart in charts %}
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <div class="row">
+                    <div class="col-md-10">
+                        <div id="chart-{{ loop.index }}" style="width: 100%; height: 500px;"></div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="card h-100 chart-card">
+                            <div class="card-header d-flex align-items-center">
+                                <h6 class="mb-0 me-2">比較プロンプト</h6>
+                                <div class="help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ chart.title }}の指標に基づいた分析プロンプトを生成します。">
+                                    <i class="bi bi-question-circle text-muted"></i>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">競合企業</h5>
-                        </div>
-                        <div class="card-body">
-                            {% if competitors %}
-                                {% for competitor in competitors %}
-                                <span class="badge bg-secondary competitor-badge">{{ competitor.name }} ({{ competitor.code }})</span>
-                                {% endfor %}
-                            {% else %}
-                                <div class="alert alert-info">
-                                    この企業の競合企業情報はまだ登録されていません。以下のグラフでは、この企業の財務指標のみを表示しています。
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <!-- 事業の内容セクション -->
-                    <h2 class="mb-4">事業の内容</h2>
-                    
-                    <div class="row mb-4">
-                        <div class="col-md-6 mb-3">
-                            <div class="card h-100">
-                                <div class="card-header">
-                                    <h5 class="mb-0">事業情報</h5>
-                                </div>
-                                <div class="card-body">
-                                    <ul class="nav nav-tabs" id="targetCompanyBusinessTabs" role="tablist">
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link active" 
-                                                    id="target-company-business-tab" 
-                                                    data-bs-toggle="tab" 
-                                                    data-bs-target="#target-company-business" 
-                                                    type="button" 
-                                                    role="tab" 
-                                                    aria-controls="target-company-business" 
-                                                    aria-selected="true">
-                                                {{ company_name }}
-                                            </button>
-                                        </li>
-                                    </ul>
-                                    <div class="tab-content mt-3" id="targetCompanyBusinessTabsContent">
-                                        <div class="tab-pane fade show active" 
-                                             id="target-company-business" 
-                                             role="tabpanel" 
-                                             aria-labelledby="target-company-business-tab">
-                                            <div style="max-height: 350px; overflow-y: auto;">
-                                                {% if business_description %}
-                                                    <div>{{ business_description|safe }}</div>
-                                                {% else %}
-                                                    <div class="alert alert-warning">
-                                                        事業の内容が見つかりません。
-                                                    </div>
-                                                {% endif %}
-                                            </div>
+                            <div class="card-body d-flex flex-column">
+                                <!-- スクロール可能な領域 -->
+                                <div class="metric-year-buttons flex-grow-0" style="max-height: 350px; overflow-y: auto;">
+                                    <!-- 企業選択セレクトボックス -->
+                                    <div class="mb-3">
+                                        <select class="form-select metric-company-select" data-chart-index="{{ loop.index }}">
+                                            <option value="{{ company_code }}" selected>{{ company_name }}</option>
+                                            {% for competitor in competitors %}
+                                            <option value="{{ competitor.code }}">{{ competitor.name }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- 年度比較ボタンコンテナ -->
+                                    <div class="d-flex flex-column mb-3" id="metric-year-buttons-{{ loop.index }}" data-chart-title="{{ chart.title }}" data-chart-index="{{ loop.index }}">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">読み込み中...</span>
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {% if competitors %}
-                        <div class="col-md-6 mb-3">
-                            <div class="card h-100">
-                                <div class="card-header">
-                                    <h5 class="mb-0">競合企業の事業情報</h5>
-                                </div>
-                                <div class="card-body">
-                                    <ul class="nav nav-tabs" id="competitorBusinessTabs" role="tablist">
-                                        {% for competitor in competitors %}
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link {% if loop.first %}active{% endif %}" 
-                                                    id="competitor-business-{{ competitor.code }}-tab" 
-                                                    data-bs-toggle="tab" 
-                                                    data-bs-target="#competitor-business-{{ competitor.code }}" 
-                                                    type="button" 
-                                                    role="tab" 
-                                                    aria-controls="competitor-business-{{ competitor.code }}" 
-                                                    aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
-                                                {{ competitor.name }}
-                                            </button>
-                                        </li>
-                                        {% endfor %}
-                                    </ul>
-                                    <div class="tab-content mt-3" id="competitorBusinessTabsContent">
-                                        {% for competitor in competitors %}
-                                        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
-                                             id="competitor-business-{{ competitor.code }}" 
-                                             role="tabpanel" 
-                                             aria-labelledby="competitor-business-{{ competitor.code }}-tab">
-                                            <div style="max-height: 350px; overflow-y: auto;">
-                                                {% if competitor.business_description %}
-                                                    <div>{{ competitor.business_description|safe }}</div>
-                                                {% else %}
-                                                    <div class="alert alert-warning">
-                                                        事業の内容が見つかりません。
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        {% endfor %}
+                                    
+                                    <div class="d-flex flex-column mt-auto">
+                                        <button class="btn btn-sm copy-button mb-2 all-years-btn" 
+                                                data-chart-title="{{ chart.title }}"
+                                                data-company-name="{{ company_name }}"
+                                                data-chart-index="{{ loop.index }}"
+                                                onclick="copySingleCompanyAllYearsPrompt(this)">
+                                            <i class="bi bi-box-arrow-up-right"></i> 全年
+                                        </button>
+                                        
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- 事業の内容の比較プロンプトコピーボタン -->
-                    <div class="text-center mb-4">
-                        <div class="btn-group" role="group">
-                            <button class="btn copy-button" onclick="copyBusinessComparisonPrompt()">
-                                <i class="bi bi-box-arrow-up-right"></i> 事業の内容の比較プロンプト
-                            </button>
-                            <button class="btn btn-success" onclick="openChatGPTWithBusinessPrompt()">
-                                <i class="bi bi-chat-dots"></i> ChatGPTで開く
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- 役員情報セクション -->
-                    <h2 class="mb-4">役員の状況</h2>
-                    
-                    <div class="row mb-4">
-                        <div class="col-md-6 mb-3">
-                            <div class="card h-100">
-                                <div class="card-header">
-                                    <h5 class="mb-0">役員情報</h5>
-                                </div>
-                                <div class="card-body">
-                                    <ul class="nav nav-tabs" id="targetCompanyTabs" role="tablist">
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link active" 
-                                                    id="target-company-tab" 
-                                                    data-bs-toggle="tab" 
-                                                    data-bs-target="#target-company" 
-                                                    type="button" 
-                                                    role="tab" 
-                                                    aria-controls="target-company" 
-                                                    aria-selected="true">
-                                                {{ company_name }}
-                                            </button>
-                                        </li>
-                                    </ul>
-                                    <div class="tab-content mt-3" id="targetCompanyTabsContent">
-                                        <div class="tab-pane fade show active" 
-                                             id="target-company" 
-                                             role="tabpanel" 
-                                             aria-labelledby="target-company-tab">
-                                            <div style="max-height: 350px; overflow-y: auto;">
-                                                {% if officers_info %}
-                                                    <div>{{ officers_info|safe }}</div>
-                                                {% else %}
-                                                    <div class="alert alert-warning">
-                                                        役員情報が見つかりません。
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {% if competitors %}
-                        <div class="col-md-6 mb-3">
-                            <div class="card h-100">
-                                <div class="card-header">
-                                    <h5 class="mb-0">競合企業の役員情報</h5>
-                                </div>
-                                <div class="card-body">
-                                    <ul class="nav nav-tabs" id="competitorTabs" role="tablist">
-                                        {% for competitor in competitors %}
-                                        <li class="nav-item" role="presentation">
-                                            <button class="nav-link {% if loop.first %}active{% endif %}" 
-                                                    id="competitor-{{ competitor.code }}-tab" 
-                                                    data-bs-toggle="tab" 
-                                                    data-bs-target="#competitor-{{ competitor.code }}" 
-                                                    type="button" 
-                                                    role="tab" 
-                                                    aria-controls="competitor-{{ competitor.code }}" 
-                                                    aria-selected="{% if loop.first %}true{% else %}false{% endif %}">
-                                                {{ competitor.name }}
-                                            </button>
-                                        </li>
-                                        {% endfor %}
-                                    </ul>
-                                    <div class="tab-content mt-3" id="competitorTabsContent">
-                                        {% for competitor in competitors %}
-                                        <div class="tab-pane fade {% if loop.first %}show active{% endif %}" 
-                                             id="competitor-{{ competitor.code }}" 
-                                             role="tabpanel" 
-                                             aria-labelledby="competitor-{{ competitor.code }}-tab">
-                                            <div style="max-height: 350px; overflow-y: auto;">
-                                                {% if competitor.officers_info %}
-                                                    <div>{{ competitor.officers_info|safe }}</div>
-                                                {% else %}
-                                                    <div class="alert alert-warning">
-                                                        役員情報が見つかりません。
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                    
-                    <!-- 役員情報の比較プロンプトコピーボタン -->
-                    <div class="text-center mb-4">
-                        <div class="btn-group" role="group">
-                            <button class="btn copy-button" onclick="copyOfficersComparisonPrompt()">
-                                <i class="bi bi-box-arrow-up-right"></i> 役員の状況の比較プロンプト
-                            </button>
-                            <button class="btn btn-success" onclick="openChatGPTWithOfficersPrompt()">
-                                <i class="bi bi-chat-dots"></i> ChatGPTで開く
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- トースト通知用のコンテナ -->
-                    <div class="toast-container"></div>
-                    
-                    <h2 class="mb-4">財務指標の比較</h2>
-                    
-                    <!-- 有価証券報告書の差分比較ボタンリスト -->
-                    <div class="card mb-4">
-                        <div class="card-header">
-                            <h5 class="mb-0">有価証券比較プロンプト</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <select class="form-select" id="company-select">
-                                        <option value="{{ company_code }}" selected>{{ company_name }}</option>
-                                        {% for competitor in competitors %}
-                                        <option value="{{ competitor.code }}">{{ competitor.name }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="d-flex flex-wrap" id="securities-report-buttons">
-                                <!-- ボタンはJavaScriptで動的に生成されます -->
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">読み込み中...</span>
-                                </div>
-                            </div>
-                            <div class="mt-3 d-flex flex-wrap">
-                                <button class="btn copy-button m-1" id="securities-single-company-all-years-btn">
-                                    <i class="bi bi-box-arrow-up-right"></i> 全年
-                                </button>
-                                <button class="btn copy-button m-1" id="securities-all-companies-all-years-btn">
+
+                                <button class="btn btn-sm copy-button all-years-btn w-100 mt-3" 
+                                        data-chart-title="{{ chart.title }}"
+                                        data-company-name="{{ company_name }}"
+                                        data-chart-index="{{ loop.index }}"
+                                        onclick="copyMetricComparisonPrompt(this)">
                                     <i class="bi bi-box-arrow-up-right"></i> 全年での<span class="competitor-count">{{ competitors|length + 1 }}</span>企業比較
                                 </button>
                             </div>
@@ -510,586 +100,967 @@
                     </div>
                 </div>
             </div>
-            
-            {% if charts %}
-                <div class="row">
-                {% for chart in charts %}
-                    <div class="col-md-6 mb-4">
-                        <div class="chart-container">
-                            <div class="row">
-                                <div class="col-md-10">
-                                    <div id="chart-{{ loop.index }}" style="width: 100%; height: 500px;"></div>
-                                </div>
-                                <div class="col-md-2">
-                                    <div class="card h-100 chart-card">
-                                        <div class="card-header d-flex align-items-center">
-                                            <h6 class="mb-0 me-2">比較プロンプト</h6>
-                                            <div class="help-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ chart.title }}の指標に基づいた分析プロンプトを生成します。">
-                                                <i class="bi bi-question-circle text-muted"></i>
-                                            </div>
-                                        </div>
-                                        <div class="card-body d-flex flex-column">
-                                            <!-- スクロール可能な領域 -->
-                                            <div class="metric-year-buttons flex-grow-0" style="max-height: 350px; overflow-y: auto;">
-                                                <!-- 企業選択セレクトボックス -->
-                                                <div class="mb-3">
-                                                    <select class="form-select metric-company-select" data-chart-index="{{ loop.index }}">
-                                                        <option value="{{ company_code }}" selected>{{ company_name }}</option>
-                                                        {% for competitor in competitors %}
-                                                        <option value="{{ competitor.code }}">{{ competitor.name }}</option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
-                                                
-                                                <!-- 年度比較ボタンコンテナ -->
-                                                <div class="d-flex flex-column mb-3" id="metric-year-buttons-{{ loop.index }}" data-chart-title="{{ chart.title }}" data-chart-index="{{ loop.index }}">
-                                                    <div class="spinner-border text-primary" role="status">
-                                                        <span class="visually-hidden">読み込み中...</span>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="d-flex flex-column mt-auto">
-                                                    <button class="btn btn-sm copy-button mb-2 all-years-btn" 
-                                                            data-chart-title="{{ chart.title }}"
-                                                            data-company-name="{{ company_name }}"
-                                                            data-chart-index="{{ loop.index }}"
-                                                            onclick="copySingleCompanyAllYearsPrompt(this)">
-                                                        <i class="bi bi-box-arrow-up-right"></i> 全年
-                                                    </button>
-                                                    
-                                                </div>
-                                            </div>
-
-                                            <button class="btn btn-sm copy-button all-years-btn w-100 mt-3" 
-                                                    data-chart-title="{{ chart.title }}"
-                                                    data-company-name="{{ company_name }}"
-                                                    data-chart-index="{{ loop.index }}"
-                                                    onclick="copyMetricComparisonPrompt(this)">
-                                                <i class="bi bi-box-arrow-up-right"></i> 全年での<span class="competitor-count">{{ competitors|length + 1 }}</span>企業比較
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <script>
-                            var chartData_{{ loop.index }} = JSON.parse('{{ chart.plotly_data | safe }}');
-                            Plotly.newPlot('chart-{{ loop.index }}', chartData_{{ loop.index }}.data, chartData_{{ loop.index }}.layout);
-                        </script>
-                    </div>
-                {% endfor %}
-                </div>
-            {% else %}
-                <div class="row justify-content-center">
-                    <div class="col-xl-10">
-                        <div class="alert alert-warning">
-                            グラフを生成するためのデータが不足しています。
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
+            <script>
+                var chartData_{{ loop.index }} = JSON.parse('{{ chart.plotly_data | safe }}');
+                Plotly.newPlot('chart-{{ loop.index }}', chartData_{{ loop.index }}.data, chartData_{{ loop.index }}.layout);
+            </script>
         </div>
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    {% endfor %}
+    </div>
+{% else %}
+    <div class="row justify-content-center">
+        <div class="col-xl-10">
+            <div class="alert alert-warning">
+                グラフを生成するためのデータが不足しています。
+            </div>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
+
+{% block app_specific_js %}
+<style>
+    /* 年度比較ボタンのスタイル */
+    .metric-year-buttons {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-bottom: 10px;
+        padding-right: 5px;
+    }
+    
+    /* スクロールバーのスタイル */
+    .metric-year-buttons::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    .metric-year-buttons::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+    
+    .metric-year-buttons::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 3px;
+    }
+    
+    .metric-year-buttons::-webkit-scrollbar-thumb:hover {
+        background: #aaa;
+    }
+    
+    /* 年度比較ボタンの文字サイズを小さく */
+    .metric-year-buttons .btn {
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
+        margin-bottom: 5px;
+    }
+    
+    /* 全年比較ボタンの文字サイズも小さく */
+    .all-years-btn {
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    /* カードの高さを固定して、内容がはみ出さないようにする */
+    .chart-card {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .chart-card .card-body {
+        flex: 1 1 auto;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        font-size: 0.85rem;
+    }
+    
+    /* チャート部分が縮まないようにする */
+    .chart-container {
+        flex: 0 0 auto;
+    }
+    
+    /* ボタン部分が必要に応じて縮むようにする */
+    .buttons-container {
+        flex: 1 1 auto;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    /* ヘルプアイコンのスタイル */
+    .help-icon {
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+    
+    /* ツールチップのカスタマイズ */
+    .tooltip {
+        font-size: 0.85rem;
+    }
+    
+    /* 比較プロンプト部分のスタイル */
+    .chart-card .form-select {
+        font-size: 0.85rem;
+        padding: 0.25rem 0.5rem;
+    }
+</style>
+
+<script>
+    // past_tenbagger固有のJavaScript関数
+
+    // 指標比較プロンプトをコピーする関数
+    function copyMetricComparisonPrompt(button) {
+        const chartTitle = button.dataset.chartTitle;
+        const companyName = button.dataset.companyName;
+        const chartIndex = button.dataset.chartIndex;
         
-        <script>
-            // 競合企業データをJinja2から取得
-            var competitorsData = {{ competitors|tojson|safe }};
+        // ボタンの元のテキストを保存
+        const originalHtml = button.innerHTML;
+        
+        // ローディング状態に変更
+        button.classList.add('loading');
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
+        
+        // データからプロンプトを生成
+        const chartData = window['chartData_' + chartIndex];
+        
+        // 指標に応じたプロンプトテキストを作成
+        let promptIntro = "";
+        if (chartTitle.includes("ROE") || chartTitle.includes("自己資本利益率")) {
+            promptIntro = `以下は${companyName}と競合他社のROE（自己資本利益率）の比較データと各年度間の有価証券報告書の差分です。このデータから企業の収益性と資本効率について分析し、投資判断の観点から考察してください。`;
+        } else if (chartTitle.includes("ROA") || chartTitle.includes("総資産利益率")) {
+            promptIntro = `以下は${companyName}と競合他社のROA（総資産利益率）の比較データと各年度間の有価証券報告書の差分です。このデータから企業の資産活用効率について分析し、経営効率の観点から考察してください。`;
+        } else if (chartTitle.includes("売上高")) {
+            promptIntro = `以下は${companyName}と競合他社の売上高とその成長率の比較データと各年度間の有価証券報告書の差分です。このデータから企業の市場シェアと成長性について分析してください。`;
+        } else if (chartTitle.includes("営業利益")) {
+            promptIntro = `以下は${companyName}と競合他社の営業利益とその成長率の比較データと各年度間の有価証券報告書の差分です。このデータから企業の本業での収益力と将来性について分析してください。`;
+        } else if (chartTitle.includes("EPS") || chartTitle.includes("１株当たり")) {
+            promptIntro = `以下は${companyName}と競合他社の１株当たり当期純利益（EPS）の比較データと各年度間の有価証券報告書の差分です。このデータから株主にとっての収益性と投資価値について分析してください。`;
+        } else if (chartTitle.includes("自己資本比率")) {
+            promptIntro = `以下は${companyName}と競合他社の自己資本比率の比較データと各年度間の有価証券報告書の差分です。このデータから企業の財務健全性とリスク耐性について分析してください。`;
+        } else if (chartTitle.includes("営業利益率")) {
+            promptIntro = `以下は${companyName}と競合他社の営業利益率の比較データと各年度間の有価証券報告書の差分です。このデータから企業の収益構造と競争力について分析してください。`;
+        } else {
+            promptIntro = `以下は${companyName}と競合他社の${chartTitle}の比較データと各年度間の有価証券報告書の差分です。このデータから企業の競争力と将来性について分析してください。`;
+        }
+        
+        // データの抽出
+        let dataText = "";
+        if (chartData && chartData.data) {
+            const traces = chartData.data;
+            const years = traces.length > 0 && traces[0].x ? traces[0].x : [];
             
-            function showToast(message) {
-                var toastContainer = document.querySelector('.toast-container');
-                var toast = document.createElement('div');
-                toast.className = 'toast';
-                toast.textContent = message;
-                
-                toastContainer.appendChild(toast);
-                
-                // フェードイン
-                setTimeout(function() {
-                    toast.classList.add('show');
-                }, 100);
-                
-                // フェードアウトして削除
-                setTimeout(function() {
-                    toast.classList.remove('show');
-                    setTimeout(function() {
-                        toastContainer.removeChild(toast);
-                    }, 300);
-                }, 2000);
-            }
-            
-            // ===== 追加: クリップボードAPIが使えない環境向けフォールバック =====
-            function openPromptWindow(text) {
-                const newWin = window.open('', '_blank');
-                if (!newWin) {
-                    alert('新しいタブを開けませんでした。ポップアップブロックを解除してください。');
-                    return;
-                }
-                const escaped = text
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;');
-                newWin.document.write(`
-                    <html>
-                      <head><meta charset="utf-8"><title>Prompt</title></head>
-                      <body style="white-space:pre-wrap;font-family:monospace;padding:20px;">
-                        ${escaped}
-                      </body>
-                    </html>`);
-                newWin.document.close();
-            }
-            
-            // navigator.clipboard が未定義、または writeText が無い場合のポリフィル
-            if (!navigator.clipboard || !navigator.clipboard.writeText) {
-                navigator.clipboard = {
-                    writeText: function(text) {
-                        openPromptWindow(text);
-                        return Promise.resolve();
+            dataText += "【データ】\n";
+            traces.forEach(trace => {
+                if (trace.name && trace.y) {
+                    dataText += `${trace.name}:\n`;
+                    for (let i = 0; i < Math.min(years.length, trace.y.length); i++) {
+                        if (trace.y[i] !== null && trace.y[i] !== undefined) {
+                            dataText += `  ${years[i]}年: ${trace.y[i]}${trace.name.includes('成長率') ? '%' : ''}\n`;
+                        }
                     }
-                };
+                    dataText += "\n";
+                }
+            });
+        }
+        
+        // 年度比較ボタンから年度と報告書の情報を取得
+        const yearButtons = document.querySelectorAll(`#metric-year-buttons-${chartIndex} button`);
+        const yearPairs = [];
+        
+        yearButtons.forEach(btn => {
+            yearPairs.push({
+                oldYear: btn.dataset.oldYear,
+                newYear: btn.dataset.newYear,
+                oldReport: btn.dataset.oldReport,
+                newReport: btn.dataset.newReport,
+                oldDate: btn.dataset.oldDate,
+                newDate: btn.dataset.newDate,
+                companyCode: btn.dataset.companyCode
+            });
+        });
+        
+        // メイン企業と競合企業の有価証券報告書の差分を取得
+        const mainCompanyCode = '{{ company_code }}';
+        const competitorCodes = competitorsData.map(comp => comp.code);
+        
+        // すべての企業（メイン企業と競合企業）のデータ取得を行う関数
+        async function getAllCompaniesData() {
+            let allResults = [];
+            
+            // メイン企業の年度ペアのみをフィルタリング
+            const mainCompanyYearPairs = yearPairs.filter(pair => pair.companyCode === mainCompanyCode);
+            
+            // メイン企業の差分を取得
+            for (const pair of mainCompanyYearPairs) {
+                try {
+                    const response = await fetch(`/past_tenbagger/api/securities_report_diff/${mainCompanyCode}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            old_report: pair.oldReport,
+                            new_report: pair.newReport,
+                            old_date: pair.oldDate,
+                            new_date: pair.newDate
+                        }),
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`${pair.oldYear}年～${pair.newYear}年の有価証券報告書の差分の取得に失敗しました`);
+                    }
+                    
+                    const data = await response.json();
+                    allResults.push({
+                        companyCode: mainCompanyCode,
+                        companyName: companyName,
+                        oldYear: pair.oldYear,
+                        newYear: pair.newYear,
+                        diffText: data.diff_text
+                    });
+                } catch (error) {
+                    console.error('メイン企業の有価証券報告書の差分の取得中にエラー:', error);
+                }
             }
             
-            function copyOfficersComparisonPrompt() {
-                // セレクタを具体的に指定
-                var button = document.querySelector('.copy-button[onclick="copyOfficersComparisonPrompt()"]');
+            // 競合企業の差分を取得
+            for (const competitorCode of competitorCodes) {
+                // 競合企業の名前を取得
+                const competitor = competitorsData.find(comp => comp.code === competitorCode);
+                if (!competitor) continue;
                 
-                // ボタンの元のテキストを保存
-                var originalHtml = button.innerHTML;
-                
-                // ローディング状態に変更
-                button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
+                const competitorName = competitor.name;
                 
                 try {
-                    // ターゲット企業の役員情報を取得
-                    var targetOfficers = document.querySelector('#target-company').textContent.trim();
+                    // 競合企業の有価証券報告書の一覧を取得
+                    const response = await fetch(`/past_tenbagger/api/securities_reports/${competitorCode}`);
+                    if (!response.ok) {
+                        console.warn(`競合企業(${competitorName})の有価証券報告書の一覧の取得に失敗しました: ${response.status}`);
+                        allResults.push({
+                            companyCode: competitorCode,
+                            companyName: competitorName,
+                            oldYear: "N/A",
+                            newYear: "N/A",
+                            diffText: "有価証券報告書が見つかりませんでした。"
+                        });
+                        continue; // 次の競合企業へ
+                    }
                     
-                    // 競合企業の役員情報を取得（business-を含まないものに限定）
-                    var competitorElements = document.querySelectorAll('[id^="competitor-"]:not([id$="-tab"]):not([id*="business"])');
-                    var competitorInfo = Array.from(competitorElements).map(function(el) {
-                        return el.textContent.trim();
-                    });
+                    const data = await response.json();
+                    if (!data.reports || data.reports.length < 2) {
+                        console.warn(`競合企業(${competitorName})の有価証券報告書が2つ未満です。スキップします。`);
+                        allResults.push({
+                            companyCode: competitorCode,
+                            companyName: competitorName,
+                            oldYear: "N/A",
+                            newYear: "N/A",
+                            diffText: data.message || "有価証券報告書が見つかりませんでした。"
+                        });
+                        continue; // 比較可能な報告書がない場合はスキップ
+                    }
                     
-                    // プロンプトテキストを作成
-                    var promptText = "下記は、それぞれの企業の役員の状況です。テンバガーの企業を選ぶ際にこれらの役員だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
-                    var companyName = '{{ company_name }}';
-                    var officersText = "【" + companyName + "の役員の状況】\n" + targetOfficers + "\n\n";
-                    
-                    // 競合企業の情報を追加
-                    var competitorsText = competitorInfo.map(function(info, index) {
-                        return "【" + competitorsData[index].name + "の役員の状況】\n" + info;
-                    }).join('\n\n');
-                    
-                    // 全テキストを結合
-                    var fullText = promptText + officersText + competitorsText;
-                    
-                    // 直接タブを開く
-                    openPromptWindow(fullText);
-                    
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
-                    
-                    // 成功状態に変更
-                    button.classList.add('clicked');
-                    button.innerHTML = originalHtml;
-                    
-                    // トースト表示
-                    showToast('タブを開きました！');
-                    
-                    // 1秒後に元の状態に戻す
-                    setTimeout(function() {
-                        button.classList.remove('clicked');
-                        button.classList.add('recovering');
-                        
-                        // 復帰アニメーション完了後にクラスを削除
-                        setTimeout(function() {
-                            button.classList.remove('recovering');
-                        }, 500);
-                    }, 1000);
-                } catch (err) {
-                    console.error('データの取得中にエラー:', err);
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
-                    button.innerHTML = originalHtml;
-                    alert('エラーが発生しました。');
-                }
-            }
-            
-            // 指標比較プロンプトをコピーする関数
-            function copyMetricComparisonPrompt(button) {
-                const chartTitle = button.dataset.chartTitle;
-                const companyName = button.dataset.companyName;
-                const chartIndex = button.dataset.chartIndex;
-                
-                // ボタンの元のテキストを保存
-                const originalHtml = button.innerHTML;
-                
-                // ローディング状態に変更
-                button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
-                
-                // データからプロンプトを生成
-                const chartData = window['chartData_' + chartIndex];
-                
-                // 指標に応じたプロンプトテキストを作成
-                let promptIntro = "";
-                if (chartTitle.includes("ROE") || chartTitle.includes("自己資本利益率")) {
-                    promptIntro = `以下は${companyName}と競合他社のROE（自己資本利益率）の比較データと各年度間の有価証券報告書の差分です。このデータから企業の収益性と資本効率について分析し、投資判断の観点から考察してください。`;
-                } else if (chartTitle.includes("ROA") || chartTitle.includes("総資産利益率")) {
-                    promptIntro = `以下は${companyName}と競合他社のROA（総資産利益率）の比較データと各年度間の有価証券報告書の差分です。このデータから企業の資産活用効率について分析し、経営効率の観点から考察してください。`;
-                } else if (chartTitle.includes("売上高")) {
-                    promptIntro = `以下は${companyName}と競合他社の売上高とその成長率の比較データと各年度間の有価証券報告書の差分です。このデータから企業の市場シェアと成長性について分析してください。`;
-                } else if (chartTitle.includes("営業利益")) {
-                    promptIntro = `以下は${companyName}と競合他社の営業利益とその成長率の比較データと各年度間の有価証券報告書の差分です。このデータから企業の本業での収益力と将来性について分析してください。`;
-                } else if (chartTitle.includes("EPS") || chartTitle.includes("１株当たり")) {
-                    promptIntro = `以下は${companyName}と競合他社の１株当たり当期純利益（EPS）の比較データと各年度間の有価証券報告書の差分です。このデータから株主にとっての収益性と投資価値について分析してください。`;
-                } else if (chartTitle.includes("自己資本比率")) {
-                    promptIntro = `以下は${companyName}と競合他社の自己資本比率の比較データと各年度間の有価証券報告書の差分です。このデータから企業の財務健全性とリスク耐性について分析してください。`;
-                } else if (chartTitle.includes("営業利益率")) {
-                    promptIntro = `以下は${companyName}と競合他社の営業利益率の比較データと各年度間の有価証券報告書の差分です。このデータから企業の収益構造と競争力について分析してください。`;
-                } else {
-                    promptIntro = `以下は${companyName}と競合他社の${chartTitle}の比較データと各年度間の有価証券報告書の差分です。このデータから企業の競争力と将来性について分析してください。`;
-                }
-                
-                // データの抽出
-                let dataText = "";
-                if (chartData && chartData.data) {
-                    const traces = chartData.data;
-                    const years = traces.length > 0 && traces[0].x ? traces[0].x : [];
-                    
-                    dataText += "【データ】\n";
-                    traces.forEach(trace => {
-                        if (trace.name && trace.y) {
-                            dataText += `${trace.name}:\n`;
-                            for (let i = 0; i < Math.min(years.length, trace.y.length); i++) {
-                                if (trace.y[i] !== null && trace.y[i] !== undefined) {
-                                    dataText += `  ${years[i]}年: ${trace.y[i]}${trace.name.includes('成長率') ? '%' : ''}\n`;
-                                }
-                            }
-                            dataText += "\n";
+                    // 年度ごとにグループ化
+                    const reportsByYear = {};
+                    data.reports.forEach(report => {
+                        const year = report.date.substring(0, 4);
+                        if (!reportsByYear[year]) {
+                            reportsByYear[year] = [];
                         }
+                        reportsByYear[year].push(report);
                     });
-                }
-                
-                // 年度比較ボタンから年度と報告書の情報を取得
-                const yearButtons = document.querySelectorAll(`#metric-year-buttons-${chartIndex} button`);
-                const yearPairs = [];
-                
-                yearButtons.forEach(btn => {
-                    yearPairs.push({
-                        oldYear: btn.dataset.oldYear,
-                        newYear: btn.dataset.newYear,
-                        oldReport: btn.dataset.oldReport,
-                        newReport: btn.dataset.newReport,
-                        oldDate: btn.dataset.oldDate,
-                        newDate: btn.dataset.newDate,
-                        companyCode: btn.dataset.companyCode
-                    });
-                });
-                
-                // メイン企業と競合企業の有価証券報告書の差分を取得
-                const mainCompanyCode = '{{ company_code }}';
-                const competitorCodes = competitorsData.map(comp => comp.code);
-                
-                // すべての企業（メイン企業と競合企業）のデータ取得を行う関数
-                async function getAllCompaniesData() {
-                    let allResults = [];
                     
-                    // メイン企業の年度ペアのみをフィルタリング
-                    const mainCompanyYearPairs = yearPairs.filter(pair => pair.companyCode === mainCompanyCode);
-                    
-                    // メイン企業の差分を取得
-                    for (const pair of mainCompanyYearPairs) {
+                    // 連続する年度のペアを作成
+                    const years = Object.keys(reportsByYear).sort();
+                    for (let i = 0; i < years.length - 1; i++) {
+                        const oldYear = years[i];
+                        const newYear = years[i + 1];
+                        
+                        const oldReport = reportsByYear[oldYear][0].file;
+                        const newReport = reportsByYear[newYear][0].file;
+                        const oldDate = reportsByYear[oldYear][0].date;
+                        const newDate = reportsByYear[newYear][0].date;
+                        
                         try {
-                            const response = await fetch(`/past_tenbagger/api/securities_report_diff/${mainCompanyCode}`, {
+                            // 差分を取得
+                            const diffResponse = await fetch(`/past_tenbagger/api/securities_report_diff/${competitorCode}`, {
                                 method: 'POST',
                                 headers: {
                                     'Content-Type': 'application/json',
                                 },
                                 body: JSON.stringify({
-                                    old_report: pair.oldReport,
-                                    new_report: pair.newReport,
-                                    old_date: pair.oldDate,
-                                    new_date: pair.newDate
+                                    old_report: oldReport,
+                                    new_report: newReport,
+                                    old_date: oldDate,
+                                    new_date: newDate
                                 }),
                             });
                             
-                            if (!response.ok) {
-                                throw new Error(`${pair.oldYear}年～${pair.newYear}年の有価証券報告書の差分の取得に失敗しました`);
+                            if (!diffResponse.ok) {
+                                throw new Error(`${competitorName}の${oldYear}年～${newYear}年の有価証券報告書の差分の取得に失敗しました`);
                             }
                             
-                            const data = await response.json();
+                            const diffData = await diffResponse.json();
                             allResults.push({
-                                companyCode: mainCompanyCode,
-                                companyName: companyName,
-                                oldYear: pair.oldYear,
-                                newYear: pair.newYear,
-                                diffText: data.diff_text
+                                companyCode: competitorCode,
+                                companyName: competitorName,
+                                oldYear: oldYear,
+                                newYear: newYear,
+                                diffText: diffData.diff_text
                             });
                         } catch (error) {
-                            console.error('メイン企業の有価証券報告書の差分の取得中にエラー:', error);
+                            console.error(`競合企業(${competitorName})の有価証券報告書の差分取得中にエラー:`, error);
                         }
                     }
-                    
-                    // 競合企業の差分を取得
-                    for (const competitorCode of competitorCodes) {
-                        // 競合企業の名前を取得
-                        const competitor = competitorsData.find(comp => comp.code === competitorCode);
-                        if (!competitor) continue;
-                        
-                        const competitorName = competitor.name;
-                        
-                        try {
-                            // 競合企業の有価証券報告書の一覧を取得
-                            const response = await fetch(`/past_tenbagger/api/securities_reports/${competitorCode}`);
-                            if (!response.ok) {
-                                console.warn(`競合企業(${competitorName})の有価証券報告書の一覧の取得に失敗しました: ${response.status}`);
-                                allResults.push({
-                                    companyCode: competitorCode,
-                                    companyName: competitorName,
-                                    oldYear: "N/A",
-                                    newYear: "N/A",
-                                    diffText: "有価証券報告書が見つかりませんでした。"
-                                });
-                                continue; // 次の競合企業へ
-                            }
-                            
-                            const data = await response.json();
-                            if (!data.reports || data.reports.length < 2) {
-                                console.warn(`競合企業(${competitorName})の有価証券報告書が2つ未満です。スキップします。`);
-                                allResults.push({
-                                    companyCode: competitorCode,
-                                    companyName: competitorName,
-                                    oldYear: "N/A",
-                                    newYear: "N/A",
-                                    diffText: data.message || "有価証券報告書が見つかりませんでした。"
-                                });
-                                continue; // 比較可能な報告書がない場合はスキップ
-                            }
-                            
-                            // 年度ごとにグループ化
-                            const reportsByYear = {};
-                            data.reports.forEach(report => {
-                                const year = report.date.substring(0, 4);
-                                if (!reportsByYear[year]) {
-                                    reportsByYear[year] = [];
-                                }
-                                reportsByYear[year].push(report);
-                            });
-                            
-                            // 連続する年度のペアを作成
-                            const years = Object.keys(reportsByYear).sort();
-                            for (let i = 0; i < years.length - 1; i++) {
-                                const oldYear = years[i];
-                                const newYear = years[i + 1];
-                                
-                                const oldReport = reportsByYear[oldYear][0].file;
-                                const newReport = reportsByYear[newYear][0].file;
-                                const oldDate = reportsByYear[oldYear][0].date;
-                                const newDate = reportsByYear[newYear][0].date;
-                                
-                                try {
-                                    // 差分を取得
-                                    const diffResponse = await fetch(`/past_tenbagger/api/securities_report_diff/${competitorCode}`, {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({
-                                            old_report: oldReport,
-                                            new_report: newReport,
-                                            old_date: oldDate,
-                                            new_date: newDate
-                                        }),
-                                    });
-                                    
-                                    if (!diffResponse.ok) {
-                                        throw new Error(`${competitorName}の${oldYear}年～${newYear}年の有価証券報告書の差分の取得に失敗しました`);
-                                    }
-                                    
-                                    const diffData = await diffResponse.json();
-                                    allResults.push({
-                                        companyCode: competitorCode,
-                                        companyName: competitorName,
-                                        oldYear: oldYear,
-                                        newYear: newYear,
-                                        diffText: diffData.diff_text
-                                    });
-                                } catch (error) {
-                                    console.error(`競合企業(${competitorName})の有価証券報告書の差分取得中にエラー:`, error);
-                                }
-                            }
-                        } catch (error) {
-                            console.error(`競合企業(${competitorName})の有価証券報告書の取得中にエラー:`, error);
-                        }
-                    }
-                    
-                    return allResults;
+                } catch (error) {
+                    console.error(`競合企業(${competitorName})の有価証券報告書の取得中にエラー:`, error);
                 }
+            }
+            
+            return allResults;
+        }
+        
+        // すべてのデータを取得して処理
+        getAllCompaniesData().then(results => {
+            // 企業ごとにグループ化
+            const diffsByCompany = {};
+            
+            results.forEach(result => {
+                if (!diffsByCompany[result.companyName]) {
+                    diffsByCompany[result.companyName] = [];
+                }
+                diffsByCompany[result.companyName].push(result);
+            });
+            
+            // 差分テキストを生成
+            let diffText = "";
+            
+            // メイン企業の差分を先に表示
+            if (diffsByCompany[companyName]) {
+                diffText += `【${companyName}の有価証券報告書の年度間差分】\n`;
                 
-                // すべてのデータを取得して処理
-                getAllCompaniesData().then(results => {
-                    // 企業ごとにグループ化
-                    const diffsByCompany = {};
-                    
-                    results.forEach(result => {
-                        if (!diffsByCompany[result.companyName]) {
-                            diffsByCompany[result.companyName] = [];
-                        }
-                        diffsByCompany[result.companyName].push(result);
-                    });
-                    
-                    // 差分テキストを生成
-                    let diffText = "";
-                    
-                    // メイン企業の差分を先に表示
-                    if (diffsByCompany[companyName]) {
-                        diffText += `【${companyName}の有価証券報告書の年度間差分】\n`;
-                        
-                        // 年度順にソート
-                        diffsByCompany[companyName].sort((a, b) => a.oldYear - b.oldYear);
-                        
-                        diffsByCompany[companyName].forEach(result => {
-                            diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
-                            diffText += result.diffText + "\n";
-                        });
-                    }
-                    
-                    // 競合企業の差分を表示
-                    Object.keys(diffsByCompany).forEach(compName => {
-                        if (compName !== companyName) {
-                            diffText += `\n【${compName}の有価証券報告書の年度間差分】\n`;
-                            
-                            // 年度順にソート
-                            diffsByCompany[compName].sort((a, b) => a.oldYear - b.oldYear);
-                            
-                            diffsByCompany[compName].forEach(result => {
-                                diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
-                                diffText += result.diffText + "\n";
-                            });
-                        }
-                    });
-                    
-                    // 全テキストを結合
-                    const fullText = `${promptIntro}\n\n${dataText}\n${diffText}\n上記データを分析し、${companyName}の強みと弱み、今後の見通しについて詳細に解説してください。`;
-                    
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
-                    button.innerHTML = originalHtml;
-                    
-                    // 直接タブを開く
-                    openPromptWindow(fullText);
-                    // 成功状態に変更
-                    button.classList.add('clicked');
-                    
-                    // トースト表示
-                    showToast('タブを開きました！');
-                    
-                    // 1秒後に元の状態に戻す
-                    setTimeout(function() {
-                        button.classList.remove('clicked');
-                        button.classList.add('recovering');
-                        
-                        // 復帰アニメーション完了後にクラスを削除
-                        setTimeout(function() {
-                            button.classList.remove('recovering');
-                        }, 500);
-                    }, 1000);
-                }).catch(error => {
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
-                    button.innerHTML = originalHtml;
-                    
-                    console.error('有価証券報告書の差分の取得中にエラー:', error);
-                    alert(`エラー: ${error.message}`);
-                    
-                    // エラーが発生した場合でも、データ部分だけでもコピーする
-                    const fallbackText = `${promptIntro}\n\n${dataText}\n上記データを分析し、${companyName}の強みと弱み、今後の見通しについて詳細に解説してください。`;
-                    
-                                            openPromptWindow(fallbackText);
-                        showToast('データ部分のみタブを開きました（差分の取得に失敗）');
+                // 年度順にソート
+                diffsByCompany[companyName].sort((a, b) => a.oldYear - b.oldYear);
+                
+                diffsByCompany[companyName].forEach(result => {
+                    diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
+                    diffText += result.diffText + "\n";
                 });
             }
             
-            // 単一企業の全年データ比較プロンプトをコピーする関数
-            function copySingleCompanyAllYearsPrompt(button) {
-                const chartTitle = button.dataset.chartTitle;
-                const chartIndex = button.dataset.chartIndex;
-                
-                // ボタンの元のテキストを保存
-                const originalHtml = button.innerHTML;
-                
-                // ローディング状態に変更
-                button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
-                
-                // 選択された企業を取得
-                const cardBody = button.closest('.card-body');
-                const select = cardBody.querySelector('.metric-company-select');
-                const selectedCompanyName = select.options[select.selectedIndex].text;
-                const selectedCompanyCode = select.value;
-                
-                // データからプロンプトを生成
-                const chartData = window['chartData_' + chartIndex];
-                
-                // 指標に応じたプロンプトテキストを作成
-                let promptIntro = "";
-                if (chartTitle.includes("ROE") || chartTitle.includes("自己資本利益率")) {
-                    promptIntro = `以下は${selectedCompanyName}のROE（自己資本利益率）の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の収益性と資本効率の推移について分析し、投資判断の観点から考察してください。`;
-                } else if (chartTitle.includes("ROA") || chartTitle.includes("総資産利益率")) {
-                    promptIntro = `以下は${selectedCompanyName}のROA（総資産利益率）の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の資産活用効率の推移について分析し、経営効率の観点から考察してください。`;
-                } else if (chartTitle.includes("売上高")) {
-                    promptIntro = `以下は${selectedCompanyName}の売上高とその成長率の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の成長性について分析してください。`;
-                } else if (chartTitle.includes("営業利益")) {
-                    promptIntro = `以下は${selectedCompanyName}の営業利益とその成長率の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の本業での収益力の推移と将来性について分析してください。`;
-                } else if (chartTitle.includes("EPS") || chartTitle.includes("１株当たり")) {
-                    promptIntro = `以下は${selectedCompanyName}の１株当たり当期純利益（EPS）の年度別データと各年度間の有価証券報告書の差分です。このデータから株主にとっての収益性と投資価値の推移について分析してください。`;
-                } else if (chartTitle.includes("自己資本比率")) {
-                    promptIntro = `以下は${selectedCompanyName}の自己資本比率の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の財務健全性とリスク耐性の推移について分析してください。`;
-                } else if (chartTitle.includes("営業利益率")) {
-                    promptIntro = `以下は${selectedCompanyName}の営業利益率の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の収益構造と競争力の推移について分析してください。`;
-                } else {
-                    promptIntro = `以下は${selectedCompanyName}の${chartTitle}の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の競争力と将来性の推移について分析してください。`;
-                }
-                
-                // データの抽出（選択された企業のみ）
-                let dataText = "";
-                if (chartData && chartData.data) {
-                    const traces = chartData.data;
-                    const years = traces.length > 0 && traces[0].x ? traces[0].x : [];
+            // 競合企業の差分を表示
+            Object.keys(diffsByCompany).forEach(compName => {
+                if (compName !== companyName) {
+                    diffText += `\n【${compName}の有価証券報告書の年度間差分】\n`;
                     
-                    dataText += "【データ】\n";
-                    traces.forEach(trace => {
-                        // 選択された企業のデータのみを抽出
-                        if (trace.name && trace.y && 
-                            (trace.name === selectedCompanyName || 
-                             trace.name.includes(selectedCompanyName))) {
-                            dataText += `${trace.name}:\n`;
-                            for (let i = 0; i < Math.min(years.length, trace.y.length); i++) {
-                                if (trace.y[i] !== null && trace.y[i] !== undefined) {
-                                    dataText += `  ${years[i]}年: ${trace.y[i]}${trace.name.includes('成長率') ? '%' : ''}\n`;
-                                }
-                            }
-                            dataText += "\n";
-                        }
+                    // 年度順にソート
+                    diffsByCompany[compName].sort((a, b) => a.oldYear - b.oldYear);
+                    
+                    diffsByCompany[compName].forEach(result => {
+                        diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
+                        diffText += result.diffText + "\n";
                     });
                 }
+            });
+            
+            // 全テキストを結合
+            const fullText = `${promptIntro}\n\n${dataText}\n${diffText}\n上記データを分析し、${companyName}の強みと弱み、今後の見通しについて詳細に解説してください。`;
+            
+            // ローディング状態を解除
+            button.classList.remove('loading');
+            button.innerHTML = originalHtml;
+            
+            // 直接タブを開く
+            openPromptWindow(fullText);
+            // 成功状態に変更
+            button.classList.add('clicked');
+            
+            // トースト表示
+            showToast('タブを開きました！');
+            
+            // 1秒後に元の状態に戻す
+            setTimeout(function() {
+                button.classList.remove('clicked');
+                button.classList.add('recovering');
                 
-                // 有価証券報告書の差分を取得するためのデータを準備
-                // 年度比較ボタンから年度と報告書の情報を取得
-                const yearButtons = document.querySelectorAll(`#metric-year-buttons-${chartIndex} button`);
+                // 復帰アニメーション完了後にクラスを削除
+                setTimeout(function() {
+                    button.classList.remove('recovering');
+                }, 500);
+            }, 1000);
+        }).catch(error => {
+            // ローディング状態を解除
+            button.classList.remove('loading');
+            button.innerHTML = originalHtml;
+            
+            console.error('有価証券報告書の差分の取得中にエラー:', error);
+            alert(`エラー: ${error.message}`);
+            
+            // エラーが発生した場合でも、データ部分だけでもコピーする
+            const fallbackText = `${promptIntro}\n\n${dataText}\n上記データを分析し、${companyName}の強みと弱み、今後の見通しについて詳細に解説してください。`;
+            
+            openPromptWindow(fallbackText);
+            showToast('データ部分のみタブを開きました（差分の取得に失敗）');
+        });
+    }
+    
+    // 単一企業の全年データ比較プロンプトをコピーする関数
+    function copySingleCompanyAllYearsPrompt(button) {
+        const chartTitle = button.dataset.chartTitle;
+        const chartIndex = button.dataset.chartIndex;
+        
+        // ボタンの元のテキストを保存
+        const originalHtml = button.innerHTML;
+        
+        // ローディング状態に変更
+        button.classList.add('loading');
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
+        
+        // 選択された企業を取得
+        const cardBody = button.closest('.card-body');
+        const select = cardBody.querySelector('.metric-company-select');
+        const selectedCompanyName = select.options[select.selectedIndex].text;
+        const selectedCompanyCode = select.value;
+        
+        // データからプロンプトを生成
+        const chartData = window['chartData_' + chartIndex];
+        
+        // 指標に応じたプロンプトテキストを作成
+        let promptIntro = "";
+        if (chartTitle.includes("ROE") || chartTitle.includes("自己資本利益率")) {
+            promptIntro = `以下は${selectedCompanyName}のROE（自己資本利益率）の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の収益性と資本効率の推移について分析し、投資判断の観点から考察してください。`;
+        } else if (chartTitle.includes("ROA") || chartTitle.includes("総資産利益率")) {
+            promptIntro = `以下は${selectedCompanyName}のROA（総資産利益率）の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の資産活用効率の推移について分析し、経営効率の観点から考察してください。`;
+        } else if (chartTitle.includes("売上高")) {
+            promptIntro = `以下は${selectedCompanyName}の売上高とその成長率の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の成長性について分析してください。`;
+        } else if (chartTitle.includes("営業利益")) {
+            promptIntro = `以下は${selectedCompanyName}の営業利益とその成長率の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の本業での収益力の推移と将来性について分析してください。`;
+        } else if (chartTitle.includes("EPS") || chartTitle.includes("１株当たり")) {
+            promptIntro = `以下は${selectedCompanyName}の１株当たり当期純利益（EPS）の年度別データと各年度間の有価証券報告書の差分です。このデータから株主にとっての収益性と投資価値の推移について分析してください。`;
+        } else if (chartTitle.includes("自己資本比率")) {
+            promptIntro = `以下は${selectedCompanyName}の自己資本比率の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の財務健全性とリスク耐性の推移について分析してください。`;
+        } else if (chartTitle.includes("営業利益率")) {
+            promptIntro = `以下は${selectedCompanyName}の営業利益率の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の収益構造と競争力の推移について分析してください。`;
+        } else {
+            promptIntro = `以下は${selectedCompanyName}の${chartTitle}の年度別データと各年度間の有価証券報告書の差分です。このデータから企業の競争力と将来性の推移について分析してください。`;
+        }
+        
+        // データの抽出（選択された企業のみ）
+        let dataText = "";
+        if (chartData && chartData.data) {
+            const traces = chartData.data;
+            const years = traces.length > 0 && traces[0].x ? traces[0].x : [];
+            
+            dataText += "【データ】\n";
+            traces.forEach(trace => {
+                // 選択された企業のデータのみを抽出
+                if (trace.name && trace.y && 
+                    (trace.name === selectedCompanyName || 
+                     trace.name.includes(selectedCompanyName))) {
+                    dataText += `${trace.name}:\n`;
+                    for (let i = 0; i < Math.min(years.length, trace.y.length); i++) {
+                        if (trace.y[i] !== null && trace.y[i] !== undefined) {
+                            dataText += `  ${years[i]}年: ${trace.y[i]}${trace.name.includes('成長率') ? '%' : ''}\n`;
+                        }
+                    }
+                    dataText += "\n";
+                }
+            });
+        }
+        
+        // 有価証券報告書の差分を取得するためのデータを準備
+        // 年度比較ボタンから年度と報告書の情報を取得
+        const yearButtons = document.querySelectorAll(`#metric-year-buttons-${chartIndex} button`);
+        const yearPairs = [];
+        
+        yearButtons.forEach(btn => {
+            yearPairs.push({
+                oldYear: btn.dataset.oldYear,
+                newYear: btn.dataset.newYear,
+                oldReport: btn.dataset.oldReport,
+                newReport: btn.dataset.newReport,
+                oldDate: btn.dataset.oldDate,
+                newDate: btn.dataset.newDate,
+                companyCode: btn.dataset.companyCode
+            });
+        });
+        
+        // 全ての年度間の差分を取得
+        let diffPromises = [];
+        
+        yearPairs.forEach(pair => {
+            const promise = fetch(`/past_tenbagger/api/securities_report_diff/${selectedCompanyCode}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    old_report: pair.oldReport,
+                    new_report: pair.newReport,
+                    old_date: pair.oldDate,
+                    new_date: pair.newDate
+                }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`${pair.oldYear}年～${pair.newYear}年の有価証券報告書の差分の取得に失敗しました`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                return {
+                    oldYear: pair.oldYear,
+                    newYear: pair.newYear,
+                    diffText: data.diff_text
+                };
+            });
+            
+            diffPromises.push(promise);
+        });
+        
+        // すべての差分取得が完了したら、プロンプトを生成
+        Promise.all(diffPromises)
+            .then(results => {
+                let diffText = "【有価証券報告書の年度間差分】\n";
+                
+                // 年度順にソート
+                results.sort((a, b) => a.oldYear - b.oldYear);
+                
+                results.forEach(result => {
+                    diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
+                    diffText += result.diffText + "\n";
+                });
+                
+                // 全テキストを結合
+                const fullText = `${promptIntro}\n\n${dataText}\n${diffText}\n上記データを分析し、${selectedCompanyName}の${chartTitle}の推移から見える傾向、強みと弱み、今後の見通しについて詳細に解説してください。`;
+                
+                // ローディング状態を解除
+                button.classList.remove('loading');
+                button.innerHTML = originalHtml;
+                
+                // 直接タブを開く
+                openPromptWindow(fullText);
+                // 成功状態に変更
+                button.classList.add('clicked');
+                
+                // トースト表示
+                showToast('タブを開きました！');
+                
+                // 1秒後に元の状態に戻す
+                setTimeout(function() {
+                    button.classList.remove('clicked');
+                    button.classList.add('recovering');
+                    
+                    // 復帰アニメーション完了後にクラスを削除
+                    setTimeout(function() {
+                        button.classList.remove('recovering');
+                    }, 500);
+                }, 1000);
+            })
+            .catch(error => {
+                console.error('有価証券報告書の差分の取得中にエラー:', error);
+                alert(`エラー: ${error.message}`);
+                
+                // エラーが発生した場合でも、データ部分だけでもコピーする
+                const fallbackText = `${promptIntro}\n\n${dataText}\n上記データを分析し、${selectedCompanyName}の${chartTitle}の推移から見える傾向、強みと弱み、今後の見通しについて詳細に解説してください。`;
+                
+                openPromptWindow(fallbackText);
+                showToast('データ部分のみタブを開きました（差分の取得に失敗）');
+            });
+    }
+    
+    // 年度比較ボタンをクリックしたときの処理
+    function copyYearComparisonPrompt(button) {
+        // ボタンの元のテキストを保存
+        const originalHtml = button.innerHTML;
+        
+        // ローディング状態に変更
+        button.classList.add('loading');
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
+        
+        const oldYear = button.dataset.oldYear;
+        const newYear = button.dataset.newYear;
+        const chartTitle = button.dataset.chartTitle;
+        const chartIndex = button.dataset.chartIndex;
+        const companyCode = button.dataset.companyCode;
+        
+        // 選択された企業の名前を取得
+        let companyName = '';
+        if (companyCode === '{{ company_code }}') {
+            companyName = '{{ company_name }}';
+        } else {
+            const competitors = competitorsData.filter(comp => comp.code === companyCode);
+            if (competitors.length > 0) {
+                companyName = competitors[0].name;
+            }
+        }
+        
+        // 有価証券報告書の差分を取得
+        fetch(`/past_tenbagger/api/securities_report_diff/${companyCode}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                old_report: button.dataset.oldReport,
+                new_report: button.dataset.newReport,
+                old_date: button.dataset.oldDate,
+                new_date: button.dataset.newDate
+            }),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('有価証券報告書の差分の取得に失敗しました');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // チャートデータから該当年のデータを抽出
+            const chartData = window['chartData_' + chartIndex];
+            let oldValue = null;
+            let newValue = null;
+            let metricName = chartTitle;
+            
+            if (chartData && chartData.data) {
+                const traces = chartData.data;
+                // 企業名に一致するトレースを探す
+                const companyTrace = traces.find(trace => 
+                    trace.name === companyName || 
+                    trace.name.includes(companyName)
+                );
+                
+                if (companyTrace && companyTrace.x && companyTrace.y) {
+                    const oldYearIndex = companyTrace.x.indexOf(oldYear);
+                    const newYearIndex = companyTrace.x.indexOf(newYear);
+                    
+                    if (oldYearIndex !== -1 && newYearIndex !== -1) {
+                        oldValue = companyTrace.y[oldYearIndex];
+                        newValue = companyTrace.y[newYearIndex];
+                    }
+                }
+            }
+            
+            // プロンプトテキストを作成
+            let promptText = `以下は${companyName}の${oldYear}年～${newYear}年の${metricName}の変化と有価証券報告書の差分です。\n\n`;
+            
+            if (oldValue !== null && newValue !== null) {
+                const change = newValue - oldValue;
+                const changePercent = (oldValue !== 0) ? (change / Math.abs(oldValue) * 100).toFixed(2) : '計算不能';
+                
+                promptText += `【${metricName}の変化】\n`;
+                promptText += `${oldYear}年: ${oldValue}\n`;
+                promptText += `${newYear}年: ${newValue}\n`;
+                promptText += `変化量: ${change > 0 ? '+' : ''}${change} (${change > 0 ? '+' : ''}${changePercent}%)\n\n`;
+            }
+            
+            promptText += `【有価証券報告書の差分】\n${data.diff_text}\n\n`;
+            promptText += `上記の情報から、${companyName}の${metricName}が${oldYear}年から${newYear}年にかけてどのように変化したのか、その理由を分析し、今後の見通しについて詳細に解説してください。`;
+            
+            // ローディング状態を解除
+            button.classList.remove('loading');
+            button.innerHTML = originalHtml;
+            
+            // 直接タブを開く
+            openPromptWindow(promptText);
+            // 成功状態に変更
+            button.classList.add('clicked');
+            
+            // トースト表示
+            showToast('タブを開きました！');
+            
+            // 1秒後に元の状態に戻す
+            setTimeout(function() {
+                button.classList.remove('clicked');
+                button.classList.add('recovering');
+                
+                // 復帰アニメーション完了後にクラスを削除
+                setTimeout(function() {
+                    button.classList.remove('recovering');
+                }, 500);
+            }, 1000);
+        })
+        .catch(error => {
+            // ローディング状態を解除
+            button.classList.remove('loading');
+            button.innerHTML = originalHtml;
+            
+            console.error('有価証券報告書の差分の取得中にエラー:', error);
+            alert(`エラー: ${error.message}`);
+        });
+    }
+    
+    // 有価証券報告書の差分比較ボタンを生成する関数
+    function loadSecuritiesReportButtons() {
+        const companyCode = document.getElementById('company-select').value;
+        
+        // ボタンコンテナをクリアしてローディングスピナーを表示
+        const buttonContainer = document.getElementById('securities-report-buttons');
+        buttonContainer.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">読み込み中...</span></div>';
+        
+        // APIエンドポイントを呼び出して有価証券報告書の一覧を取得
+        fetch(`/past_tenbagger/api/securities_reports/${companyCode}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('有価証券報告書の一覧の取得に失敗しました');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // ローディングスピナーを削除
+                buttonContainer.innerHTML = '';
+                
+                if (data.reports.length < 2) {
+                    buttonContainer.innerHTML = '<div class="alert alert-info w-100">比較可能な有価証券報告書が見つかりません。</div>';
+                    return;
+                }
+                
+                // 年度ごとにグループ化
+                const reportsByYear = {};
+                data.reports.forEach(report => {
+                    const year = report.date.substring(0, 4);
+                    if (!reportsByYear[year]) {
+                        reportsByYear[year] = [];
+                    }
+                    reportsByYear[year].push(report);
+                });
+                
+                // 連続する年度のペアを作成
+                const years = Object.keys(reportsByYear).sort();
+                for (let i = 0; i < years.length - 1; i++) {
+                    const oldYear = years[i];
+                    const newYear = years[i + 1];
+                    
+                    // ボタンを作成
+                    const button = document.createElement('button');
+                    button.className = 'btn copy-button m-1';
+                    button.innerHTML = `<i class="bi bi-box-arrow-up-right"></i> ${oldYear}年～${newYear}年`;
+                    button.dataset.oldYear = oldYear;
+                    button.dataset.newYear = newYear;
+                    button.dataset.oldReport = reportsByYear[oldYear][0].file;
+                    button.dataset.newReport = reportsByYear[newYear][0].file;
+                    button.dataset.oldDate = reportsByYear[oldYear][0].date;
+                    button.dataset.newDate = reportsByYear[newYear][0].date;
+                    button.dataset.companyCode = companyCode;
+                    
+                    // クリックイベントを追加
+                    button.addEventListener('click', function() {
+                        copySecuritiesReportDiff(this);
+                    });
+                    
+                    buttonContainer.appendChild(button);
+                }
+            })
+            .catch(error => {
+                console.error('有価証券報告書の一覧の取得中にエラー:', error);
+                const buttonContainer = document.getElementById('securities-report-buttons');
+                buttonContainer.innerHTML = `<div class="alert alert-danger w-100">エラー: ${error.message}</div>`;
+            });
+    }
+    
+    // 指標の年度比較ボタンを生成する関数
+    function loadMetricYearButtons(chartIndex, companyCode, chartTitle) {
+        const buttonContainer = document.getElementById(`metric-year-buttons-${chartIndex}`);
+        buttonContainer.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">読み込み中...</span></div>';
+        
+        // APIエンドポイントを呼び出して有価証券報告書の一覧を取得
+        fetch(`/past_tenbagger/api/securities_reports/${companyCode}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('有価証券報告書の一覧の取得に失敗しました');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // ローディングスピナーを削除
+                buttonContainer.innerHTML = '';
+                
+                if (data.reports.length < 2) {
+                    buttonContainer.innerHTML = '<div class="alert alert-info w-100">比較可能な有価証券報告書が見つかりません。</div>';
+                    return;
+                }
+                
+                // 年度ごとにグループ化
+                const reportsByYear = {};
+                data.reports.forEach(report => {
+                    const year = report.date.substring(0, 4);
+                    if (!reportsByYear[year]) {
+                        reportsByYear[year] = [];
+                    }
+                    reportsByYear[year].push(report);
+                });
+                
+                // 連続する年度のペアを作成
+                const years = Object.keys(reportsByYear).sort();
+                for (let i = 0; i < years.length - 1; i++) {
+                    const oldYear = years[i];
+                    const newYear = years[i + 1];
+                    
+                    // ボタンを作成
+                    const button = document.createElement('button');
+                    button.className = 'btn copy-button m-1 btn-sm';
+                    button.innerHTML = `<i class="bi bi-box-arrow-up-right"></i> ${oldYear}～${newYear}`;
+                    button.dataset.oldYear = oldYear;
+                    button.dataset.newYear = newYear;
+                    button.dataset.oldReport = reportsByYear[oldYear][0].file;
+                    button.dataset.newReport = reportsByYear[newYear][0].file;
+                    button.dataset.oldDate = reportsByYear[oldYear][0].date;
+                    button.dataset.newDate = reportsByYear[newYear][0].date;
+                    button.dataset.companyCode = companyCode;
+                    button.dataset.chartIndex = chartIndex;
+                    button.dataset.chartTitle = chartTitle;
+                    
+                    // クリックイベントを追加
+                    button.addEventListener('click', function() {
+                        copyYearComparisonPrompt(this);
+                    });
+                    
+                    buttonContainer.appendChild(button);
+                }
+            })
+            .catch(error => {
+                console.error('有価証券報告書の一覧の取得中にエラー:', error);
+                buttonContainer.innerHTML = `<div class="alert alert-danger w-100">エラー: ${error.message}</div>`;
+            });
+    }
+    
+    // 有価証券報告書の差分をコピーする関数
+    function copySecuritiesReportDiff(button) {
+        // ボタンの元のテキストを保存
+        const originalHtml = button.innerHTML;
+        
+        // ローディング状態に変更
+        button.classList.add('loading');
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
+        
+        const oldReport = button.dataset.oldReport;
+        const newReport = button.dataset.newReport;
+        const oldDate = button.dataset.oldDate;
+        const newDate = button.dataset.newDate;
+        const companyCode = button.dataset.companyCode;
+        
+        // 選択された企業の名前を取得
+        let companyName = '';
+        if (companyCode === '{{ company_code }}') {
+            companyName = '{{ company_name }}';
+        } else {
+            const select = document.getElementById('company-select');
+            const selectedOption = select.options[select.selectedIndex];
+            companyName = selectedOption.text;
+        }
+        
+        // APIエンドポイントを呼び出して差分を取得
+        fetch(`/past_tenbagger/api/securities_report_diff/${companyCode}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                old_report: oldReport,
+                new_report: newReport,
+                old_date: oldDate,
+                new_date: newDate
+            }),
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('有価証券報告書の差分の取得に失敗しました');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // プロンプトテキストを作成
+            const promptText = `以下は${companyName}の${button.dataset.oldYear}年～${button.dataset.newYear}年の有価証券報告書の差分です。この差分から企業の成長性や将来性について分析してください。\n\n${data.diff_text}`;
+            
+            // ローディング状態を解除
+            button.classList.remove('loading');
+            button.innerHTML = originalHtml;
+            
+            // 直接タブを開く
+            openPromptWindow(promptText);
+            // 成功状態に変更
+            button.classList.add('clicked');
+            
+            // トースト表示
+            showToast('タブを開きました！');
+            
+            // 1秒後に元の状態に戻す
+            setTimeout(function() {
+                button.classList.remove('clicked');
+                button.classList.add('recovering');
+                
+                // 復帰アニメーション完了後にクラスを削除
+                setTimeout(function() {
+                    button.classList.remove('recovering');
+                }, 500);
+            }, 1000);
+        })
+        .catch(error => {
+            // ローディング状態を解除
+            button.classList.remove('loading');
+            button.innerHTML = originalHtml;
+            
+            console.error('有価証券報告書の差分の取得中にエラー:', error);
+            alert(`エラー: ${error.message}`);
+        });
+    }
+    
+    // 有価証券報告書の全年比較プロンプトをコピーする関数
+    function copySecuritiesAllYearsPrompt() {
+        const button = document.getElementById('securities-single-company-all-years-btn');
+        
+        // ボタンの元のテキストを保存
+        const originalHtml = button.innerHTML;
+        
+        // ローディング状態に変更
+        button.classList.add('loading');
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
+        
+        // 選択された企業を取得
+        const select = document.getElementById('company-select');
+        const selectedCompanyName = select.options[select.selectedIndex].text;
+        const selectedCompanyCode = select.value;
+        
+        // APIエンドポイントを呼び出して有価証券報告書の一覧を取得
+        fetch(`/past_tenbagger/api/securities_reports/${selectedCompanyCode}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('有価証券報告書の一覧の取得に失敗しました');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.reports.length < 2) {
+                    throw new Error('比較可能な有価証券報告書が見つかりません。');
+                }
+                
+                // 年度ごとにグループ化
+                const reportsByYear = {};
+                data.reports.forEach(report => {
+                    const year = report.date.substring(0, 4);
+                    if (!reportsByYear[year]) {
+                        reportsByYear[year] = [];
+                    }
+                    reportsByYear[year].push(report);
+                });
+                
+                // 連続する年度のペアを作成
+                const years = Object.keys(reportsByYear).sort();
                 const yearPairs = [];
                 
-                yearButtons.forEach(btn => {
+                for (let i = 0; i < years.length - 1; i++) {
+                    const oldYear = years[i];
+                    const newYear = years[i + 1];
+                    
                     yearPairs.push({
-                        oldYear: btn.dataset.oldYear,
-                        newYear: btn.dataset.newYear,
-                        oldReport: btn.dataset.oldReport,
-                        newReport: btn.dataset.newReport,
-                        oldDate: btn.dataset.oldDate,
-                        newDate: btn.dataset.newDate,
-                        companyCode: btn.dataset.companyCode
+                        oldYear: oldYear,
+                        newYear: newYear,
+                        oldReport: reportsByYear[oldYear][0].file,
+                        newReport: reportsByYear[newYear][0].file,
+                        oldDate: reportsByYear[oldYear][0].date,
+                        newDate: reportsByYear[newYear][0].date
                     });
-                });
+                }
                 
                 // 全ての年度間の差分を取得
                 let diffPromises = [];
@@ -1125,880 +1096,33 @@
                 });
                 
                 // すべての差分取得が完了したら、プロンプトを生成
-                Promise.all(diffPromises)
-                    .then(results => {
-                        let diffText = "【有価証券報告書の年度間差分】\n";
-                        
-                        // 年度順にソート
-                        results.sort((a, b) => a.oldYear - b.oldYear);
-                        
-                        results.forEach(result => {
-                            diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
-                            diffText += result.diffText + "\n";
-                        });
-                        
-                        // 全テキストを結合
-                        const fullText = `${promptIntro}\n\n${dataText}\n${diffText}\n上記データを分析し、${selectedCompanyName}の${chartTitle}の推移から見える傾向、強みと弱み、今後の見通しについて詳細に解説してください。`;
-                        
-                        // ローディング状態を解除
-                        button.classList.remove('loading');
-                        button.innerHTML = originalHtml;
-                        
-                        // 直接タブを開く
-                        openPromptWindow(fullText);
-                        // 成功状態に変更
-                        button.classList.add('clicked');
-                        
-                        // トースト表示
-                        showToast('タブを開きました！');
-                        
-                        // 1秒後に元の状態に戻す
-                        setTimeout(function() {
-                            button.classList.remove('clicked');
-                            button.classList.add('recovering');
-                            
-                            // 復帰アニメーション完了後にクラスを削除
-                            setTimeout(function() {
-                                button.classList.remove('recovering');
-                            }, 500);
-                        }, 1000);
-                    })
-                    .catch(error => {
-                        console.error('有価証券報告書の差分の取得中にエラー:', error);
-                        alert(`エラー: ${error.message}`);
-                        
-                        // エラーが発生した場合でも、データ部分だけでもコピーする
-                        const fallbackText = `${promptIntro}\n\n${dataText}\n上記データを分析し、${selectedCompanyName}の${chartTitle}の推移から見える傾向、強みと弱み、今後の見通しについて詳細に解説してください。`;
-                        
-                        openPromptWindow(fallbackText);
-                        showToast('データ部分のみタブを開きました（差分の取得に失敗）');
-                    });
-            }
-            
-            // 年度比較ボタンをクリックしたときの処理
-            function copyYearComparisonPrompt(button) {
-                // ボタンの元のテキストを保存
-                const originalHtml = button.innerHTML;
+                return Promise.all(diffPromises);
+            })
+            .then(results => {
+                let diffText = "【有価証券報告書の年度間差分】\n";
                 
-                // ローディング状態に変更
-                button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
+                // 年度順にソート
+                results.sort((a, b) => a.oldYear - b.oldYear);
                 
-                const oldYear = button.dataset.oldYear;
-                const newYear = button.dataset.newYear;
-                const chartTitle = button.dataset.chartTitle;
-                const chartIndex = button.dataset.chartIndex;
-                const companyCode = button.dataset.companyCode;
-                
-                // 選択された企業の名前を取得
-                let companyName = '';
-                if (companyCode === '{{ company_code }}') {
-                    companyName = '{{ company_name }}';
-                } else {
-                    const competitors = competitorsData.filter(comp => comp.code === companyCode);
-                    if (competitors.length > 0) {
-                        companyName = competitors[0].name;
-                    }
-                }
-                
-                // 有価証券報告書の差分を取得
-                fetch(`/past_tenbagger/api/securities_report_diff/${companyCode}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        old_report: button.dataset.oldReport,
-                        new_report: button.dataset.newReport,
-                        old_date: button.dataset.oldDate,
-                        new_date: button.dataset.newDate
-                    }),
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('有価証券報告書の差分の取得に失敗しました');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // チャートデータから該当年のデータを抽出
-                    const chartData = window['chartData_' + chartIndex];
-                    let oldValue = null;
-                    let newValue = null;
-                    let metricName = chartTitle;
-                    
-                    if (chartData && chartData.data) {
-                        const traces = chartData.data;
-                        // 企業名に一致するトレースを探す
-                        const companyTrace = traces.find(trace => 
-                            trace.name === companyName || 
-                            trace.name.includes(companyName)
-                        );
-                        
-                        if (companyTrace && companyTrace.x && companyTrace.y) {
-                            const oldYearIndex = companyTrace.x.indexOf(oldYear);
-                            const newYearIndex = companyTrace.x.indexOf(newYear);
-                            
-                            if (oldYearIndex !== -1 && newYearIndex !== -1) {
-                                oldValue = companyTrace.y[oldYearIndex];
-                                newValue = companyTrace.y[newYearIndex];
-                            }
-                        }
-                    }
-                    
-                    // プロンプトテキストを作成
-                    let promptText = `以下は${companyName}の${oldYear}年～${newYear}年の${metricName}の変化と有価証券報告書の差分です。\n\n`;
-                    
-                    if (oldValue !== null && newValue !== null) {
-                        const change = newValue - oldValue;
-                        const changePercent = (oldValue !== 0) ? (change / Math.abs(oldValue) * 100).toFixed(2) : '計算不能';
-                        
-                        promptText += `【${metricName}の変化】\n`;
-                        promptText += `${oldYear}年: ${oldValue}\n`;
-                        promptText += `${newYear}年: ${newValue}\n`;
-                        promptText += `変化量: ${change > 0 ? '+' : ''}${change} (${change > 0 ? '+' : ''}${changePercent}%)\n\n`;
-                    }
-                    
-                    promptText += `【有価証券報告書の差分】\n${data.diff_text}\n\n`;
-                    promptText += `上記の情報から、${companyName}の${metricName}が${oldYear}年から${newYear}年にかけてどのように変化したのか、その理由を分析し、今後の見通しについて詳細に解説してください。`;
-                    
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
-                    button.innerHTML = originalHtml;
-                    
-                    // 直接タブを開く
-                    openPromptWindow(promptText);
-                    // 成功状態に変更
-                    button.classList.add('clicked');
-                    
-                    // トースト表示
-                    showToast('タブを開きました！');
-                    
-                    // 1秒後に元の状態に戻す
-                    setTimeout(function() {
-                        button.classList.remove('clicked');
-                        button.classList.add('recovering');
-                        
-                        // 復帰アニメーション完了後にクラスを削除
-                        setTimeout(function() {
-                            button.classList.remove('recovering');
-                        }, 500);
-                    }, 1000);
-                })
-                .catch(error => {
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
-                    button.innerHTML = originalHtml;
-                    
-                    console.error('有価証券報告書の差分の取得中にエラー:', error);
-                    alert(`エラー: ${error.message}`);
+                results.forEach(result => {
+                    diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
+                    diffText += result.diffText + "\n";
                 });
-            }
-            
-            // 有価証券報告書の差分比較ボタンを生成する関数
-            function loadSecuritiesReportButtons() {
-                const companyCode = document.getElementById('company-select').value;
-                
-                // ボタンコンテナをクリアしてローディングスピナーを表示
-                const buttonContainer = document.getElementById('securities-report-buttons');
-                buttonContainer.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">読み込み中...</span></div>';
-                
-                // APIエンドポイントを呼び出して有価証券報告書の一覧を取得
-                fetch(`/past_tenbagger/api/securities_reports/${companyCode}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('有価証券報告書の一覧の取得に失敗しました');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        // ローディングスピナーを削除
-                        buttonContainer.innerHTML = '';
-                        
-                        if (data.reports.length < 2) {
-                            buttonContainer.innerHTML = '<div class="alert alert-info w-100">比較可能な有価証券報告書が見つかりません。</div>';
-                            return;
-                        }
-                        
-                        // 年度ごとにグループ化
-                        const reportsByYear = {};
-                        data.reports.forEach(report => {
-                            const year = report.date.substring(0, 4);
-                            if (!reportsByYear[year]) {
-                                reportsByYear[year] = [];
-                            }
-                            reportsByYear[year].push(report);
-                        });
-                        
-                        // 連続する年度のペアを作成
-                        const years = Object.keys(reportsByYear).sort();
-                        for (let i = 0; i < years.length - 1; i++) {
-                            const oldYear = years[i];
-                            const newYear = years[i + 1];
-                            
-                            // ボタンを作成
-                            const button = document.createElement('button');
-                            button.className = 'btn copy-button m-1';
-                            button.innerHTML = `<i class="bi bi-box-arrow-up-right"></i> ${oldYear}年～${newYear}年`;
-                            button.dataset.oldYear = oldYear;
-                            button.dataset.newYear = newYear;
-                            button.dataset.oldReport = reportsByYear[oldYear][0].file;
-                            button.dataset.newReport = reportsByYear[newYear][0].file;
-                            button.dataset.oldDate = reportsByYear[oldYear][0].date;
-                            button.dataset.newDate = reportsByYear[newYear][0].date;
-                            button.dataset.companyCode = companyCode;
-                            
-                            // クリックイベントを追加
-                            button.addEventListener('click', function() {
-                                copySecuritiesReportDiff(this);
-                            });
-                            
-                            buttonContainer.appendChild(button);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('有価証券報告書の一覧の取得中にエラー:', error);
-                        const buttonContainer = document.getElementById('securities-report-buttons');
-                        buttonContainer.innerHTML = `<div class="alert alert-danger w-100">エラー: ${error.message}</div>`;
-                    });
-            }
-            
-            // 指標の年度比較ボタンを生成する関数
-            function loadMetricYearButtons(chartIndex, companyCode, chartTitle) {
-                const buttonContainer = document.getElementById(`metric-year-buttons-${chartIndex}`);
-                buttonContainer.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">読み込み中...</span></div>';
-                
-                // APIエンドポイントを呼び出して有価証券報告書の一覧を取得
-                fetch(`/past_tenbagger/api/securities_reports/${companyCode}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('有価証券報告書の一覧の取得に失敗しました');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        // ローディングスピナーを削除
-                        buttonContainer.innerHTML = '';
-                        
-                        if (data.reports.length < 2) {
-                            buttonContainer.innerHTML = '<div class="alert alert-info w-100">比較可能な有価証券報告書が見つかりません。</div>';
-                            return;
-                        }
-                        
-                        // 年度ごとにグループ化
-                        const reportsByYear = {};
-                        data.reports.forEach(report => {
-                            const year = report.date.substring(0, 4);
-                            if (!reportsByYear[year]) {
-                                reportsByYear[year] = [];
-                            }
-                            reportsByYear[year].push(report);
-                        });
-                        
-                        // 連続する年度のペアを作成
-                        const years = Object.keys(reportsByYear).sort();
-                        for (let i = 0; i < years.length - 1; i++) {
-                            const oldYear = years[i];
-                            const newYear = years[i + 1];
-                            
-                            // ボタンを作成
-                            const button = document.createElement('button');
-                            button.className = 'btn copy-button m-1 btn-sm';
-                            button.innerHTML = `<i class="bi bi-box-arrow-up-right"></i> ${oldYear}～${newYear}`;
-                            button.dataset.oldYear = oldYear;
-                            button.dataset.newYear = newYear;
-                            button.dataset.oldReport = reportsByYear[oldYear][0].file;
-                            button.dataset.newReport = reportsByYear[newYear][0].file;
-                            button.dataset.oldDate = reportsByYear[oldYear][0].date;
-                            button.dataset.newDate = reportsByYear[newYear][0].date;
-                            button.dataset.companyCode = companyCode;
-                            button.dataset.chartIndex = chartIndex;
-                            button.dataset.chartTitle = chartTitle;
-                            
-                            // クリックイベントを追加
-                            button.addEventListener('click', function() {
-                                copyYearComparisonPrompt(this);
-                            });
-                            
-                            buttonContainer.appendChild(button);
-                        }
-                    })
-                    .catch(error => {
-                        console.error('有価証券報告書の一覧の取得中にエラー:', error);
-                        buttonContainer.innerHTML = `<div class="alert alert-danger w-100">エラー: ${error.message}</div>`;
-                    });
-            }
-            
-            // 有価証券報告書の差分をコピーする関数
-            function copySecuritiesReportDiff(button) {
-                // ボタンの元のテキストを保存
-                const originalHtml = button.innerHTML;
-                
-                // ローディング状態に変更
-                button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
-                
-                const oldReport = button.dataset.oldReport;
-                const newReport = button.dataset.newReport;
-                const oldDate = button.dataset.oldDate;
-                const newDate = button.dataset.newDate;
-                const companyCode = button.dataset.companyCode;
-                
-                // 選択された企業の名前を取得
-                let companyName = '';
-                if (companyCode === '{{ company_code }}') {
-                    companyName = '{{ company_name }}';
-                } else {
-                    const select = document.getElementById('company-select');
-                    const selectedOption = select.options[select.selectedIndex];
-                    companyName = selectedOption.text;
-                }
-                
-                // APIエンドポイントを呼び出して差分を取得
-                fetch(`/past_tenbagger/api/securities_report_diff/${companyCode}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        old_report: oldReport,
-                        new_report: newReport,
-                        old_date: oldDate,
-                        new_date: newDate
-                    }),
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('有価証券報告書の差分の取得に失敗しました');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    // プロンプトテキストを作成
-                    const promptText = `以下は${companyName}の${button.dataset.oldYear}年～${button.dataset.newYear}年の有価証券報告書の差分です。この差分から企業の成長性や将来性について分析してください。\n\n${data.diff_text}`;
-                    
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
-                    button.innerHTML = originalHtml;
-                    
-                    // 直接タブを開く
-                    openPromptWindow(promptText);
-                    // 成功状態に変更
-                    button.classList.add('clicked');
-                    
-                    // トースト表示
-                    showToast('タブを開きました！');
-                    
-                    // 1秒後に元の状態に戻す
-                    setTimeout(function() {
-                        button.classList.remove('clicked');
-                        button.classList.add('recovering');
-                        
-                        // 復帰アニメーション完了後にクラスを削除
-                        setTimeout(function() {
-                            button.classList.remove('recovering');
-                        }, 500);
-                    }, 1000);
-                })
-                .catch(error => {
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
-                    button.innerHTML = originalHtml;
-                    
-                    console.error('有価証券報告書の差分の取得中にエラー:', error);
-                    alert(`エラー: ${error.message}`);
-                });
-            }
-            
-            // 有価証券報告書の全年比較プロンプトをコピーする関数
-            function copySecuritiesAllYearsPrompt() {
-                const button = document.getElementById('securities-single-company-all-years-btn');
-                
-                // ボタンの元のテキストを保存
-                const originalHtml = button.innerHTML;
-                
-                // ローディング状態に変更
-                button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
-                
-                // 選択された企業を取得
-                const select = document.getElementById('company-select');
-                const selectedCompanyName = select.options[select.selectedIndex].text;
-                const selectedCompanyCode = select.value;
-                
-                // APIエンドポイントを呼び出して有価証券報告書の一覧を取得
-                fetch(`/past_tenbagger/api/securities_reports/${selectedCompanyCode}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error('有価証券報告書の一覧の取得に失敗しました');
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        if (data.reports.length < 2) {
-                            throw new Error('比較可能な有価証券報告書が見つかりません。');
-                        }
-                        
-                        // 年度ごとにグループ化
-                        const reportsByYear = {};
-                        data.reports.forEach(report => {
-                            const year = report.date.substring(0, 4);
-                            if (!reportsByYear[year]) {
-                                reportsByYear[year] = [];
-                            }
-                            reportsByYear[year].push(report);
-                        });
-                        
-                        // 連続する年度のペアを作成
-                        const years = Object.keys(reportsByYear).sort();
-                        const yearPairs = [];
-                        
-                        for (let i = 0; i < years.length - 1; i++) {
-                            const oldYear = years[i];
-                            const newYear = years[i + 1];
-                            
-                            yearPairs.push({
-                                oldYear: oldYear,
-                                newYear: newYear,
-                                oldReport: reportsByYear[oldYear][0].file,
-                                newReport: reportsByYear[newYear][0].file,
-                                oldDate: reportsByYear[oldYear][0].date,
-                                newDate: reportsByYear[newYear][0].date
-                            });
-                        }
-                        
-                        // 全ての年度間の差分を取得
-                        let diffPromises = [];
-                        
-                        yearPairs.forEach(pair => {
-                            const promise = fetch(`/past_tenbagger/api/securities_report_diff/${selectedCompanyCode}`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                },
-                                body: JSON.stringify({
-                                    old_report: pair.oldReport,
-                                    new_report: pair.newReport,
-                                    old_date: pair.oldDate,
-                                    new_date: pair.newDate
-                                }),
-                            })
-                            .then(response => {
-                                if (!response.ok) {
-                                    throw new Error(`${pair.oldYear}年～${pair.newYear}年の有価証券報告書の差分の取得に失敗しました`);
-                                }
-                                return response.json();
-                            })
-                            .then(data => {
-                                return {
-                                    oldYear: pair.oldYear,
-                                    newYear: pair.newYear,
-                                    diffText: data.diff_text
-                                };
-                            });
-                            
-                            diffPromises.push(promise);
-                        });
-                        
-                        // すべての差分取得が完了したら、プロンプトを生成
-                        return Promise.all(diffPromises);
-                    })
-                    .then(results => {
-                        let diffText = "【有価証券報告書の年度間差分】\n";
-                        
-                        // 年度順にソート
-                        results.sort((a, b) => a.oldYear - b.oldYear);
-                        
-                        results.forEach(result => {
-                            diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
-                            diffText += result.diffText + "\n";
-                        });
-                        
-                        // 全テキストを結合
-                        const promptText = `以下は${selectedCompanyName}の有価証券報告書の年度間差分です。この情報から企業の成長性や将来性について分析してください。\n\n${diffText}\n上記データを分析し、${selectedCompanyName}の強みと弱み、今後の見通しについて詳細に解説してください。`;
-                        
-                        // ローディング状態を解除
-                        button.classList.remove('loading');
-                        button.innerHTML = originalHtml;
-                        
-                        // 直接タブを開く
-                        openPromptWindow(promptText);
-                        return Promise.resolve();
-                    })
-                    .then(() => {
-                        // 成功状態に変更
-                        button.classList.add('clicked');
-                        
-                        // トースト表示
-                        showToast('タブを開きました！');
-                        
-                        // 1秒後に元の状態に戻す
-                        setTimeout(function() {
-                            button.classList.remove('clicked');
-                            button.classList.add('recovering');
-                            
-                            // 復帰アニメーション完了後にクラスを削除
-                            setTimeout(function() {
-                                button.classList.remove('recovering');
-                            }, 500);
-                        }, 1000);
-                    })
-                    .catch(error => {
-                        console.error('有価証券報告書の差分の取得中にエラー:', error);
-                        alert(`エラー: ${error.message}`);
-                    });
-            }
-            
-            // 全企業の有価証券報告書の全年比較プロンプトをコピーする関数
-            function copySecuritiesAllCompaniesAllYearsPrompt() {
-                const button = document.getElementById('securities-all-companies-all-years-btn');
-                
-                // ボタンの元のテキストを保存
-                const originalHtml = button.innerHTML;
-                
-                // ローディング状態に変更
-                button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
-                
-                const mainCompanyCode = '{{ company_code }}';
-                const mainCompanyName = '{{ company_name }}';
-                const competitorCodes = competitorsData.map(comp => comp.code);
-                
-                // すべての企業（メイン企業と競合企業）のデータ取得を行う関数
-                async function getAllCompaniesData() {
-                    let allResults = [];
-                    
-                    // メイン企業の有価証券報告書の差分を取得
-                    try {
-                        const response = await fetch(`/past_tenbagger/api/securities_reports/${mainCompanyCode}`);
-                        if (!response.ok) {
-                            throw new Error('有価証券報告書の一覧の取得に失敗しました');
-                        }
-                        
-                        const data = await response.json();
-                        if (data.reports.length < 2) {
-                            console.warn(`${mainCompanyName}の比較可能な有価証券報告書が見つかりません。`);
-                        } else {
-                            // 年度ごとにグループ化
-                            const reportsByYear = {};
-                            data.reports.forEach(report => {
-                                const year = report.date.substring(0, 4);
-                                if (!reportsByYear[year]) {
-                                    reportsByYear[year] = [];
-                                }
-                                reportsByYear[year].push(report);
-                            });
-                            
-                            // 連続する年度のペアを作成
-                            const years = Object.keys(reportsByYear).sort();
-                            
-                            for (let i = 0; i < years.length - 1; i++) {
-                                const oldYear = years[i];
-                                const newYear = years[i + 1];
-                                
-                                const oldReport = reportsByYear[oldYear][0].file;
-                                const newReport = reportsByYear[newYear][0].file;
-                                const oldDate = reportsByYear[oldYear][0].date;
-                                const newDate = reportsByYear[newYear][0].date;
-                                
-                                try {
-                                    const diffResponse = await fetch(`/past_tenbagger/api/securities_report_diff/${mainCompanyCode}`, {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({
-                                            old_report: oldReport,
-                                            new_report: newReport,
-                                            old_date: oldDate,
-                                            new_date: newDate
-                                        }),
-                                    });
-                                    
-                                    if (!diffResponse.ok) {
-                                        throw new Error(`${oldYear}年～${newYear}年の有価証券報告書の差分の取得に失敗しました`);
-                                    }
-                                    
-                                    const diffData = await diffResponse.json();
-                                    allResults.push({
-                                        companyCode: mainCompanyCode,
-                                        companyName: mainCompanyName,
-                                        oldYear: oldYear,
-                                        newYear: newYear,
-                                        diffText: diffData.diff_text
-                                    });
-                                } catch (error) {
-                                    console.error('メイン企業の有価証券報告書の差分の取得中にエラー:', error);
-                                }
-                            }
-                        }
-                    } catch (error) {
-                        console.error('メイン企業の有価証券報告書の一覧の取得中にエラー:', error);
-                    }
-                    
-                    // 競合企業の差分を取得
-                    for (const competitorCode of competitorCodes) {
-                        // 競合企業の名前を取得
-                        const competitor = competitorsData.find(comp => comp.code === competitorCode);
-                        if (!competitor) continue;
-                        
-                        const competitorName = competitor.name;
-                        
-                        try {
-                            // 競合企業の有価証券報告書の一覧を取得
-                            const response = await fetch(`/past_tenbagger/api/securities_reports/${competitorCode}`);
-                            if (!response.ok) {
-                                console.warn(`競合企業(${competitorName})の有価証券報告書の一覧の取得に失敗しました: ${response.status}`);
-                                allResults.push({
-                                    companyCode: competitorCode,
-                                    companyName: competitorName,
-                                    oldYear: "N/A",
-                                    newYear: "N/A",
-                                    diffText: "有価証券報告書が見つかりませんでした。"
-                                });
-                                continue; // 次の競合企業へ
-                            }
-                            
-                            const data = await response.json();
-                            if (!data.reports || data.reports.length < 2) {
-                                console.warn(`競合企業(${competitorName})の有価証券報告書が2つ未満です。スキップします。`);
-                                allResults.push({
-                                    companyCode: competitorCode,
-                                    companyName: competitorName,
-                                    oldYear: "N/A",
-                                    newYear: "N/A",
-                                    diffText: data.message || "有価証券報告書が見つかりませんでした。"
-                                });
-                                continue; // 比較可能な報告書がない場合はスキップ
-                            }
-                            
-                            // 年度ごとにグループ化
-                            const reportsByYear = {};
-                            data.reports.forEach(report => {
-                                const year = report.date.substring(0, 4);
-                                if (!reportsByYear[year]) {
-                                    reportsByYear[year] = [];
-                                }
-                                reportsByYear[year].push(report);
-                            });
-                            
-                            // 連続する年度のペアを作成
-                            const years = Object.keys(reportsByYear).sort();
-                            for (let i = 0; i < years.length - 1; i++) {
-                                const oldYear = years[i];
-                                const newYear = years[i + 1];
-                                
-                                const oldReport = reportsByYear[oldYear][0].file;
-                                const newReport = reportsByYear[newYear][0].file;
-                                const oldDate = reportsByYear[oldYear][0].date;
-                                const newDate = reportsByYear[newYear][0].date;
-                                
-                                try {
-                                    // 差分を取得
-                                    const diffResponse = await fetch(`/past_tenbagger/api/securities_report_diff/${competitorCode}`, {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                        },
-                                        body: JSON.stringify({
-                                            old_report: oldReport,
-                                            new_report: newReport,
-                                            old_date: oldDate,
-                                            new_date: newDate
-                                        }),
-                                    });
-                                    
-                                    if (!diffResponse.ok) {
-                                        throw new Error(`${competitorName}の${oldYear}年～${newYear}年の有価証券報告書の差分の取得に失敗しました`);
-                                    }
-                                    
-                                    const diffData = await diffResponse.json();
-                                    allResults.push({
-                                        companyCode: competitorCode,
-                                        companyName: competitorName,
-                                        oldYear: oldYear,
-                                        newYear: newYear,
-                                        diffText: diffData.diff_text
-                                    });
-                                } catch (error) {
-                                    console.error(`競合企業(${competitorName})の有価証券報告書の差分取得中にエラー:`, error);
-                                }
-                            }
-                        } catch (error) {
-                            console.error(`競合企業(${competitorName})の有価証券報告書の取得中にエラー:`, error);
-                        }
-                    }
-                    
-                    return allResults;
-                }
-                
-                // すべてのデータを取得して処理
-                getAllCompaniesData().then(results => {
-                    // 企業ごとにグループ化
-                    const diffsByCompany = {};
-                    
-                    results.forEach(result => {
-                        if (!diffsByCompany[result.companyName]) {
-                            diffsByCompany[result.companyName] = [];
-                        }
-                        diffsByCompany[result.companyName].push(result);
-                    });
-                    
-                    // 差分テキストを生成
-                    let diffText = "";
-                    
-                    // メイン企業の差分を先に表示
-                    if (diffsByCompany[mainCompanyName]) {
-                        diffText += `【${mainCompanyName}の有価証券報告書の年度間差分】\n`;
-                        
-                        // 年度順にソート
-                        diffsByCompany[mainCompanyName].sort((a, b) => a.oldYear - b.oldYear);
-                        
-                        diffsByCompany[mainCompanyName].forEach(result => {
-                            diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
-                            diffText += result.diffText + "\n";
-                        });
-                    }
-                    
-                    // 競合企業の差分を表示
-                    Object.keys(diffsByCompany).forEach(compName => {
-                        if (compName !== mainCompanyName) {
-                            diffText += `\n【${compName}の有価証券報告書の年度間差分】\n`;
-                            
-                            // 年度順にソート
-                            diffsByCompany[compName].sort((a, b) => a.oldYear - b.oldYear);
-                            
-                            diffsByCompany[compName].forEach(result => {
-                                diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
-                                diffText += result.diffText + "\n";
-                            });
-                        }
-                    });
-                    
-                    // 全テキストを結合
-                    const promptText = `以下は${mainCompanyName}と競合他社の有価証券報告書の年度間差分です。この情報から各企業の成長性や将来性について比較分析してください。\n\n${diffText}\n上記データを分析し、${mainCompanyName}と競合他社の強みと弱み、今後の見通しについて詳細に解説してください。`;
-                    
-                    // ローディング状態を解除
-                    button.classList.remove('loading');
-                    button.innerHTML = originalHtml;
-                    
-                    // 直接タブを開く
-                    openPromptWindow(promptText);
-                    return Promise.resolve();
-                })
-                .then(() => {
-                    // 成功状態に変更
-                    button.classList.add('clicked');
-                    
-                    // トースト表示
-                    showToast('コピーしました！');
-                    
-                    // 1秒後に元の状態に戻す
-                    setTimeout(function() {
-                        button.classList.remove('clicked');
-                        button.classList.add('recovering');
-                        
-                        // 復帰アニメーション完了後にクラスを削除
-                        setTimeout(function() {
-                            button.classList.remove('recovering');
-                        }, 500);
-                    }, 1000);
-                })
-                .catch(error => {
-                    console.error('有価証券報告書の差分の取得中にエラー:', error);
-                    alert(`エラー: ${error.message}`);
-                });
-            }
-            
-            // 企業選択が変更されたときのイベントハンドラ
-            document.getElementById('company-select').addEventListener('change', function() {
-                loadSecuritiesReportButtons();
-            });
-            
-            // 指標の企業選択が変更されたときのイベントハンドラを設定
-            document.addEventListener('DOMContentLoaded', function() {
-                // メインの有価証券報告書ボタンを読み込み
-                loadSecuritiesReportButtons();
-                
-                // 全年ボタンのイベントリスナーを設定
-                document.getElementById('securities-single-company-all-years-btn').addEventListener('click', copySecuritiesAllYearsPrompt);
-                document.getElementById('securities-all-companies-all-years-btn').addEventListener('click', copySecuritiesAllCompaniesAllYearsPrompt);
-                
-                // 各グラフの指標年度比較ボタンを読み込み
-                const metricSelects = document.querySelectorAll('.metric-company-select');
-                metricSelects.forEach(select => {
-                    const chartIndex = select.dataset.chartIndex;
-                    const chartTitle = document.querySelector(`#metric-year-buttons-${chartIndex}`).dataset.chartTitle;
-                    
-                    // 初期読み込み
-                    loadMetricYearButtons(chartIndex, select.value, chartTitle);
-                    
-                    // 変更イベントを設定
-                    select.addEventListener('change', function() {
-                        loadMetricYearButtons(chartIndex, this.value, chartTitle);
-                        
-                        // 選択された企業名を更新
-                        const selectedCompanyName = this.options[this.selectedIndex].text;
-                        const cardBody = this.closest('.card-body');
-                        const selectedCompanyNameSpan = cardBody.querySelector('.selected-company-name');
-                        if (selectedCompanyNameSpan) {
-                            selectedCompanyNameSpan.textContent = selectedCompanyName;
-                        }
-                    });
-                });
-                
-                // ツールチップの初期化
-                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                tooltipTriggerList.map(function (tooltipTriggerEl) {
-                    return new bootstrap.Tooltip(tooltipTriggerEl);
-                });
-            });
-            
-            // グローバルへ公開
-            window.copyBusinessComparisonPrompt = copyBusinessComparisonPrompt;
-            window.copyOfficersComparisonPrompt = copyOfficersComparisonPrompt;
-            
-            function copyBusinessComparisonPrompt() {
-                var button = document.querySelector('.copy-button[onclick="copyBusinessComparisonPrompt()"]');
-                
-                // ボタンの元のテキストを保存
-                var originalHtml = button.innerHTML;
-                
-                // ローディング状態に変更
-                button.classList.add('loading');
-                button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
-                
-                // ターゲット企業の事業の内容を取得
-                var targetBusiness = document.querySelector('#target-company-business').textContent.trim();
-                
-                // 競合企業の事業の内容を取得
-                var competitorElements = document.querySelectorAll('[id^="competitor-business-"]:not([id$="-tab"])');
-                var competitorInfo = Array.from(competitorElements).map(function(el) {
-                    return el.textContent.trim();
-                });
-                
-                // プロンプトテキストを作成
-                var promptText = "下記は、それぞれの企業の事業の内容です。テンバガーの企業を選ぶ際にこれらの事業内容だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
-                var companyName = '{{ company_name }}';
-                var businessText = "【" + companyName + "の事業の内容】\n" + targetBusiness + "\n\n";
-                
-                // 競合企業の情報を追加
-                var competitorsText = competitorInfo.map(function(info, index) {
-                    return "【" + competitorsData[index].name + "の事業の内容】\n" + info;
-                }).join('\n\n');
                 
                 // 全テキストを結合
-                var fullText = promptText + businessText + competitorsText;
-                
-                // 直接新しいタブを開いて内容を表示
-                openPromptWindow(fullText);
+                const promptText = `以下は${selectedCompanyName}の有価証券報告書の年度間差分です。この情報から企業の成長性や将来性について分析してください。\n\n${diffText}\n上記データを分析し、${selectedCompanyName}の強みと弱み、今後の見通しについて詳細に解説してください。`;
                 
                 // ローディング状態を解除
                 button.classList.remove('loading');
+                button.innerHTML = originalHtml;
                 
+                // 直接タブを開く
+                openPromptWindow(promptText);
+                return Promise.resolve();
+            })
+            .then(() => {
                 // 成功状態に変更
                 button.classList.add('clicked');
-                button.innerHTML = originalHtml;
                 
                 // トースト表示
                 showToast('タブを開きました！');
@@ -2013,202 +1137,317 @@
                         button.classList.remove('recovering');
                     }, 500);
                 }, 1000);
-            }
+            })
+            .catch(error => {
+                console.error('有価証券報告書の差分の取得中にエラー:', error);
+                alert(`エラー: ${error.message}`);
+            });
+    }
+    
+    // 全企業の有価証券報告書の全年比較プロンプトをコピーする関数
+    function copySecuritiesAllCompaniesAllYearsPrompt() {
+        const button = document.getElementById('securities-all-companies-all-years-btn');
+        
+        // ボタンの元のテキストを保存
+        const originalHtml = button.innerHTML;
+        
+        // ローディング状態に変更
+        button.classList.add('loading');
+        button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span><span class="loading-text">処理中...</span><span class="original-text">' + originalHtml + '</span>';
+        
+        const mainCompanyCode = '{{ company_code }}';
+        const mainCompanyName = '{{ company_name }}';
+        const competitorCodes = competitorsData.map(comp => comp.code);
+        
+        // すべての企業（メイン企業と競合企業）のデータ取得を行う関数
+        async function getAllCompaniesData() {
+            let allResults = [];
             
-            // ChatGPTで事業の内容の比較プロンプトを開く関数
-            function openChatGPTWithBusinessPrompt() {
-                // ターゲット企業の事業の内容を取得
-                var targetBusiness = document.querySelector('#target-company-business').textContent.trim();
+            // メイン企業の有価証券報告書の差分を取得
+            try {
+                const response = await fetch(`/past_tenbagger/api/securities_reports/${mainCompanyCode}`);
+                if (!response.ok) {
+                    throw new Error('有価証券報告書の一覧の取得に失敗しました');
+                }
                 
-                // 競合企業の事業の内容を取得
-                var competitorElements = document.querySelectorAll('[id^="competitor-business-"]:not([id$="-tab"])');
-                var competitorInfo = Array.from(competitorElements).map(function(el) {
-                    return el.textContent.trim();
-                });
-                
-                // プロンプトテキストを作成
-                var promptText = "下記は、それぞれの企業の事業の内容です。テンバガーの企業を選ぶ際にこれらの事業内容だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
-                var companyName = '{{ company_name }}';
-                var businessText = "【" + companyName + "の事業の内容】\n" + targetBusiness + "\n\n";
-                
-                // 競合企業の情報を追加
-                var competitorsText = competitorInfo.map(function(info, index) {
-                    return "【" + competitorsData[index].name + "の事業の内容】\n" + info;
-                }).join('\n\n');
-                
-                // 全テキストを結合
-                var fullText = promptText + businessText + competitorsText;
-                
-                // ChatGPTを開いて浮動ボタンを作成
-                var chatWindow = window.open('https://chatgpt.com/', '_blank');
-                
-                // ページが読み込まれるのを待ってから浮動ボタンを追加
-                setTimeout(function() {
-                    if (chatWindow && !chatWindow.closed) {
+                const data = await response.json();
+                if (data.reports.length < 2) {
+                    console.warn(`${mainCompanyName}の比較可能な有価証券報告書が見つかりません。`);
+                } else {
+                    // 年度ごとにグループ化
+                    const reportsByYear = {};
+                    data.reports.forEach(report => {
+                        const year = report.date.substring(0, 4);
+                        if (!reportsByYear[year]) {
+                            reportsByYear[year] = [];
+                        }
+                        reportsByYear[year].push(report);
+                    });
+                    
+                    // 連続する年度のペアを作成
+                    const years = Object.keys(reportsByYear).sort();
+                    
+                    for (let i = 0; i < years.length - 1; i++) {
+                        const oldYear = years[i];
+                        const newYear = years[i + 1];
+                        
+                        const oldReport = reportsByYear[oldYear][0].file;
+                        const newReport = reportsByYear[newYear][0].file;
+                        const oldDate = reportsByYear[oldYear][0].date;
+                        const newDate = reportsByYear[newYear][0].date;
+                        
                         try {
-                            // 浮かせるdiv要素を作成
-                            var toggleDiv = chatWindow.document.createElement("div");
-                            toggleDiv.id = "floatingPromptDiv";
-                            toggleDiv.style.position = "fixed";
-                            toggleDiv.style.display = "flex";
-                            toggleDiv.style.top = "20px";
-                            toggleDiv.style.right = "20px";
-                            toggleDiv.style.width = "60px";
-                            toggleDiv.style.height = "60px";
-                            toggleDiv.style.backgroundColor = "rgba(16, 163, 127, 0.9)";
-                            toggleDiv.style.color = "white";
-                            toggleDiv.style.borderRadius = "50%";
-                            toggleDiv.style.alignItems = "center";
-                            toggleDiv.style.justifyContent = "center";
-                            toggleDiv.style.cursor = "pointer";
-                            toggleDiv.style.zIndex = "10000";
-                            toggleDiv.style.fontSize = "24px";
-                            toggleDiv.innerHTML = "📝";
-                            toggleDiv.title = "プロンプトを入力";
-                            
-                            // クリックイベントを追加
-                            toggleDiv.addEventListener("click", function() {
-                                try {
-                                    // ChatGPTの入力欄を特定
-                                    var inputField = chatWindow.document.getElementById("prompt-textarea") || 
-                                                   chatWindow.document.querySelector(".ProseMirror") ||
-                                                   chatWindow.document.querySelector('textarea[placeholder*="Message"]') ||
-                                                   chatWindow.document.querySelector('div[contenteditable="true"]');
-                                    
-                                    if (inputField) {
-                                        // フォーカスを設定
-                                        inputField.focus();
-                                        
-                                        if (inputField.tagName === 'TEXTAREA') {
-                                            inputField.value = fullText;
-                                            inputField.dispatchEvent(new Event("input", { bubbles: true }));
-                                        } else {
-                                            inputField.textContent = fullText;
-                                            inputField.dispatchEvent(new Event("input", { bubbles: true }));
-                                        }
-                                        
-                                        // ボタンを削除
-                                        toggleDiv.remove();
-                                    } else {
-                                        alert("入力欄が見つかりませんでした。ページが完全に読み込まれるまでお待ちください。");
-                                    }
-                                } catch (error) {
-                                    console.error("プロンプト入力エラー:", error);
-                                    alert("プロンプトの入力に失敗しました。");
-                                }
+                            const diffResponse = await fetch(`/past_tenbagger/api/securities_report_diff/${mainCompanyCode}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    old_report: oldReport,
+                                    new_report: newReport,
+                                    old_date: oldDate,
+                                    new_date: newDate
+                                }),
                             });
                             
-                            // divをページに追加
-                            chatWindow.document.body.appendChild(toggleDiv);
+                            if (!diffResponse.ok) {
+                                throw new Error(`${oldYear}年～${newYear}年の有価証券報告書の差分の取得に失敗しました`);
+                            }
+                            
+                            const diffData = await diffResponse.json();
+                            allResults.push({
+                                companyCode: mainCompanyCode,
+                                companyName: mainCompanyName,
+                                oldYear: oldYear,
+                                newYear: newYear,
+                                diffText: diffData.diff_text
+                            });
                         } catch (error) {
-                            console.error("浮動ボタンの作成に失敗:", error);
+                            console.error('メイン企業の有価証券報告書の差分の取得中にエラー:', error);
                         }
                     }
-                }, 3000);
-                
-                // トースト表示
-                showToast('ChatGPTを開きました！');
+                }
+            } catch (error) {
+                console.error('メイン企業の有価証券報告書の一覧の取得中にエラー:', error);
             }
             
-            // ChatGPTで役員の状況の比較プロンプトを開く関数
-            function openChatGPTWithOfficersPrompt() {
-                // ターゲット企業の役員情報を取得
-                var targetOfficers = document.querySelector('#target-company').textContent.trim();
+            // 競合企業の差分を取得
+            for (const competitorCode of competitorCodes) {
+                // 競合企業の名前を取得
+                const competitor = competitorsData.find(comp => comp.code === competitorCode);
+                if (!competitor) continue;
                 
-                // 競合企業の役員情報を取得
-                var competitorElements = document.querySelectorAll('[id^="competitor-"]:not([id$="-tab"]):not([id*="business"])');
-                var competitorInfo = Array.from(competitorElements).map(function(el) {
-                    return el.textContent.trim();
-                });
+                const competitorName = competitor.name;
                 
-                // プロンプトテキストを作成
-                var promptText = "下記は、それぞれの企業の役員の状況です。テンバガーの企業を選ぶ際にこれらの役員だけの情報から、どの会社が伸びそうだと思うか予測し理由を教えて\n\n";
-                var companyName = '{{ company_name }}';
-                var officersText = "【" + companyName + "の役員の状況】\n" + targetOfficers + "\n\n";
-                
-                // 競合企業の情報を追加
-                var competitorsText = competitorInfo.map(function(info, index) {
-                    return "【" + competitorsData[index].name + "の役員の状況】\n" + info;
-                }).join('\n\n');
-                
-                // 全テキストを結合
-                var fullText = promptText + officersText + competitorsText;
-                
-                // ChatGPTを開いて浮動ボタンを作成
-                var chatWindow = window.open('https://chatgpt.com/', '_blank');
-                
-                // ページが読み込まれるのを待ってから浮動ボタンを追加
-                setTimeout(function() {
-                    if (chatWindow && !chatWindow.closed) {
+                try {
+                    // 競合企業の有価証券報告書の一覧を取得
+                    const response = await fetch(`/past_tenbagger/api/securities_reports/${competitorCode}`);
+                    if (!response.ok) {
+                        console.warn(`競合企業(${competitorName})の有価証券報告書の一覧の取得に失敗しました: ${response.status}`);
+                        allResults.push({
+                            companyCode: competitorCode,
+                            companyName: competitorName,
+                            oldYear: "N/A",
+                            newYear: "N/A",
+                            diffText: "有価証券報告書が見つかりませんでした。"
+                        });
+                        continue; // 次の競合企業へ
+                    }
+                    
+                    const data = await response.json();
+                    if (!data.reports || data.reports.length < 2) {
+                        console.warn(`競合企業(${competitorName})の有価証券報告書が2つ未満です。スキップします。`);
+                        allResults.push({
+                            companyCode: competitorCode,
+                            companyName: competitorName,
+                            oldYear: "N/A",
+                            newYear: "N/A",
+                            diffText: data.message || "有価証券報告書が見つかりませんでした。"
+                        });
+                        continue; // 比較可能な報告書がない場合はスキップ
+                    }
+                    
+                    // 年度ごとにグループ化
+                    const reportsByYear = {};
+                    data.reports.forEach(report => {
+                        const year = report.date.substring(0, 4);
+                        if (!reportsByYear[year]) {
+                            reportsByYear[year] = [];
+                        }
+                        reportsByYear[year].push(report);
+                    });
+                    
+                    // 連続する年度のペアを作成
+                    const years = Object.keys(reportsByYear).sort();
+                    for (let i = 0; i < years.length - 1; i++) {
+                        const oldYear = years[i];
+                        const newYear = years[i + 1];
+                        
+                        const oldReport = reportsByYear[oldYear][0].file;
+                        const newReport = reportsByYear[newYear][0].file;
+                        const oldDate = reportsByYear[oldYear][0].date;
+                        const newDate = reportsByYear[newYear][0].date;
+                        
                         try {
-                            // 浮かせるdiv要素を作成
-                            var toggleDiv = chatWindow.document.createElement("div");
-                            toggleDiv.id = "floatingPromptDiv";
-                            toggleDiv.style.position = "fixed";
-                            toggleDiv.style.display = "flex";
-                            toggleDiv.style.top = "20px";
-                            toggleDiv.style.right = "20px";
-                            toggleDiv.style.width = "60px";
-                            toggleDiv.style.height = "60px";
-                            toggleDiv.style.backgroundColor = "rgba(16, 163, 127, 0.9)";
-                            toggleDiv.style.color = "white";
-                            toggleDiv.style.borderRadius = "50%";
-                            toggleDiv.style.alignItems = "center";
-                            toggleDiv.style.justifyContent = "center";
-                            toggleDiv.style.cursor = "pointer";
-                            toggleDiv.style.zIndex = "10000";
-                            toggleDiv.style.fontSize = "24px";
-                            toggleDiv.innerHTML = "📝";
-                            toggleDiv.title = "プロンプトを入力";
-                            
-                            // クリックイベントを追加
-                            toggleDiv.addEventListener("click", function() {
-                                try {
-                                    // ChatGPTの入力欄を特定
-                                    var inputField = chatWindow.document.getElementById("prompt-textarea") || 
-                                                   chatWindow.document.querySelector(".ProseMirror") ||
-                                                   chatWindow.document.querySelector('textarea[placeholder*="Message"]') ||
-                                                   chatWindow.document.querySelector('div[contenteditable="true"]');
-                                    
-                                    if (inputField) {
-                                        // フォーカスを設定
-                                        inputField.focus();
-                                        
-                                        if (inputField.tagName === 'TEXTAREA') {
-                                            inputField.value = fullText;
-                                            inputField.dispatchEvent(new Event("input", { bubbles: true }));
-                                        } else {
-                                            inputField.textContent = fullText;
-                                            inputField.dispatchEvent(new Event("input", { bubbles: true }));
-                                        }
-                                        
-                                        // ボタンを削除
-                                        toggleDiv.remove();
-                                    } else {
-                                        alert("入力欄が見つかりませんでした。ページが完全に読み込まれるまでお待ちください。");
-                                    }
-                                } catch (error) {
-                                    console.error("プロンプト入力エラー:", error);
-                                    alert("プロンプトの入力に失敗しました。");
-                                }
+                            // 差分を取得
+                            const diffResponse = await fetch(`/past_tenbagger/api/securities_report_diff/${competitorCode}`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    old_report: oldReport,
+                                    new_report: newReport,
+                                    old_date: oldDate,
+                                    new_date: newDate
+                                }),
                             });
                             
-                            // divをページに追加
-                            chatWindow.document.body.appendChild(toggleDiv);
+                            if (!diffResponse.ok) {
+                                throw new Error(`${competitorName}の${oldYear}年～${newYear}年の有価証券報告書の差分の取得に失敗しました`);
+                            }
+                            
+                            const diffData = await diffResponse.json();
+                            allResults.push({
+                                companyCode: competitorCode,
+                                companyName: competitorName,
+                                oldYear: oldYear,
+                                newYear: newYear,
+                                diffText: diffData.diff_text
+                            });
                         } catch (error) {
-                            console.error("浮動ボタンの作成に失敗:", error);
+                            console.error(`競合企業(${competitorName})の有価証券報告書の差分取得中にエラー:`, error);
                         }
                     }
-                }, 3000);
-                
-                // トースト表示
-                showToast('ChatGPTを開きました！');
+                } catch (error) {
+                    console.error(`競合企業(${competitorName})の有価証券報告書の取得中にエラー:`, error);
+                }
             }
             
-            // グローバルへ公開
-            window.openChatGPTWithBusinessPrompt = openChatGPTWithBusinessPrompt;
-            window.openChatGPTWithOfficersPrompt = openChatGPTWithOfficersPrompt;
-        </script>
-    </body>
-    </html>
+            return allResults;
+        }
+        
+        // すべてのデータを取得して処理
+        getAllCompaniesData().then(results => {
+            // 企業ごとにグループ化
+            const diffsByCompany = {};
+            
+            results.forEach(result => {
+                if (!diffsByCompany[result.companyName]) {
+                    diffsByCompany[result.companyName] = [];
+                }
+                diffsByCompany[result.companyName].push(result);
+            });
+            
+            // 差分テキストを生成
+            let diffText = "";
+            
+            // メイン企業の差分を先に表示
+            if (diffsByCompany[mainCompanyName]) {
+                diffText += `【${mainCompanyName}の有価証券報告書の年度間差分】\n`;
+                
+                // 年度順にソート
+                diffsByCompany[mainCompanyName].sort((a, b) => a.oldYear - b.oldYear);
+                
+                diffsByCompany[mainCompanyName].forEach(result => {
+                    diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
+                    diffText += result.diffText + "\n";
+                });
+            }
+            
+            // 競合企業の差分を表示
+            Object.keys(diffsByCompany).forEach(compName => {
+                if (compName !== mainCompanyName) {
+                    diffText += `\n【${compName}の有価証券報告書の年度間差分】\n`;
+                    
+                    // 年度順にソート
+                    diffsByCompany[compName].sort((a, b) => a.oldYear - b.oldYear);
+                    
+                    diffsByCompany[compName].forEach(result => {
+                        diffText += `\n--- ${result.oldYear}年～${result.newYear}年の差分 ---\n`;
+                        diffText += result.diffText + "\n";
+                    });
+                }
+            });
+            
+            // 全テキストを結合
+            const promptText = `以下は${mainCompanyName}と競合他社の有価証券報告書の年度間差分です。この情報から各企業の成長性や将来性について比較分析してください。\n\n${diffText}\n上記データを分析し、${mainCompanyName}と競合他社の強みと弱み、今後の見通しについて詳細に解説してください。`;
+            
+            // ローディング状態を解除
+            button.classList.remove('loading');
+            button.innerHTML = originalHtml;
+            
+            // 直接タブを開く
+            openPromptWindow(promptText);
+            return Promise.resolve();
+        })
+        .then(() => {
+            // 成功状態に変更
+            button.classList.add('clicked');
+            
+            // トースト表示
+            showToast('コピーしました！');
+            
+            // 1秒後に元の状態に戻す
+            setTimeout(function() {
+                button.classList.remove('clicked');
+                button.classList.add('recovering');
+                
+                // 復帰アニメーション完了後にクラスを削除
+                setTimeout(function() {
+                    button.classList.remove('recovering');
+                }, 500);
+            }, 1000);
+        })
+        .catch(error => {
+            console.error('有価証券報告書の差分の取得中にエラー:', error);
+            alert(`エラー: ${error.message}`);
+        });
+    }
+    
+    // 企業選択が変更されたときのイベントハンドラ
+    document.getElementById('company-select').addEventListener('change', function() {
+        loadSecuritiesReportButtons();
+    });
+    
+    // 指標の企業選択が変更されたときのイベントハンドラを設定
+    document.addEventListener('DOMContentLoaded', function() {
+        // メインの有価証券報告書ボタンを読み込み
+        loadSecuritiesReportButtons();
+        
+        // 全年ボタンのイベントリスナーを設定
+        document.getElementById('securities-single-company-all-years-btn').addEventListener('click', copySecuritiesAllYearsPrompt);
+        document.getElementById('securities-all-companies-all-years-btn').addEventListener('click', copySecuritiesAllCompaniesAllYearsPrompt);
+        
+        // 各グラフの指標年度比較ボタンを読み込み
+        const metricSelects = document.querySelectorAll('.metric-company-select');
+        metricSelects.forEach(select => {
+            const chartIndex = select.dataset.chartIndex;
+            const chartTitle = document.querySelector(`#metric-year-buttons-${chartIndex}`).dataset.chartTitle;
+            
+            // 初期読み込み
+            loadMetricYearButtons(chartIndex, select.value, chartTitle);
+            
+            // 変更イベントを設定
+            select.addEventListener('change', function() {
+                loadMetricYearButtons(chartIndex, this.value, chartTitle);
+                
+                // 選択された企業名を更新
+                const selectedCompanyName = this.options[this.selectedIndex].text;
+                const cardBody = this.closest('.card-body');
+                const selectedCompanyNameSpan = cardBody.querySelector('.selected-company-name');
+                if (selectedCompanyNameSpan) {
+                    selectedCompanyNameSpan.textContent = selectedCompanyName;
+                }
+            });
+        });
+        
+        // ツールチップの初期化
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+{% endblock %}
     

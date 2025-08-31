@@ -16,6 +16,146 @@ def create_root_app():
     """ルートアプリケーションを作成する関数"""
     app = Flask(__name__)
     
+    @app.route('/api/save-chatgpt-link', methods=['POST'])
+    def save_chatgpt_link():
+        """ChatGPTリンクを保存するAPI"""
+        try:
+            import json
+            from datetime import datetime
+            import os
+            
+            data = request.get_json()
+            if not data:
+                return jsonify({"success": False, "message": "リクエストデータが不正です"}), 400
+            
+            company_code = data.get('company_code')
+            url = data.get('url')
+            name = data.get('name', '')
+            timestamp = data.get('timestamp', datetime.now().isoformat())
+            # アプリタイプ（past_tenbagger / next_tenbagger など）
+            app_type = data.get('app_type', 'common')
+            
+            if not company_code or not url or not name:
+                return jsonify({"success": False, "message": "企業コード、URL、名称は必須です"}), 400
+            
+            # ChatGPTまたはGeminiのリンクかチェック
+            import re
+            is_chatgpt = bool(re.match(r'^https://chatgpt\.com/share/.+', url))
+            is_gemini = bool(re.match(r'^https://g\.co/.+', url)) or bool(re.match(r'^https://gemini\.google\.com/share/.+', url))
+            
+            if not is_chatgpt and not is_gemini:
+                return jsonify({"success": False, "message": "ChatGPTまたはGeminiのリンクではありません"}), 400
+            
+            # データディレクトリの確保
+            data_dir = Path(__file__).parent.parent / "data" / "db" / "chatgpt_links" / app_type
+            data_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 企業ごとのJSONファイルに保存
+            json_file = data_dir / f"{company_code}.json"
+            
+            # 既存データの読み込み
+            links = []
+            if json_file.exists():
+                try:
+                    with open(json_file, 'r', encoding='utf-8') as f:
+                        links = json.load(f)
+                except:
+                    links = []
+            
+            # 新しいリンクを追加
+            new_link = {
+                "url": url,
+                "name": name,
+                "timestamp": timestamp,
+                "saved_at": datetime.now().isoformat()
+            }
+            links.append(new_link)
+            
+            # ファイルに保存
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json.dump(links, f, ensure_ascii=False, indent=2)
+            
+            return jsonify({"success": True, "message": "リンクを保存しました"})
+            
+        except Exception as e:
+            logger.error(f"ChatGPTリンク保存エラー: {e}", exc_info=True)
+            return jsonify({"success": False, "message": "保存中にエラーが発生しました"}), 500
+    
+    @app.route('/api/get-chatgpt-links/<company_code>')
+    def get_chatgpt_links(company_code):
+        """ChatGPTリンクを取得するAPI"""
+        try:
+            import json
+            
+            # クエリパラメータからアプリタイプを取得
+            app_type = request.args.get('app_type', 'common')
+            data_dir = Path(__file__).parent.parent / "data" / "db" / "chatgpt_links" / app_type
+            json_file = data_dir / f"{company_code}.json"
+            
+            if not json_file.exists():
+                return jsonify({"success": True, "links": []})
+            
+            with open(json_file, 'r', encoding='utf-8') as f:
+                links = json.load(f)
+                
+            # 新しい順に並び替え
+            links.sort(key=lambda x: x.get('saved_at', ''), reverse=True)
+            
+            return jsonify({"success": True, "links": links})
+            
+        except Exception as e:
+            logger.error(f"ChatGPTリンク取得エラー: {e}", exc_info=True)
+            return jsonify({"success": False, "message": "リンクの取得に失敗しました"}), 500
+    
+    @app.route('/api/delete-chatgpt-link', methods=['DELETE'])
+    def delete_chatgpt_link():
+        """ChatGPTリンクを削除するAPI"""
+        try:
+            import json
+            from datetime import datetime
+            
+            data = request.get_json()
+            if not data:
+                return jsonify({"success": False, "message": "リクエストデータが不正です"}), 400
+            
+            company_code = data.get('company_code')
+            link_index = data.get('link_index')
+            
+            if not company_code or link_index is None:
+                return jsonify({"success": False, "message": "企業コードとリンクインデックスは必須です"}), 400
+            
+            # データディレクトリの確保
+            app_type = data.get('app_type', 'common')
+            data_dir = Path(__file__).parent.parent / "data" / "db" / "chatgpt_links" / app_type
+            json_file = data_dir / f"{company_code}.json"
+            
+            if not json_file.exists():
+                return jsonify({"success": False, "message": "リンクファイルが見つかりません"}), 404
+            
+            # 既存データの読み込み
+            with open(json_file, 'r', encoding='utf-8') as f:
+                links = json.load(f)
+            
+            # インデックスの範囲チェック
+            if link_index < 0 or link_index >= len(links):
+                return jsonify({"success": False, "message": "不正なリンクインデックスです"}), 400
+            
+            # 指定されたインデックスのリンクを削除
+            deleted_link = links.pop(link_index)
+            
+            # ファイルに保存
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json.dump(links, f, ensure_ascii=False, indent=2)
+            
+            return jsonify({
+                "success": True, 
+                "message": f"リンク「{deleted_link.get('name', 'unnamed')}」を削除しました"
+            })
+            
+        except Exception as e:
+            logger.error(f"ChatGPTリンク削除エラー: {e}", exc_info=True)
+            return jsonify({"success": False, "message": "削除中にエラーが発生しました"}), 500
+    
     @app.route('/')
     def root():
         html = """
@@ -113,12 +253,20 @@ def create_next_tenbagger_app():
     # プロジェクトのルートディレクトリを取得
     base_dir = Path(__file__).parent
     
-    # next_tenbaggerのテンプレートディレクトリを指定してアプリケーションを作成
+    # テンプレートディレクトリを複数指定（common/templatesと専用ディレクトリ）
     template_dir = os.path.join(base_dir, 'next_tenbagger', 'templates')
     static_dir = os.path.join(base_dir, 'next_tenbagger', 'static')
     app = Flask(__name__, 
                 template_folder=template_dir,
                 static_folder=static_dir)
+    
+    # 共通テンプレートディレクトリを追加
+    from jinja2 import ChoiceLoader, FileSystemLoader
+    common_template_dir = os.path.join(base_dir, 'common', 'templates')
+    app.jinja_loader = ChoiceLoader([
+        FileSystemLoader(template_dir),
+        FileSystemLoader(common_template_dir)
+    ])
     
     # next_tenbaggerのビジネスロジックをインポート
     from visualizer.next_tenbagger.root import (
@@ -134,7 +282,12 @@ def create_next_tenbagger_app():
         data, error, status_code = next_tenbagger_index()
         if error:
             return error, status_code
-        return render_template('index.html', **data)
+        return render_template('index.html', 
+                             companies=data.get('companies', []),
+                             show_year_grouping=True,
+                             show_detail_icon=True,
+                             show_detailed_labels=True,
+                             app_prefix="next_tenbagger")
     
     @app.route('/<company_code>')
     def company_view(company_code):
@@ -167,12 +320,20 @@ def create_past_tenbagger_app():
     # プロジェクトのルートディレクトリを取得
     base_dir = Path(__file__).parent
     
-    # past_tenbaggerのテンプレートディレクトリを指定してアプリケーションを作成
+    # テンプレートディレクトリを複数指定（common/templatesと専用ディレクトリ）
     template_dir = os.path.join(base_dir, 'past_tenbagger', 'templates')
     static_dir = os.path.join(base_dir, 'past_tenbagger', 'static')
     app = Flask(__name__, 
                 template_folder=template_dir,
                 static_folder=static_dir)
+    
+    # 共通テンプレートディレクトリを追加
+    from jinja2 import ChoiceLoader, FileSystemLoader
+    common_template_dir = os.path.join(base_dir, 'common', 'templates')
+    app.jinja_loader = ChoiceLoader([
+        FileSystemLoader(template_dir),
+        FileSystemLoader(common_template_dir)
+    ])
     
     # past_tenbaggerのビジネスロジックをインポート
     from visualizer.past_tenbagger.root import (
@@ -188,7 +349,15 @@ def create_past_tenbagger_app():
         companies, error, status_code = past_tenbagger_index()
         if error:
             return error, status_code
-        return render_template('index.html', companies=companies)
+        return render_template('index.html', 
+                             companies=companies,
+                             show_year_grouping=False,
+                             show_multiple_badge=True,
+                             show_code_subtitle=False,
+                             show_detail_button=False,
+                             show_detail_icon=True,
+                             show_detailed_labels=False,
+                             app_prefix="past_tenbagger")
     
     @app.route('/<company_code>')
     def company_view(company_code):

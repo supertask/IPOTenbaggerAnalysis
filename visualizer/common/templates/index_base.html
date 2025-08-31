@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+
+{% block title %}{% block page_title %}{% endblock %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4 text-center">{% block page_heading %}{% endblock %}</h1>
+    <p class="text-center mb-4">{% block page_description %}{% endblock %}</p>
+    
+    {% if show_year_grouping and companies %}
+        {% set has_ipo_year = companies[0].ipo_year is defined %}
+        {% if has_ipo_year %}
+            {% for year, year_companies in companies|groupby('ipo_year')|sort(reverse=true) %}
+                <h2 class="year-heading">{{ year }}年</h2>
+                <div class="row">
+                {% for company in year_companies %}
+                    {% include 'components/index/company_card.html' %}
+                {% endfor %}
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="row">
+            {% for company in companies %}
+                {% include 'components/index/company_card.html' %}
+            {% endfor %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="row">
+        {% for company in companies %}
+            {% include 'components/index/company_card.html' %}
+        {% endfor %}
+        </div>
+    {% endif %}
+    
+    {% if not companies %}
+    <div class="alert alert-info text-center">
+        <p>企業データが見つかりません。データファイルが正しく配置されているか確認してください。</p>
+        <p>期待されるパス: data/output/combiner/all_companies.tsv</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    body { padding-top: 20px; }
+    .company-card { 
+        margin-bottom: 20px; 
+        transition: transform 0.3s, box-shadow 0.3s; 
+        border: 1px solid rgba(0,0,0,0.125);
+    }
+    .company-card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15); 
+    }
+    .multiple-badge {
+        font-size: 0.9rem;
+        font-weight: bold;
+        padding: 0.35rem 0.5rem;
+        border-radius: 0.25rem;
+        margin-left: 0.5rem;
+    }
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid rgba(0,0,0,0.125);
+        padding: 0.75rem 1rem;
+    }
+    .card-title {
+        margin-bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 1rem;
+    }
+    .company-info {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .info-item {
+        width: 50%;
+        margin-bottom: 0.5rem;
+    }
+    .info-label {
+        font-weight: 600;
+    }
+    .info-value {
+        font-weight: normal;
+    }
+    .highlight-value {
+        color: #dc3545; /* 赤色 */
+        font-weight: 700; /* 太字 */
+    }
+    .highlight-attention {
+        color: #0d6efd; /* 青色 */
+        font-weight: 700; /* 太字 */
+    }
+    .year-heading {
+        margin-top: 30px;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #dee2e6;
+    }
+    .detail-icon {
+        font-size: 1.2rem;
+        color: #0d6efd;
+        transition: transform 0.2s, color 0.2s;
+        margin-left: 5px;
+    }
+    .detail-icon:hover {
+        color: #0a58ca;
+        transform: scale(1.2);
+    }
+    .detail-button {
+        transition: all 0.2s;
+    }
+    .detail-button:hover {
+        transform: translateY(-1px);
+    }
+
+    /* レスポンシブ調整 */
+    @media (max-width: 575.98px) {
+        .card-title {
+            font-size: 0.9rem;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .multiple-badge {
+            margin-left: 0;
+            margin-top: 0.25rem;
+            font-size: 0.8rem;
+        }
+        .info-item {
+            width: 100%;
+            margin-bottom: 0.3rem;
+        }
+        .company-info {
+            font-size: 0.8rem;
+        }
+    }
+    @media (min-width: 1200px) {
+        .col-xl-5th {
+            flex: 0 0 20%;
+            max-width: 20%;
+        }
+    }
+</style>
+{% endblock %} 
