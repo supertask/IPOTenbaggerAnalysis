@@ -1,0 +1,105 @@
+name: Sync EDINET IPO reports to MKC
+
+on:
+  schedule:
+    # 毎月1日 09:00 JST（GitHubはUTC基準なので 00:00 UTC）
+    - cron: '0 0 1 * *'
+  push:
+    tags:
+      - 'center-*'        # 例: center-2025-08-31
+  workflow_dispatch:
+
+concurrency:
+  group: sync-edinet-to-mkc
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read   # IPOTenbaggerAnalysis の読み取りのみ。書き込みはPATで実施
+    steps:
+      - name: Checkout IPOTenbaggerAnalysis (sparse)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # 対象ディレクトリのみ取得して高速化
+          sparse-checkout: |
+            data/output/edinet_db/ipo_reports
+          sparse-checkout-cone: true
+
+      - name: Ensure secret exists
+        run: |
+          if [ -z "${{ secrets.MILLIONARE_KNOWLEDGE_CENTER_TOKEN }}" ]; then
+            echo "::error::Secret MILLIONARE_KNOWLEDGE_CENTER_TOKEN is not set in IPOTenbaggerAnalysis (Settings > Secrets and variables > Actions)."
+            exit 1
+          fi
+
+      - name: Checkout MillionareKnowledgeCenter
+        uses: actions/checkout@v4
+        with:
+          repository: supertask/MillionareKnowledgeCenter
+          ref: main                           # 宛先のデフォルトブランチに合わせて必要なら変更
+          token: ${{ secrets.MILLIONARE_KNOWLEDGE_CENTER_TOKEN }}
+          path: mkc
+          fetch-depth: 0
+
+      - name: Sync ipo_reports -> knowledge/edinet_db
+        shell: bash
+        run: |
+          set -euo pipefail
+          SRC_BASE="data/output/edinet_db/ipo_reports"
+          DEST_BASE="mkc/knowledge/edinet_db"
+
+          if [ ! -d "${SRC_BASE}" ]; then
+            echo "Source base '${SRC_BASE}' not found. Nothing to sync."
+            exit 0
+          fi
+
+          shopt -s nullglob
+          # 直下の「フォルダ群」を列挙（ファイルは無視）
+          dirs=("${SRC_BASE}"/*/)
+          if [ ${#dirs[@]} -eq 0 ]; then
+            echo "No folders under ${SRC_BASE}."
+            exit 0
+          fi
+
+          for src_dir in "${dirs[@]}"; do
+            cat_name="$(basename "${src_dir%/}")"
+            dest_dir="${DEST_BASE}/${cat_name}"
+            mkdir -p "${dest_dir}"
+
+            # 各カテゴリ配下だけをミラー。除外は .git と .DS_Store
+            rsync -a -m --delete --delete-excluded \
+              --exclude='.git/' \
+              --exclude='.DS_Store' \
+              "${src_dir}" "${dest_dir}/"
+
+            echo "Synced ${src_dir} -> ${dest_dir}"
+          done
+
+      - name: Commit & Push to MillionareKnowledgeCenter
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd mkc
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # 念のため .DS_Store を一掃（同期範囲外に紛れた場合の保険）
+          find knowledge/edinet_db -name '.DS_Store' -type f -delete || true
+
+          git add -A
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+            git commit -m "chore(sync): EDINET IPO reports from IPOTenbaggerAnalysis (tag ${TAG_NAME})"
+          else
+            git commit -m "chore(sync): EDINET IPO reports from IPOTenbaggerAnalysis ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))"
+          fi
+
+          git push origin HEAD
