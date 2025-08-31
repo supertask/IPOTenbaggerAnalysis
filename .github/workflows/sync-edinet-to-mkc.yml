@@ -1,9 +1,9 @@
 name: Sync EDINET IPO reports to MKC
 
 on:
-  schedule:
-    # 毎月1日 09:00 JST（GitHubはUTC基準なので 00:00 UTC）
-    - cron: '0 0 1 * *'
+#  schedule:
+#    # 毎月1日 09:00 JST（GitHubはUTC基準なので 00:00 UTC）
+#    - cron: '0 0 1 * *'
   push:
     tags:
       - 'center-*'        # 例: center-2025-08-31
@@ -47,7 +47,7 @@ jobs:
           fetch-depth: 0
           # 対象ディレクトリのみ取得して高速化
           sparse-checkout: |
-            data/output/edinet_db/ipo_reports
+            data/output/
           sparse-checkout-cone: true
 
       - name: Ensure secret exists
@@ -70,8 +70,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SRC_BASE="data/output/edinet_db/ipo_reports"
-          DEST_BASE="mkc/knowledge/edinet_db"
+          SRC_BASE="data/output"
+          DEST_BASE="mkc/knowledge/listed_companies_data"
 
           if [ ! -d "${SRC_BASE}" ]; then
             echo "Source base '${SRC_BASE}' not found. Nothing to sync."
@@ -93,9 +93,9 @@ jobs:
             cd mkc
             
             # Clean up unwanted files
-            find knowledge/edinet_db -name '.DS_Store' -type f -delete 2>/dev/null || true
-            find knowledge/edinet_db -name '*.tmp' -type f -delete 2>/dev/null || true
-            find knowledge/edinet_db -name '*.temp' -type f -delete 2>/dev/null || true
+            find knowledge/listed_companies_data -name '.DS_Store' -type f -delete 2>/dev/null || true
+            find knowledge/listed_companies_data -name '*.tmp' -type f -delete 2>/dev/null || true
+            find knowledge/listed_companies_data -name '*.temp' -type f -delete 2>/dev/null || true
 
             git add -A
             if git diff --staged --quiet; then
@@ -131,7 +131,7 @@ jobs:
           
           # File counting for split commits
           files_in_current_batch=0
-          max_files_per_push=200
+          max_files_per_push=300
           push_count=1
           
           # Disable immediate exit on error for the sync loop to handle errors gracefully
