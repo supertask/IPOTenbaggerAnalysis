@@ -24,7 +24,7 @@ jobs:
           echo "=== Before cleanup ==="
           df -h
           
-          # Remove unnecessary software to free up space
+          # Remove unnecessary software to free up space (more aggressive)
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
@@ -35,9 +35,25 @@ jobs:
           sudo rm -rf /usr/local/share/powershell
           sudo rm -rf /usr/local/share/chromium
           sudo rm -rf /usr/local/lib/node_modules
+          sudo rm -rf /opt/pipx_bin
+          sudo rm -rf /opt/microsoft
+          sudo rm -rf /usr/share/swift
+          sudo rm -rf /usr/local/share/vcpkg
+          sudo rm -rf /usr/local/julia*
+          sudo rm -rf /usr/share/miniconda
+          sudo rm -rf /usr/local/aws-cli
           
-          # Clean apt cache
+          # Clean system caches and temporary files
           sudo apt-get clean
+          sudo apt-get autoremove -y
+          sudo journalctl --vacuum-time=1d
+          sudo find /tmp -type f -exec rm -f {} + 2>/dev/null || true
+          sudo find /var/tmp -type f -exec rm -f {} + 2>/dev/null || true
+          sudo find /var/cache -type f -exec rm -f {} + 2>/dev/null || true
+          
+          # Clear Docker if present
+          docker system prune -af 2>/dev/null || true
+          docker volume prune -f 2>/dev/null || true
           
           echo "=== After cleanup ==="
           df -h
@@ -124,14 +140,14 @@ jobs:
           df -h
 
           # Process directories in smaller batches to manage disk usage
-          # Start with a smaller batch size to be more conservative with disk space
-          batch_size=20
+          # Use very small batch size to be extremely conservative with disk space
+          batch_size=10
           total_success=0
           total_failed=0
           
           # File counting for split commits
           files_in_current_batch=0
-          max_files_per_push=300
+          max_files_per_push=150
           push_count=1
           
           # Disable immediate exit on error for the sync loop to handle errors gracefully
@@ -203,25 +219,39 @@ jobs:
                 echo "✗ Failed to sync ${src_dir} (error code: ${rsync_exit_code})"
                 ((sync_failed++))
                 
-                # If disk space is the issue, try to free up space and continue
+                              # If disk space is the issue, try to free up space and continue
+              available_space=$(df . | tail -1 | awk '{print $4}')
+              if [ "$available_space" -lt 1000000 ]; then  # Less than 1GB
+                echo "Critical: Low disk space. Attempting emergency cleanup..."
+                sudo apt-get clean
+                sudo apt-get autoremove -y
+                docker system prune -af 2>/dev/null || true
+                docker volume prune -f 2>/dev/null || true
+                find /tmp -type f -delete 2>/dev/null || true
+                find /var/tmp -type f -delete 2>/dev/null || true
+                find /var/cache -type f -delete 2>/dev/null || true
+                sudo journalctl --vacuum-time=1d
+                
+                # Force memory cleanup
+                sudo sysctl -w vm.drop_caches=3
+                
+                # Check if we have enough space to continue
                 available_space=$(df . | tail -1 | awk '{print $4}')
-                if [ "$available_space" -lt 500000 ]; then  # Less than 500MB
-                  echo "Critical: Very low disk space. Attempting emergency cleanup..."
-                  sudo apt-get clean
-                  docker system prune -af 2>/dev/null || true
-                  find /tmp -type f -name "*.tmp" -delete 2>/dev/null || true
-                  find /var/tmp -type f -name "*.tmp" -delete 2>/dev/null || true
-                  
-                  # Check if we have enough space to continue
-                  available_space=$(df . | tail -1 | awk '{print $4}')
-                  if [ "$available_space" -lt 500000 ]; then
-                    echo "Error: Still insufficient disk space after cleanup. Cannot continue."
-                    exit 1
-                  fi
+                if [ "$available_space" -lt 800000 ]; then  # Less than 800MB
+                  echo "Error: Still insufficient disk space after cleanup. Cannot continue."
+                  exit 1
                 fi
+              fi
               fi
               
               echo "  Completed processing directory $(($j+1))/${#dirs[@]}: ${cat_name} (batch total: ${files_in_current_batch} files)"
+              
+              # Clean up source directory after successful sync to save space
+              if [ "${rsync_exit_code}" -eq 0 ] && [ -d "${src_dir}" ]; then
+                echo "  Cleaning up source directory to save disk space..."
+                rm -rf "${src_dir}" 2>/dev/null || true
+                echo "  Source directory cleaned: ${src_dir}"
+              fi
             done
             
             echo "Batch $((i/batch_size + 1)) summary: ${sync_success} successful, ${sync_failed} failed"
@@ -238,12 +268,19 @@ jobs:
             find . -name "*.tmp" -type f -delete 2>/dev/null || true
             find . -name "*.temp" -type f -delete 2>/dev/null || true
             
-            # If disk usage is getting high, trigger garbage collection
+            # More aggressive disk monitoring and cleanup
             available_space=$(df . | tail -1 | awk '{print $4}')
-            if [ "$available_space" -lt 1000000 ]; then  # Less than 1GB available
-              echo "Warning: Low disk space ($available_space KB available). Running cleanup..."
+            if [ "$available_space" -lt 2000000 ]; then  # Less than 2GB available
+              echo "Warning: Low disk space ($available_space KB available). Running proactive cleanup..."
               sudo apt-get clean
-              docker system prune -f 2>/dev/null || true
+              sudo apt-get autoremove -y
+              docker system prune -af 2>/dev/null || true
+              docker volume prune -f 2>/dev/null || true
+              find /tmp -type f -delete 2>/dev/null || true
+              find /var/tmp -type f -delete 2>/dev/null || true
+              sudo journalctl --vacuum-time=1d
+              sudo sysctl -w vm.drop_caches=3
+              echo "Cleanup completed. New available space: $(df . | tail -1 | awk '{print $4}') KB"
             fi
           done
           
