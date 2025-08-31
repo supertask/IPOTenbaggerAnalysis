@@ -78,6 +78,39 @@ jobs:
             exit 0
           fi
 
+          # Git configuration (共通設定)
+          cd mkc
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cd ..
+
+          # Function to commit and push changes
+          commit_and_push() {
+            local commit_msg="$1"
+            local file_count="$2"
+            
+            echo "=== Committing and pushing $file_count files ==="
+            cd mkc
+            
+            # Clean up unwanted files
+            find knowledge/edinet_db -name '.DS_Store' -type f -delete 2>/dev/null || true
+            find knowledge/edinet_db -name '*.tmp' -type f -delete 2>/dev/null || true
+            find knowledge/edinet_db -name '*.temp' -type f -delete 2>/dev/null || true
+
+            git add -A
+            if git diff --staged --quiet; then
+              echo "No changes to commit."
+              cd ..
+              return 0
+            fi
+
+            git commit -m "$commit_msg"
+            git push origin HEAD
+            echo "✅ Successfully pushed batch with $file_count files"
+            cd ..
+            return 0
+          }
+
           shopt -s nullglob
           # 直下の「フォルダ群」を列挙（ファイルは無視）
           dirs=("${SRC_BASE}"/*/)
@@ -95,6 +128,11 @@ jobs:
           batch_size=20
           total_success=0
           total_failed=0
+          
+          # File counting for split commits
+          files_in_current_batch=0
+          max_files_per_push=200
+          push_count=1
           
           # Disable immediate exit on error for the sync loop to handle errors gracefully
           set +e
@@ -116,8 +154,30 @@ jobs:
               dest_dir="${DEST_BASE}/${cat_name}"
               mkdir -p "${dest_dir}"
 
-              echo "Syncing ${src_dir} -> ${dest_dir} ($(($j+1))/${#dirs[@]})"
-              echo "  Source contents: $(ls -la "${src_dir}" 2>/dev/null | wc -l) items"
+              # Count files in source directory
+              dir_file_count=$(find "${src_dir}" -type f 2>/dev/null | wc -l || echo 0)
+              
+              echo "Syncing ${src_dir} -> ${dest_dir} ($(($j+1))/${#dirs[@]}) - ${dir_file_count} files"
+              echo "  Current batch total: $((files_in_current_batch + dir_file_count)) files"
+              
+              # Check if adding this directory would exceed the limit
+              if [ $((files_in_current_batch + dir_file_count)) -gt $max_files_per_push ] && [ $files_in_current_batch -gt 0 ]; then
+                echo "  📦 File limit approaching ($((files_in_current_batch + dir_file_count))>${max_files_per_push}). Pushing current batch..."
+                
+                # Commit and push current changes
+                if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+                  TAG_NAME="${GITHUB_REF#refs/tags/}"
+                  commit_msg="chore(sync): EDINET IPO reports batch ${push_count} from IPOTenbaggerAnalysis (tag ${TAG_NAME})"
+                else
+                  commit_msg="chore(sync): EDINET IPO reports batch ${push_count} from IPOTenbaggerAnalysis ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))"
+                fi
+                
+                commit_and_push "$commit_msg" "$files_in_current_batch"
+                
+                # Reset counters
+                files_in_current_batch=0
+                ((push_count++))
+              fi
               
               # 最適化されたrsyncオプション：圧縮、進捗表示、効率的な転送
               echo "  About to execute rsync command..."
@@ -137,6 +197,8 @@ jobs:
                 echo "✓ Successfully synced ${src_dir}"
                 echo "  Destination contents: $(ls -la "${dest_dir}" 2>/dev/null | wc -l) items"
                 ((sync_success++))
+                # Add to file count only if sync was successful
+                ((files_in_current_batch += dir_file_count))
               else
                 echo "✗ Failed to sync ${src_dir} (error code: ${rsync_exit_code})"
                 ((sync_failed++))
@@ -159,7 +221,7 @@ jobs:
                 fi
               fi
               
-              echo "  Completed processing directory $(($j+1))/${#dirs[@]}: ${cat_name}"
+              echo "  Completed processing directory $(($j+1))/${#dirs[@]}: ${cat_name} (batch total: ${files_in_current_batch} files)"
             done
             
             echo "Batch $((i/batch_size + 1)) summary: ${sync_success} successful, ${sync_failed} failed"
@@ -188,11 +250,25 @@ jobs:
           # Re-enable immediate exit on error after sync loop
           set -e
           
+          # Push any remaining files
+          if [ $files_in_current_batch -gt 0 ]; then
+            echo "=== Pushing final batch with ${files_in_current_batch} remaining files ==="
+            if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+              TAG_NAME="${GITHUB_REF#refs/tags/}"
+              commit_msg="chore(sync): EDINET IPO reports batch ${push_count} (final) from IPOTenbaggerAnalysis (tag ${TAG_NAME})"
+            else
+              commit_msg="chore(sync): EDINET IPO reports batch ${push_count} (final) from IPOTenbaggerAnalysis ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))"
+            fi
+            
+            commit_and_push "$commit_msg" "$files_in_current_batch"
+          fi
+
           # Final sync statistics
           echo "=== SYNC COMPLETE ==="
           echo "Total directories processed: ${#dirs[@]}"
           echo "Successfully synced: ${total_success}"
           echo "Failed to sync: ${total_failed}"
+          echo "Total push batches: ${push_count}"
           
           if [ "$total_failed" -gt 0 ]; then
             echo "⚠️  Warning: Some directories failed to sync. Check logs above for details."
@@ -204,7 +280,7 @@ jobs:
             echo "✅ All directories synced successfully!"
           fi
 
-      - name: Final cleanup before commit
+      - name: Final cleanup
         shell: bash
         run: |
           echo "=== Final disk status ==="
@@ -217,31 +293,3 @@ jobs:
           
           echo "=== After final cleanup ==="
           df -h
-
-      - name: Commit & Push to MillionareKnowledgeCenter
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd mkc
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # 念のため .DS_Store を一掃（同期範囲外に紛れた場合の保険）
-          find knowledge/edinet_db -name '.DS_Store' -type f -delete || true
-          find knowledge/edinet_db -name '*.tmp' -type f -delete || true
-          find knowledge/edinet_db -name '*.temp' -type f -delete || true
-
-          git add -A
-          if git diff --staged --quiet; then
-            echo "No changes to commit."
-            exit 0
-          fi
-
-          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
-            TAG_NAME="${GITHUB_REF#refs/tags/}"
-            git commit -m "chore(sync): EDINET IPO reports from IPOTenbaggerAnalysis (tag ${TAG_NAME})"
-          else
-            git commit -m "chore(sync): EDINET IPO reports from IPOTenbaggerAnalysis ($(date -u +'%Y-%m-%dT%H:%M:%SZ'))"
-          fi
-
-          git push origin HEAD
