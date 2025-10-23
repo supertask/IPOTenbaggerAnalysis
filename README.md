@@ -7,7 +7,7 @@ IPO関連の各種データを収集・分析し、可視化するツール群�
 
 ![IPO Tenbagar Analysis Top](./doc/images/IPO_tenbagger_analysis.png)
 
-[Website screenshots](./doc/WEBSITE_SCREENSHOTS.md)
+[More of website screenshots](./doc/WEBSITE_SCREENSHOTS.md)
 
 
 ## セットアップ
