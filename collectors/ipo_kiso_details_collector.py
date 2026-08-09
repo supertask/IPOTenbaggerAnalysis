@@ -13,6 +13,7 @@ from tqdm import tqdm
 from requests.exceptions import HTTPError
 
 from collectors.settings import GeneralSettings, KisoScraperSettings
+from collectors.file_utils import sanitize_filename
 
 class IPOKisoDetailsCollector:
     def __init__(self):
@@ -81,7 +82,7 @@ class IPOKisoDetailsCollector:
     def save_html_to_cache(self, html, year, company_code, company_name):
         """ HTMLを指定されたパスに保存する """
         # ファイル名に使用できない文字を削除
-        sanitized_name = re.sub(r'[<>:"/\\|?*]', '_', company_name)
+        sanitized_name = sanitize_filename(company_name)
         cache_dir = f"{self.kiso_scraper_settings.cache_dir}/{year}"
         os.makedirs(cache_dir, exist_ok=True)
         file_path = os.path.join(cache_dir, f"{company_code}_{sanitized_name}.html")
@@ -93,7 +94,7 @@ class IPOKisoDetailsCollector:
 
     def load_html_from_cache(self, year, company_code, company_name):
         """ キャッシュされたHTMLを読み込む """
-        sanitized_name = re.sub(r'[<>:"/\\|?*]', '_', company_name)
+        sanitized_name = sanitize_filename(company_name)
         file_path = f"{self.kiso_scraper_settings.cache_dir}/{year}/{company_code}_{sanitized_name}.html"
         
         if os.path.exists(file_path):

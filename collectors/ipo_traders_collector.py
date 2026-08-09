@@ -6,6 +6,7 @@ import csv
 import pandas as pd 
 from collectors.settings import GeneralSettings, TradersScraperSettings
 from collectors.ipo_analyzer_core import IPOAnalyzerCore
+from collectors.file_utils import sanitize_filename
 import traceback
 from tqdm import tqdm
 
@@ -19,7 +20,7 @@ class IPOTradersAnalyzer(IPOAnalyzerCore):
 
     def fetch_traders_page(self, code, year, company_name, cache_dir):
         url = f"{self.base_url}/{code}"
-        cache_path = os.path.join(cache_dir, f"{year}/{code}_{company_name}.html")
+        cache_path = os.path.join(cache_dir, f"{year}/{code}_{sanitize_filename(company_name)}.html")
     
         if not os.path.exists(os.path.dirname(cache_path)):
             os.makedirs(os.path.dirname(cache_path))

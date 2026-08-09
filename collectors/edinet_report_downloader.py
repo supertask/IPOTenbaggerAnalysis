@@ -11,6 +11,8 @@ import chardet
 import shutil
 from datetime import datetime, timedelta
 
+from collectors.file_utils import sanitize_filename
+
 # Suppress the InsecureRequestWarning
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -461,7 +463,7 @@ class EdinetReportDownloader:
             end_date_str = current_date.strftime('%Y-%m-%d')
 
             # 有価証券届出書を保存（事業の内容が書かれてない場合が多いかも？？）
-            company_folder = f"{self.NEW_REPORTS_DIR}/{company_code4}_{company_name}/securities_registration_statement"
+            company_folder = f"{self.NEW_REPORTS_DIR}/{company_code4}_{sanitize_filename(company_name)}/securities_registration_statement"
             self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REGISTRATION, company_folder, '有価証券届出書', company_code4, company_name, start_date_str, end_date_str)
             
             # 四半期報告書を保存
