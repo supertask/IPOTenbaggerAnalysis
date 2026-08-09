@@ -1,8 +1,12 @@
 requests
-langchain
-langchain-community
-langchain_groq
-playwright_stealth
+# langchain 1.x では langchain.chains.LLMChain / ConversationBufferWindowMemory が削除されている
+langchain<1.0
+langchain-community<0.4
+langchain_groq<1.0
+# playwright_stealth 2.x では stealth_sync が削除されている
+playwright_stealth<2
+# playwright_stealth 1.x が pkg_resources を使うため（setuptools 81 で削除された）
+setuptools<81
 flask
 pandas
 matplotlib
