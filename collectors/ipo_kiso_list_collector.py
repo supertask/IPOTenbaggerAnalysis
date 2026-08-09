@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import csv
 import re
 from collectors.settings import GeneralSettings, KisoScraperSettings
+from collectors.http_utils import get_with_retry
 
 class IPOKisoListCollector:
     def __init__(self):
@@ -71,7 +72,7 @@ class IPOKisoListCollector:
     def run(self):
         for year in self.years:
             url = f"{self.base_url}/company/" if year == self.kiso_scraper_settings.this_year else f"{self.base_url}/company/{year}.html"
-            response = requests.get(url)
+            response = get_with_retry(url)
             html = response.content
             soup = BeautifulSoup(html, 'html.parser')
             if year >= 2018:

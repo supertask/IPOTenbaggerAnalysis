@@ -14,6 +14,7 @@ from requests.exceptions import HTTPError
 
 from collectors.settings import GeneralSettings, KisoScraperSettings
 from collectors.file_utils import sanitize_filename
+from collectors.http_utils import get_with_retry
 
 class IPOKisoDetailsCollector:
     def __init__(self):
@@ -111,7 +112,7 @@ class IPOKisoDetailsCollector:
             html = cached_html
         else:
             url = f'{self.base_url}{relative_url}'
-            response = requests.get(url)
+            response = get_with_retry(url)
             html = response.content.decode('utf-8')  # bytesからstrへ変換
             
             # キャッシュとして保存
@@ -399,7 +400,12 @@ class IPOKisoDetailsCollector:
                         relative_url = row[2]
 
                         company_name, code, ipo_info_url = row
-                        company_data = self.scrape_company_data(relative_url, year, code, company_name)
+                        try:
+                            company_data = self.scrape_company_data(relative_url, year, code, company_name)
+                        except requests.exceptions.RequestException as e:
+                            # 再試行しても繋がらない場合は、その企業だけスキップして収集を続ける
+                            print(f"ERROR: Failed to fetch page for {company_name} ({code}): {e}")
+                            continue
                         match_market_name = re.search(market_name_re, company_data['企業名']) # 市場の名前も企業名に入っている
                         market_name = match_market_name.group(1) if match_market_name else ""
                         company_data["企業名"] = company_name #読み込んだCSVに書かれた企業名で置き換え

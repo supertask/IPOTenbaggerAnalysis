@@ -7,6 +7,7 @@ import pandas as pd
 from collectors.settings import GeneralSettings, TradersScraperSettings
 from collectors.ipo_analyzer_core import IPOAnalyzerCore
 from collectors.file_utils import sanitize_filename
+from collectors.http_utils import get_with_retry
 import traceback
 from tqdm import tqdm
 
@@ -26,7 +27,11 @@ class IPOTradersAnalyzer(IPOAnalyzerCore):
             os.makedirs(os.path.dirname(cache_path))
     
         if not os.path.exists(cache_path):
-            response = requests.get(url)
+            try:
+                response = get_with_retry(url)
+            except requests.exceptions.RequestException as e:
+                # 再試行しても繋がらない場合は、その企業だけスキップして収集を続ける
+                raise ValueError(f"Failed to fetch page for {company_name} ({code}): {e}")
             html = response.content.decode('utf-8')  # bytesからstrへ変換
             if response.status_code == 200:
                 with open(cache_path, 'w', encoding='utf-8') as file:
