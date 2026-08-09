@@ -368,8 +368,10 @@ def get_securities_reports(company_code):
         
         if matching_dirs:
             securities_registration_statement_dir = matching_dirs[0]
+            # quarterly_reportsが無いのでsecurities_registration_statementを報告書ディレクトリとして使う
+            quarterly_reports_dir = securities_registration_statement_dir
             print(f"企業コードで一致するsecurities_registration_statementディレクトリが見つかりました: {securities_registration_statement_dir}")
-            
+
             # ディレクトリ名から企業名を抽出
             if not company_name:
                 dir_name = os.path.basename(os.path.dirname(securities_registration_statement_dir))
