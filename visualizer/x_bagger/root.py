@@ -3,17 +3,60 @@ import pandas as pd
 import json
 from pathlib import Path
 
+from visualizer import db as _index_db
+
 # プロジェクトのルートディレクトリを取得
 project_root = Path(__file__).parent.parent.parent
 data_dir = project_root / "data" / "output" / "combiner" / "x_bagger_probability"
 
+
+def _load_conditions_from_db():
+    conn = _index_db.get_conn()
+    if conn is None:
+        return None
+    rows = conn.execute(
+        "SELECT condition_index, category, condition_text FROM x_bagger_conditions ORDER BY condition_index"
+    ).fetchall()
+    if not rows:
+        return None
+    return pd.DataFrame([
+        {"条件index": r["condition_index"], "対象の条件": r["category"], "条件": r["condition_text"]}
+        for r in rows
+    ])
+
+
+def _load_probability_from_db():
+    conn = _index_db.get_conn()
+    if conn is None:
+        return None
+    rows = conn.execute(
+        "SELECT row_json FROM x_bagger_probability ORDER BY id"
+    ).fetchall()
+    if not rows:
+        return None
+    records = [json.loads(r["row_json"]) for r in rows]
+    df = pd.DataFrame.from_records(records)
+    # DB stored every column as a string; restore numeric dtypes so downstream
+    # comparisons like df['X倍'] == 5 behave the same as the raw CSV path.
+    for col in df.columns:
+        original = df[col]
+        converted = pd.to_numeric(original, errors="coerce")
+        # only replace if no new NaN was introduced (i.e., all non-null values parsed)
+        if (converted.isna() & original.notna()).sum() == 0 and converted.notna().sum() > 0:
+            df[col] = converted
+    return df
+
+
 def load_conditions():
     """条件データを読み込む"""
+    db_df = _load_conditions_from_db()
+    if db_df is not None:
+        return db_df, None, 200
     try:
         conditions_file = data_dir / "x_bagger_conditions.tsv"
         if not conditions_file.exists():
             return None, "条件ファイルが見つかりません", 404
-        
+
         df = pd.read_csv(conditions_file, sep='\t')
         return df, None, 200
     except Exception as e:
@@ -21,11 +64,14 @@ def load_conditions():
 
 def load_probability_data():
     """確率データを読み込む"""
+    db_df = _load_probability_from_db()
+    if db_df is not None:
+        return db_df, None, 200
     try:
         probability_file = data_dir / "x_bagger_probability.tsv"
         if not probability_file.exists():
             return None, "確率ファイルが見つかりません", 404
-        
+
         df = pd.read_csv(probability_file, sep='\t')
         return df, None, 200
     except Exception as e:
