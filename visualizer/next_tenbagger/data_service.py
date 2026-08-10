@@ -15,6 +15,7 @@ from .config import (
     METRIC_ALIASES,
     RECENT_IPO_COMPANIES_PATH
 )
+from visualizer import db as _index_db
 
 # IPO_REPORTS_DIRを追加
 IPO_REPORTS_DIR = Path(__file__).parent.parent.parent / 'data/output/edinet_db/ipo_reports'
@@ -51,8 +52,16 @@ class DataService:
     @staticmethod
     def get_company_code_name_map() -> Dict[str, str]:
         """すべての企業コードと名前のマッピングを取得"""
+        conn = _index_db.get_conn()
+        if conn is not None:
+            rows = conn.execute(
+                "SELECT code, name FROM companies "
+                "WHERE company_dir_new IS NOT NULL OR company_dir_old IS NOT NULL"
+            ).fetchall()
+            return {row["code"]: row["name"] for row in rows}
+
         company_map = {}
-        
+
         try:
             # IPO_REPORTS_NEW_DIRからディレクトリ名を取得
             if os.path.exists(IPO_REPORTS_NEW_DIR):
@@ -87,8 +96,23 @@ class DataService:
     @staticmethod
     def get_recent_ipo_companies() -> List[Dict[str, Any]]:
         """直近3年でIPOした企業のリストを取得"""
+        conn = _index_db.get_conn()
+        if conn is not None:
+            cutoff = (datetime.now() - timedelta(days=3 * 365)).strftime("%Y-%m-%d")
+            rows = conn.execute(
+                """SELECT code, name, ipo_date FROM companies
+                   WHERE ipo_date IS NOT NULL AND ipo_date >= ?
+                     AND (company_dir_new IS NOT NULL OR company_dir_old IS NOT NULL)
+                   ORDER BY ipo_date DESC""",
+                (cutoff,),
+            ).fetchall()
+            return [
+                {"code": row["code"], "name": row["name"], "ipo_date": row["ipo_date"]}
+                for row in rows
+            ]
+
         companies = []
-        
+
         try:
             # 直近3年のIPO企業リストを読み込む
             if os.path.exists(RECENT_IPO_COMPANIES_PATH):
@@ -137,6 +161,19 @@ class DataService:
     @staticmethod
     def get_competitors(company_code: str) -> List[Dict[str, str]]:
         """競合他社のリストを取得"""
+        conn = _index_db.get_conn()
+        if conn is not None:
+            rows = conn.execute(
+                """SELECT competitor_code, competitor_name FROM competitors
+                   WHERE company_code = ? ORDER BY rank""",
+                (str(company_code),),
+            ).fetchall()
+            return [
+                {"code": row["competitor_code"], "name": row["competitor_name"]}
+                for row in rows
+                if row["competitor_code"]
+            ]
+
         comparison_files = sorted(glob.glob(f"{COMPARISON_DIR}/companies_*.tsv"), reverse=True)
         
         if not comparison_files:
@@ -175,14 +212,108 @@ class DataService:
             return []
 
     @staticmethod
+    def _get_company_data_from_db(company_code: str) -> Optional[pd.DataFrame]:
+        """financial_metrics から DataFrame を組み立てる。DB未使用なら None。
+
+        raw TSV 経路と同じ選択ロジックを再現:
+          - securities_registration が 5 年分の NetSales (Prior1-5) を持つ →
+            annual と併合して返す
+          - 5 年分無くて annual も無い → securities_registration を単体で返す
+          - 5 年分無くて annual あり → annual のみ返す（securities は除外）
+        """
+        conn = _index_db.get_conn()
+        if conn is None:
+            return None
+        code = str(company_code)
+
+        has_annual = conn.execute(
+            "SELECT 1 FROM financial_metrics WHERE company_code = ? AND report_type = 'annual' LIMIT 1",
+            (code,),
+        ).fetchone() is not None
+        has_securities = conn.execute(
+            "SELECT 1 FROM financial_metrics WHERE company_code = ? AND report_type = 'securities_registration' LIMIT 1",
+            (code,),
+        ).fetchone() is not None
+        if not has_annual and not has_securities:
+            return None
+
+        has_five_years = False
+        if has_securities:
+            row = conn.execute(
+                """SELECT COUNT(DISTINCT context_id) AS n
+                   FROM financial_metrics
+                   WHERE company_code = ?
+                     AND report_type = 'securities_registration'
+                     AND element_id = 'jpcrp_cor:NetSalesSummaryOfBusinessResults'
+                     AND (context_id LIKE '%Prior1YearDuration_NonConsolidatedMember%'
+                       OR context_id LIKE '%Prior2YearDuration_NonConsolidatedMember%'
+                       OR context_id LIKE '%Prior3YearDuration_NonConsolidatedMember%'
+                       OR context_id LIKE '%Prior4YearDuration_NonConsolidatedMember%'
+                       OR context_id LIKE '%Prior5YearDuration_NonConsolidatedMember%')""",
+                (code,),
+            ).fetchone()
+            has_five_years = row and row["n"] >= 5
+
+        include_securities = has_securities and (has_five_years or not has_annual)
+        types = ["annual"] if has_annual else []
+        if include_securities:
+            types.append("securities_registration")
+        placeholders = ",".join("?" * len(types))
+        rows = conn.execute(
+            f"""SELECT report_type, report_date, element_id, element_name, context_id,
+                       relative_period, consolidation, period_type, unit_id, unit, value
+                FROM financial_metrics
+                WHERE company_code = ? AND report_type IN ({placeholders})
+                ORDER BY report_date, id""",
+            (code, *types),
+        ).fetchall()
+        if not rows:
+            return None
+
+        latest_sr = None
+        if include_securities:
+            row = conn.execute(
+                """SELECT report_date FROM report_files
+                   WHERE company_code = ? AND report_type = 'securities_registration'
+                   ORDER BY report_date DESC LIMIT 1""",
+                (code,),
+            ).fetchone()
+            latest_sr = row["report_date"] if row else None
+
+        records = []
+        for r in rows:
+            records.append({
+                "要素ID": r["element_id"],
+                "項目名": r["element_name"],
+                "コンテキストID": r["context_id"],
+                "相対年度": r["relative_period"],
+                "連結・個別": r["consolidation"],
+                "期間・時点": r["period_type"],
+                "ユニットID": r["unit_id"],
+                "単位": r["unit"],
+                "値": r["value"],
+                "annual_report_date": r["report_date"] if r["report_type"] == "annual" else None,
+                "securities_registration_date": latest_sr if r["report_type"] == "securities_registration" else None,
+            })
+        return pd.DataFrame.from_records(records)
+
+    @staticmethod
     def get_company_data(company_code: str) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
         """企業の財務データを取得"""
+        db_df = DataService._get_company_data_from_db(company_code)
+        if db_df is not None:
+            return db_df, None
+        conn = _index_db.get_conn()
+        if conn is not None:
+            # DB は使えるが該当企業のデータが無い
+            return None, f"財務データが見つかりません: {company_code}"
+
         try:
             company_map = DataService.get_company_code_name_map()
-            
+
             if company_code not in company_map:
                 return None, "企業が見つかりません"
-            
+
             company_name = company_map[company_code]
             company_dir = f"{IPO_REPORTS_NEW_DIR}/{company_code}_{company_name}"
             
@@ -799,6 +930,17 @@ class DataService:
     @staticmethod
     def get_officers_info(company_code: str) -> Optional[str]:
         """役員情報を取得"""
+        conn = _index_db.get_conn()
+        if conn is not None:
+            row = conn.execute(
+                "SELECT latest_html FROM officers_info WHERE company_code = ?",
+                (str(company_code),),
+            ).fetchone()
+            if row is None:
+                return None
+            html = row["latest_html"]
+            return html.replace("\n", "<br>") if html else None
+
         try:
             company_map = DataService.get_company_code_name_map()
             
@@ -889,6 +1031,17 @@ class DataService:
     @staticmethod
     def get_business_description(company_code: str) -> Optional[str]:
         """事業の内容を取得"""
+        conn = _index_db.get_conn()
+        if conn is not None:
+            row = conn.execute(
+                "SELECT latest_html FROM business_descriptions WHERE company_code = ?",
+                (str(company_code),),
+            ).fetchone()
+            if row is None:
+                return None
+            html = row["latest_html"]
+            return html.replace("\n", "<br>") if html else None
+
         try:
             company_map = DataService.get_company_code_name_map()
             

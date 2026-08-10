@@ -20,6 +20,7 @@ from .config import (
 )
 from .data_service import DataService
 from .chart_service import ChartService
+from visualizer import db as _index_db
 
 # ロギングの設定
 logging.basicConfig(
@@ -125,8 +126,48 @@ def get_company_name(row):
         company_name = str(company_name)
     return company_name
 
+def _load_companies_from_db() -> Optional[list]:
+    """DBから直近3年IPO企業をロード。DB無しなら None を返す。"""
+    conn = _index_db.get_conn()
+    if conn is None:
+        return None
+    current_year = datetime.now().year
+    rows = conn.execute(
+        """SELECT code, name, ipo_year, president_share, market_cap, industry,
+                  all_companies_json
+           FROM companies
+           WHERE (company_dir_new IS NOT NULL OR company_dir_old IS NOT NULL)
+             AND ipo_year IS NOT NULL
+             AND ? - ipo_year <= 3
+           ORDER BY ipo_year DESC""",
+        (current_year,),
+    ).fetchall()
+    companies = []
+    for row in rows:
+        extra = {}
+        if row["all_companies_json"]:
+            try:
+                extra = json.loads(row["all_companies_json"])
+            except (TypeError, ValueError):
+                extra = {}
+        companies.append({
+            "code": row["code"],
+            "name": row["name"],
+            "president_share": row["president_share"] if row["president_share"] is not None else "不明",
+            "attention_rate": extra.get("注目度", "不明"),
+            "market_cap": row["market_cap"] if row["market_cap"] is not None else None,
+            "years_since_ipo": extra.get("上場までの年数", "不明"),
+            "industry": row["industry"] if row["industry"] is not None else extra.get("業種", "不明"),
+            "ipo_year": row["ipo_year"],
+        })
+    return companies
+
+
 def load_companies_data() -> Tuple[list, bool]:
     """企業データの読み込み"""
+    db_result = _load_companies_from_db()
+    if db_result is not None:
+        return db_result, True
     try:
         # all_companies.tsvファイルを使用
         if os.path.exists(ALL_COMPANIES_PATH):
@@ -333,20 +374,43 @@ def company_view(company_code):
 @handle_errors
 def get_securities_reports(company_code):
     """四半期報告書の一覧を取得するAPI"""
+    conn = _index_db.get_conn()
+    if conn is not None:
+        rows = conn.execute(
+            """SELECT report_type, report_date, file_path FROM report_files
+               WHERE company_code = ?
+                 AND report_type IN ('quarterly', 'securities_registration')
+               ORDER BY CASE report_type
+                   WHEN 'quarterly' THEN 0 ELSE 1 END,
+                 report_date""",
+            (str(company_code),),
+        ).fetchall()
+        if rows:
+            reports = [
+                {
+                    "file": str(_index_db.BASE_DIR / r["file_path"]),
+                    "date": r["report_date"],
+                }
+                for r in rows
+            ]
+            return {"reports": reports}, None, 200
+        # DB is available but this company has no reports
+        return {"reports": []}, "四半期報告書ファイルが見つかりません", 404
+
     companies, success = load_companies_data()
     if not success:
         return None, "企業データの読み込みに失敗しました", 500
-    
+
     # 企業コードで検索
     company = next((c for c in companies if c['code'] == company_code), None)
     company_name = None
-    
+
     if company:
         company_name = company['name']
         print(f"企業コード {company_code} の企業名: {company_name}")
     else:
         print(f"企業コード {company_code} が見つかりません。ディレクトリ検索を試みます。")
-    
+
     # 最初から企業コードだけで検索（最も優先度高）
     code_pattern = f"{IPO_REPORTS_NEW_DIR}/{company_code}_*/quarterly_reports"
     matching_dirs = glob.glob(code_pattern)
