@@ -18,6 +18,7 @@ from .config import (
 )
 from .data_service import DataService
 from .chart_service import ChartService
+from visualizer import db as _index_db
 
 # ロギングの設定
 logging.basicConfig(
@@ -46,8 +47,37 @@ def handle_errors(func: Callable) -> Callable:
             return str(e), 500
     return wrapper
 
+def _load_companies_from_db() -> Optional[list]:
+    """DBから past_tenbagger 用の企業一覧を取得。DB無しなら None を返す。"""
+    conn = _index_db.get_conn()
+    if conn is None:
+        return None
+    rows = conn.execute(
+        """SELECT code, name, current_multiple, max_multiple,
+                  president_share, market_cap
+           FROM companies
+           WHERE current_multiple IS NOT NULL
+           ORDER BY current_multiple DESC"""
+    ).fetchall()
+    return [
+        {
+            "code": row["code"],
+            "name": row["name"],
+            "current_multiple": row["current_multiple"],
+            "max_multiple": row["max_multiple"],
+            "president_share": row["president_share"],
+            "market_cap": row["market_cap"],
+        }
+        for row in rows
+    ]
+
+
 def load_companies_data() -> Tuple[list, bool]:
     """企業データの読み込み"""
+    db_result = _load_companies_from_db()
+    if db_result is not None:
+        logger.info(f"企業を現在何倍株で並べ替えました。企業数: {len(db_result)}")
+        return db_result, True
     try:
         #logger.info(f"ALL_COMPANIES_PATH: {ALL_COMPANIES_PATH}")
         if os.path.exists(ALL_COMPANIES_PATH):
@@ -272,20 +302,40 @@ def company_view(company_code):
 
 def get_securities_reports(company_code):
     """有価証券報告書の一覧を取得するAPI"""
+    conn = _index_db.get_conn()
+    if conn is not None:
+        rows = conn.execute(
+            """SELECT report_date, file_path FROM report_files
+               WHERE company_code = ? AND report_type = 'annual'
+               ORDER BY report_date""",
+            (str(company_code),),
+        ).fetchall()
+        if rows:
+            reports = [
+                {
+                    "file": Path(r["file_path"]).name,
+                    "date": r["report_date"],
+                    "path": str(_index_db.BASE_DIR / r["file_path"]),
+                }
+                for r in rows
+            ]
+            return {"reports": reports}, 200
+        return {"reports": [], "message": "比較可能な有価証券報告書が見つかりません。"}, 200
+
     companies, success = load_companies_data()
     if not success:
         return {"error": "企業データの読み込みに失敗しました"}, 500
-    
+
     # 企業コードで検索
     company = next((c for c in companies if c['code'] == company_code), None)
     company_name = None
-    
+
     if company:
         company_name = company['name']
         print(f"企業コード {company_code} の企業名: {company_name}")
     else:
         print(f"企業コード {company_code} が見つかりません。ディレクトリ検索を試みます。")
-    
+
     # 最初から企業コードだけで検索（最も優先度高）
     code_pattern = f"{IPO_REPORTS_DIR}/{company_code}_*/annual_securities_reports"
     matching_dirs = glob.glob(code_pattern)

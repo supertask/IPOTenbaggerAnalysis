@@ -12,6 +12,7 @@ from .config import (
     COMPARISON_DIR,
     METRIC_ALIASES
 )
+from visualizer import db as _index_db
 
 # カラーフォーマッターの設定
 class ColoredFormatter(logging.Formatter):
@@ -45,24 +46,44 @@ class DataService:
     @staticmethod
     def get_company_code_name_map() -> Dict[str, str]:
         """すべての企業コードと名前のマッピングを取得"""
+        conn = _index_db.get_conn()
+        if conn is not None:
+            rows = conn.execute(
+                "SELECT code, name FROM companies WHERE company_dir_old IS NOT NULL"
+            ).fetchall()
+            return {row["code"]: row["name"] for row in rows}
+
         company_map = {}
-        
+
         try:
             for company_dir in glob.glob(f"{IPO_REPORTS_DIR}/*"):
                 dir_name = os.path.basename(company_dir)
                 if '_' in dir_name:
                     code, name = dir_name.split('_', 1)
                     company_map[code] = name
-            
+
             logger.info(f"企業数: {len(company_map)}")
         except Exception as e:
             logger.error(f"企業コード・名前マッピングの取得中にエラー: {e}", exc_info=True)
-        
+
         return company_map
 
     @staticmethod
     def get_competitors(company_code: str) -> List[Dict[str, str]]:
         """指定された企業コードの競合企業リストを取得"""
+        conn = _index_db.get_conn()
+        if conn is not None:
+            rows = conn.execute(
+                """SELECT competitor_code, competitor_name FROM competitors
+                   WHERE company_code = ? ORDER BY rank""",
+                (str(company_code),),
+            ).fetchall()
+            return [
+                {"code": row["competitor_code"], "name": row["competitor_name"]}
+                for row in rows
+                if row["competitor_code"]
+            ]
+
         comparison_files = sorted(glob.glob(f"{COMPARISON_DIR}/companies_*.tsv"), reverse=True)
         
         if not comparison_files:
@@ -88,8 +109,50 @@ class DataService:
             return []
 
     @staticmethod
+    def _get_company_data_from_db(company_code: str) -> Optional[pd.DataFrame]:
+        """financial_metrics から DataFrame を組み立てる。DB未使用なら None。"""
+        conn = _index_db.get_conn()
+        if conn is None:
+            return None
+        rows = conn.execute(
+            """SELECT report_date, element_id, element_name, context_id,
+                      relative_period, consolidation, period_type, unit_id, unit, value
+               FROM financial_metrics
+               WHERE company_code = ? AND report_type = 'annual'
+               ORDER BY report_date, id""",
+            (str(company_code),),
+        ).fetchall()
+        if not rows:
+            return None
+        records = [
+            {
+                "要素ID": r["element_id"],
+                "項目名": r["element_name"],
+                "コンテキストID": r["context_id"],
+                "相対年度": r["relative_period"],
+                "連結・個別": r["consolidation"],
+                "期間・時点": r["period_type"],
+                "ユニットID": r["unit_id"],
+                "単位": r["unit"],
+                "値": r["value"],
+                # past_tenbagger の _extract_single_metric がファイル名先頭 4 文字を
+                # 年度として使うため、report_date 頭 4 文字で同じキーを合成する
+                "年度": r["report_date"][:4] if r["report_date"] else None,
+            }
+            for r in rows
+        ]
+        return pd.DataFrame.from_records(records)
+
+    @staticmethod
     def get_company_data(company_code: str) -> Tuple[Optional[pd.DataFrame], Optional[str]]:
         """指定された企業コードの財務データを取得"""
+        db_df = DataService._get_company_data_from_db(company_code)
+        if db_df is not None:
+            return db_df, None
+        conn = _index_db.get_conn()
+        if conn is not None:
+            return None, "有価証券報告書が見つかりません"
+
         company_map = DataService.get_company_code_name_map()
         
         if company_code not in company_map:
@@ -456,6 +519,17 @@ class DataService:
     @staticmethod
     def get_officers_info(company_code: str) -> Optional[str]:
         """指定された企業コードの役員情報を取得"""
+        conn = _index_db.get_conn()
+        if conn is not None:
+            row = conn.execute(
+                "SELECT oldest_html FROM officers_info WHERE company_code = ?",
+                (str(company_code),),
+            ).fetchone()
+            if row is None:
+                return None
+            html = row["oldest_html"]
+            return html.replace("\n", "<br>") if html else None
+
         company_map = DataService.get_company_code_name_map()
         
         if company_code not in company_map:
@@ -507,6 +581,17 @@ class DataService:
     @staticmethod
     def get_business_description(company_code: str) -> Optional[str]:
         """指定された企業コードの事業の内容を取得"""
+        conn = _index_db.get_conn()
+        if conn is not None:
+            row = conn.execute(
+                "SELECT oldest_html FROM business_descriptions WHERE company_code = ?",
+                (str(company_code),),
+            ).fetchone()
+            if row is None:
+                return None
+            html = row["oldest_html"]
+            return html.replace("\n", "<br>") if html else None
+
         company_map = DataService.get_company_code_name_map()
         
         if company_code not in company_map:
