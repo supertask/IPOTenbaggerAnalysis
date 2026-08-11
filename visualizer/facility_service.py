@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FACILITY_TSV = os.path.join(
     BASE_DIR, "data", "output", "facilities", "facility_counts.tsv")
+CAPEX_TSV = os.path.join(BASE_DIR, "data", "output", "facilities", "capex.tsv")
 
 SALES_IDS = ("jpcrp_cor:NetSalesSummaryOfBusinessResults",
              "jpcrp_cor:RevenueIFRSSummaryOfBusinessResults")
@@ -68,6 +69,81 @@ def _load() -> Dict[str, Dict[str, dict]]:
 
     _cache, _cache_mtime = data, mtime
     return data
+
+
+_capex_cache: Optional[Dict[str, Dict[str, float]]] = None
+_capex_mtime: Optional[float] = None
+# 「設備の新設計画」に書かれた1店舗あたりの投資予定額。_load_capex が埋める
+_planned_cache: Dict[str, dict] = {}
+
+
+def _load_capex() -> Dict[str, Dict[str, float]]:
+    """{銘柄コード: {報告日: 設備投資額（百万円）}}"""
+    global _capex_cache, _capex_mtime
+    if not os.path.exists(CAPEX_TSV):
+        return {}
+    mtime = os.path.getmtime(CAPEX_TSV)
+    if _capex_cache is not None and _capex_mtime == mtime:
+        return _capex_cache
+
+    data: Dict[str, Dict[str, float]] = {}
+    planned: Dict[str, dict] = {}
+    try:
+        with open(CAPEX_TSV, encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f, delimiter="\t"):
+                amount = _num(row.get("設備投資額_百万円"))
+                if amount is not None:
+                    data.setdefault(row["コード"], {})[row["報告日"]] = amount
+                per_store = _num(row.get("計画_1店舗あたり_百万円"))
+                if per_store:
+                    # 新しい報告日のものを残す
+                    current = planned.get(row["コード"])
+                    if current is None or row["報告日"] > current["date"]:
+                        planned[row["コード"]] = {
+                            "date": row["報告日"],
+                            "per_store": per_store,
+                            "total": _num(row.get("計画_投資額_百万円")),
+                            "stores": _num(row.get("計画_店舗数")),
+                        }
+    except OSError as e:
+        logger.warning("設備投資額を読めませんでした: %s", e)
+        return {}
+    _planned_cache.clear()
+    _planned_cache.update(planned)
+
+    _capex_cache, _capex_mtime = data, mtime
+    return data
+
+
+def _opening_cost(code: str, points: List[dict]) -> Optional[dict]:
+    """1拠点あたりの出店額。設備投資額 ÷ その期に増えた拠点数
+
+    拠点が減った期や、増加が無い期は計算できない。設備投資には本社や
+    システムへの投資も含まれるので、出店だけの費用ではない点に注意。
+    """
+    capex = _load_capex().get(code) or {}
+    if len(points) < 2 or not capex:
+        return None
+
+    samples = []
+    for previous, current in zip(points, points[1:]):
+        added = current["count"] - previous["count"]
+        amount = capex.get(current["date"])
+        if amount is None or added <= 0:
+            continue
+        samples.append({
+            "date": current["date"],
+            "added": added,
+            "capex": amount,
+            "per_new": amount / added,
+        })
+    if not samples:
+        return None
+
+    values = sorted(s["per_new"] for s in samples)
+    middle = (values[len(values) // 2] if len(values) % 2
+              else (values[len(values) // 2 - 1] + values[len(values) // 2]) / 2)
+    return {"samples": samples[-5:], "median": middle, "count": len(samples)}
 
 
 def _financials(codes) -> Dict[str, Dict[str, Dict[str, float]]]:
@@ -169,9 +245,23 @@ def get_facility_view(company_code, competitors: Optional[List[dict]] = None
         if middle > 0:
             ratio = own["latest"]["profit_per"] / middle
 
+    # 出店単価。安く出せているかを見る材料
+    _load_capex()
+    opening = _opening_cost(code, own["points"])
+    planned = _planned_cache.get(code)
+    peer_openings = []
+    for peer in peers:
+        series = _series(peer["code"], data[peer["code"]], financials)
+        cost = _opening_cost(peer["code"], series["points"]) if series else None
+        if cost:
+            peer_openings.append({"name": peer["name"], "median": cost["median"]})
+
     return {
         "own": own,
         "peers": sorted(peers, key=lambda p: -(p["latest"]["profit_per"] or 0)),
         "ratio_to_peers": ratio,
         "has_series": len(own["points"]) >= 2,
+        "opening_cost": opening,
+        "planned_cost": planned,
+        "peer_opening_costs": sorted(peer_openings, key=lambda p: p["median"]),
     }

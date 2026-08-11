@@ -44,6 +44,53 @@
         </div>
         {% endif %}
 
+        {% if facility.planned_cost %}
+        <div class="alert alert-light border py-2 px-3 mb-3">
+            <strong>出店計画</strong>
+            {{ '{:,.0f}'.format(facility.planned_cost.total) }}百万円で
+            {{ '{:,.0f}'.format(facility.planned_cost.stores) }}店舗
+            → <strong>1店舗あたり {{ '%.0f'|format(facility.planned_cost.per_store) }}百万円</strong>
+            <span class="text-muted small">（{{ facility.planned_cost.date[:7] }}の有報「設備の新設、除却等の計画」より）</span>
+        </div>
+        {% endif %}
+
+        {% if facility.opening_cost %}
+        <div class="mb-3">
+            <h6 class="mb-2">1拠点あたりの出店額</h6>
+            <table class="table table-sm facility-table mb-2">
+                <thead>
+                    <tr><th>期</th><th class="num">設備投資額</th><th class="num">増えた拠点</th><th class="num">1拠点あたり</th></tr>
+                </thead>
+                <tbody>
+                    {% for s in facility.opening_cost.samples %}
+                    <tr>
+                        <td>{{ s.date[:7] }}</td>
+                        <td class="num">{{ '{:,.0f}'.format(s.capex) }}百万</td>
+                        <td class="num">+{{ '{:,.0f}'.format(s.added) }}</td>
+                        <td class="num"><strong>{{ '%.0f'|format(s.per_new) }}百万</strong></td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="table-active">
+                        <td colspan="3"><strong>中央値（{{ facility.opening_cost.count }}期分）</strong></td>
+                        <td class="num"><strong>{{ '%.0f'|format(facility.opening_cost.median) }}百万</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+            {% if facility.peer_opening_costs %}
+            <div class="small text-muted">
+                競合の1拠点あたり出店額（中央値）:
+                {% for p in facility.peer_opening_costs %}
+                {{ p.name }} {{ '%.0f'|format(p.median) }}百万{% if not loop.last %} / {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+            <div class="small text-muted">
+                設備投資額には本社やシステムへの投資も含まれるため、出店だけの費用ではありません。
+                フランチャイズ店は加盟企業が投資するので、この額には入りません。
+            </div>
+        </div>
+        {% endif %}
+
         {% if facility.has_series %}
         <div id="facility-chart" style="min-height: 320px;"></div>
         {% endif %}
