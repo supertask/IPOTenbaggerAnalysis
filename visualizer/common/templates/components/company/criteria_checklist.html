@@ -27,11 +27,25 @@
                     <span class="criteria-title">
                         {{ item.no }}. {{ item.title }}
                         {% if item.required %}<span class="criteria-required">必須</span>{% endif %}
-                        <span class="criteria-caret">▾</span>
+                        {% if item.evidence %}<span class="criteria-caret">▾</span>{% endif %}
                     </span>
                     <span class="criteria-detail">{{ item.detail }}</span>
                 </button>
+                <button type="button" class="criteria-help" aria-expanded="false"
+                        aria-controls="criteria-why-{{ item.no }}"
+                        title="この条件の意味">?</button>
                 <div class="criteria-more" id="criteria-detail-{{ item.no }}" hidden>
+                    {% if item.evidence %}
+                    <table class="criteria-evidence">
+                        {% for e in item.evidence %}
+                        <tr><th>{{ e.label }}</th><td>{{ e.value }}</td></tr>
+                        {% endfor %}
+                    </table>
+                    {% else %}
+                    <p class="mb-0 criteria-how">この条件を裏づけるデータが見つかりませんでした。</p>
+                    {% endif %}
+                </div>
+                <div class="criteria-more criteria-why" id="criteria-why-{{ item.no }}" hidden>
                     {% if item.why %}<p class="mb-1">{{ item.why }}</p>{% endif %}
                     {% if item.how %}<p class="mb-0 criteria-how"><strong>判定方法:</strong> {{ item.how }}</p>{% endif %}
                 </div>
@@ -41,16 +55,26 @@
         <script>
         (function () {
             document.addEventListener('DOMContentLoaded', function () {
-                document.querySelectorAll('.criteria-toggle').forEach(function (btn) {
+                document.querySelectorAll('.criteria-toggle, .criteria-help')
+                    .forEach(function (btn) {
                     btn.addEventListener('click', function () {
                         var panel = document.getElementById(
                             btn.getAttribute('aria-controls'));
                         if (!panel) return;
+                        var item = btn.closest('.criteria-item');
                         var open = panel.hasAttribute('hidden');
-                        if (open) { panel.removeAttribute('hidden'); }
-                        else { panel.setAttribute('hidden', ''); }
-                        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-                        btn.closest('.criteria-item').classList.toggle('is-open', open);
+                        // 根拠と説明は同時に開かない
+                        item.querySelectorAll('.criteria-more').forEach(function (p) {
+                            p.setAttribute('hidden', '');
+                        });
+                        item.querySelectorAll('[aria-expanded]').forEach(function (b) {
+                            b.setAttribute('aria-expanded', 'false');
+                        });
+                        if (open) {
+                            panel.removeAttribute('hidden');
+                            btn.setAttribute('aria-expanded', 'true');
+                        }
+                        item.classList.toggle('is-open', open);
                     });
                 });
             });
