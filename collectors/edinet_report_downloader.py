@@ -246,9 +246,13 @@ class EdinetReportDownloader:
 
         for i in range(len(filtered_documents)):
             document = filtered_documents.iloc[i]
+            file_path = f"{company_folder}/{document['date']}_{doc_name}.tsv"
+            # 既に取得済みの書類は取り直さない。過去分まで毎回落とすと
+            # EDINETへのリクエストが数万件になる
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                continue
             tsv_raw_data = self.request_doc_elements(document['date'], document['docID'], doc_name)
             if tsv_raw_data:
-                file_path = f"{company_folder}/{document['date']}_{doc_name}.tsv"
                 with open(file_path, 'wb') as debug_file:
                     debug_file.write(tsv_raw_data)
                 print(f"Saved: {file_path}")
@@ -471,8 +475,10 @@ class EdinetReportDownloader:
             #self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_QUARTERLY_REPORT, company_folder, '四半期報告書', company_code4, company_name, start_date_str, end_date_str)
 
             # 有価証券報告書を保存
-            #company_folder = f"{self.REPORTS_DIR}/{company_code4}_{company_name}/annual_securities_reports"
-            #self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REPORT, company_folder, '有価証券報告書', company_code4, company_name)
+            # 財務指標のチャート、拠点数、原価の構成、持株の推移、PERのEPSが
+            # すべてこれを見ているので、止めると全部が古いまま残る
+            company_folder = f"{self.REPORTS_DIR}/{company_code4}_{sanitize_filename(company_name)}/annual_securities_reports"
+            self.save_securities_docs(company_doc_info, self.DOC_TYPE_CODE_SECURITIES_REPORT, company_folder, '有価証券報告書', company_code4, company_name, start_date_str, end_date_str)
 
     def run(self):
         self.save_securities_reports()
