@@ -159,13 +159,24 @@
         }
 
         .criteria-item {
+            border-radius: 0.25rem;
+            border-left: 3px solid transparent;
+            overflow: hidden;
+        }
+
+        .criteria-toggle {
             display: grid;
             grid-template-columns: 1.4rem minmax(0, 1fr);
             grid-template-areas: "mark title" ".    detail";
             align-items: baseline;
-            padding: 0.3rem 0.5rem;
-            border-radius: 0.25rem;
-            border-left: 3px solid transparent;
+            width: 100%;
+            padding: 0.4rem 0.5rem;
+            border: 0;
+            background: none;
+            text-align: left;
+            cursor: pointer;
+            font: inherit;
+            color: inherit;
         }
 
         .criteria-mark { grid-area: mark; font-weight: bold; }
@@ -175,6 +186,21 @@
             font-size: 0.85rem;
             color: #6c757d;
         }
+
+        .criteria-caret {
+            font-size: 0.7rem;
+            color: #adb5bd;
+            transition: transform 0.15s;
+            display: inline-block;
+        }
+        .criteria-item.is-open .criteria-caret { transform: rotate(180deg); }
+
+        .criteria-more {
+            padding: 0 0.5rem 0.6rem 1.9rem;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+        .criteria-more .criteria-how { color: #6c757d; }
 
         .criteria-pass    { border-left-color: #198754; background-color: #f1f8f4; }
         .criteria-pass .criteria-mark { color: #198754; }

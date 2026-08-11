@@ -16,20 +16,47 @@
         <div class="criteria-grid">
             {% for item in criteria['items'] %}
             <div class="criteria-item criteria-{{ item.status }}">
-                <span class="criteria-mark">
-                    {%- if item.status == 'pass' %}✓
-                    {%- elif item.status == 'partial' %}△
-                    {%- elif item.status == 'fail' %}✕
-                    {%- else %}?{% endif -%}
-                </span>
-                <span class="criteria-title">
-                    {{ item.no }}. {{ item.title }}
-                    {% if item.required %}<span class="criteria-required">必須</span>{% endif %}
-                </span>
-                <span class="criteria-detail">{{ item.detail }}</span>
+                <button type="button" class="criteria-toggle" aria-expanded="false"
+                        aria-controls="criteria-detail-{{ item.no }}">
+                    <span class="criteria-mark">
+                        {%- if item.status == 'pass' %}✓
+                        {%- elif item.status == 'partial' %}△
+                        {%- elif item.status == 'fail' %}✕
+                        {%- else %}?{% endif -%}
+                    </span>
+                    <span class="criteria-title">
+                        {{ item.no }}. {{ item.title }}
+                        {% if item.required %}<span class="criteria-required">必須</span>{% endif %}
+                        <span class="criteria-caret">▾</span>
+                    </span>
+                    <span class="criteria-detail">{{ item.detail }}</span>
+                </button>
+                <div class="criteria-more" id="criteria-detail-{{ item.no }}" hidden>
+                    {% if item.why %}<p class="mb-1">{{ item.why }}</p>{% endif %}
+                    {% if item.how %}<p class="mb-0 criteria-how"><strong>判定方法:</strong> {{ item.how }}</p>{% endif %}
+                </div>
             </div>
             {% endfor %}
         </div>
+        <script>
+        (function () {
+            document.addEventListener('DOMContentLoaded', function () {
+                document.querySelectorAll('.criteria-toggle').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        var panel = document.getElementById(
+                            btn.getAttribute('aria-controls'));
+                        if (!panel) return;
+                        var open = panel.hasAttribute('hidden');
+                        if (open) { panel.removeAttribute('hidden'); }
+                        else { panel.setAttribute('hidden', ''); }
+                        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                        btn.closest('.criteria-item').classList.toggle('is-open', open);
+                    });
+                });
+            });
+        })();
+        </script>
+
         <div class="text-muted small mt-3">
             満たす数が多いほど候補として有力という基準で、全部を満たす必要はありません。
             条件2と6は文章からの自動判定が難しいため「要確認」のままにしています。
