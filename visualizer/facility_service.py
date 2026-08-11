@@ -23,6 +23,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FACILITY_TSV = os.path.join(
     BASE_DIR, "data", "output", "facilities", "facility_counts.tsv")
 CAPEX_TSV = os.path.join(BASE_DIR, "data", "output", "facilities", "capex.tsv")
+COST_TSV = os.path.join(
+    BASE_DIR, "data", "output", "facilities", "cost_structure.tsv")
 
 SALES_IDS = ("jpcrp_cor:NetSalesSummaryOfBusinessResults",
              "jpcrp_cor:RevenueIFRSSummaryOfBusinessResults")
@@ -113,6 +115,46 @@ def _load_capex() -> Dict[str, Dict[str, float]]:
 
     _capex_cache, _capex_mtime = data, mtime
     return data
+
+
+_cost_cache: Optional[Dict[str, dict]] = None
+_cost_mtime: Optional[float] = None
+
+
+def _load_cost_structure() -> Dict[str, dict]:
+    """{銘柄コード: 直近期の原価の構成}"""
+    global _cost_cache, _cost_mtime
+    if not os.path.exists(COST_TSV):
+        return {}
+    mtime = os.path.getmtime(COST_TSV)
+    if _cost_cache is not None and _cost_mtime == mtime:
+        return _cost_cache
+
+    latest: Dict[str, dict] = {}
+    try:
+        with open(COST_TSV, encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f, delimiter="\t"):
+                code = row["コード"]
+                current = latest.get(code)
+                if current and row["報告日"] <= current["date"]:
+                    continue
+                cost = _num(row.get("売上原価_百万円"))
+                labor = _num(row.get("労務費_百万円"))
+                latest[code] = {
+                    "date": row["報告日"],
+                    "cost_ratio": _num(row.get("原価率_％")),
+                    "purchase_ratio": _num(row.get("仕入高対原価_％")),
+                    "purchase": _num(row.get("仕入高_百万円")),
+                    "labor": labor,
+                    "labor_ratio": (labor / cost * 100
+                                    if labor is not None and cost else None),
+                }
+    except OSError as e:
+        logger.warning("原価の構成を読めませんでした: %s", e)
+        return {}
+
+    _cost_cache, _cost_mtime = latest, mtime
+    return latest
 
 
 def _opening_cost(code: str, points: List[dict]) -> Optional[dict]:
@@ -256,6 +298,16 @@ def get_facility_view(company_code, competitors: Optional[List[dict]] = None
         if cost:
             peer_openings.append({"name": peer["name"], "median": cost["median"]})
 
+    # 原価の構成。拠点数に依存しないので、拠点数の定義揺れの影響を受けずに比べられる
+    costs = _load_cost_structure()
+    own_cost = costs.get(code)
+    peer_costs = []
+    for peer in (competitors or []):
+        peer_code = str(peer.get("code") or "").strip()
+        entry = costs.get(peer_code)
+        if entry and entry.get("cost_ratio") is not None:
+            peer_costs.append({"name": peer.get("name") or peer_code, **entry})
+
     return {
         "own": own,
         "peers": sorted(peers, key=lambda p: -(p["latest"]["profit_per"] or 0)),
@@ -264,4 +316,6 @@ def get_facility_view(company_code, competitors: Optional[List[dict]] = None
         "opening_cost": opening,
         "planned_cost": planned,
         "peer_opening_costs": sorted(peer_openings, key=lambda p: p["median"]),
+        "cost_structure": own_cost,
+        "peer_cost_structures": sorted(peer_costs, key=lambda p: p["cost_ratio"]),
     }

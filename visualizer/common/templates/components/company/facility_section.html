@@ -91,6 +91,41 @@
         </div>
         {% endif %}
 
+        {% if facility.cost_structure and facility.cost_structure.cost_ratio %}
+        <div class="mb-3">
+            <h6 class="mb-2">原価の構成</h6>
+            <table class="table table-sm facility-table mb-2">
+                <thead>
+                    <tr><th>企業</th><th class="num">期</th><th class="num">原価率</th>
+                        <th class="num">仕入が原価に占める割合</th><th class="num">労務費が原価に占める割合</th></tr>
+                </thead>
+                <tbody>
+                    <tr class="table-active">
+                        <td><strong>{{ company_name }}</strong></td>
+                        <td class="num">{{ facility.cost_structure.date[:7] }}</td>
+                        <td class="num"><strong>{{ '%.1f'|format(facility.cost_structure.cost_ratio) }}%</strong></td>
+                        <td class="num">{% if facility.cost_structure.purchase_ratio %}{{ '%.1f'|format(facility.cost_structure.purchase_ratio) }}%{% else %}–{% endif %}</td>
+                        <td class="num">{% if facility.cost_structure.labor_ratio %}{{ '%.1f'|format(facility.cost_structure.labor_ratio) }}%{% else %}–{% endif %}</td>
+                    </tr>
+                    {% for p in facility.peer_cost_structures %}
+                    <tr>
+                        <td>{{ p.name }}</td>
+                        <td class="num">{{ p.date[:7] }}</td>
+                        <td class="num">{{ '%.1f'|format(p.cost_ratio) }}%</td>
+                        <td class="num">{% if p.purchase_ratio %}{{ '%.1f'|format(p.purchase_ratio) }}%{% else %}–{% endif %}</td>
+                        <td class="num">{% if p.labor_ratio %}{{ '%.1f'|format(p.labor_ratio) }}%{% else %}–{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div class="small text-muted">
+                原価率は売上原価 ÷ 売上高。仕入と労務費の内訳は「売上原価明細書」を出している企業でのみ分かります
+                （製造業・小売業が中心で、サービス業では作成しない企業が多い）。
+                建材や設備品の単価そのものは開示されないため、安く仕入れているかは構成比から推し量ることになります。
+            </div>
+        </div>
+        {% endif %}
+
         {% if facility.has_series %}
         <div id="facility-chart" style="min-height: 320px;"></div>
         {% endif %}
