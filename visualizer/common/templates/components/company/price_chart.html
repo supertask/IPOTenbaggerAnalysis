@@ -96,14 +96,17 @@
                 showlegend: true,
                 legend: { orientation: 'h', y: 1.1 },
                 hovermode: 'x unified',
-                dragmode: 'pan',
+                // ドラッグでの移動も切る。データの無い未来側へ動かせてしまうため
+                dragmode: false,
                 xaxis: {
                     type: 'date',
                     // 目盛りを一番下の段に付ける（既定だと株価と出来高の間に出る）
                     anchor: hasPer ? 'y3' : 'y2',
                     rangeslider: { visible: true, thickness: 0.07 },
                     // 休場日を詰めて、間隔が空かないようにする
-                    rangebreaks: [{ bounds: ['sat', 'mon'] }]
+                    rangebreaks: [{ bounds: ['sat', 'mon'] }],
+                    // データのある範囲の外へは動かせないようにする
+                    range: [dates[0], dates[dates.length - 1]]
                 },
                 yaxis:  {
                     domain: hasPer ? [0.46, 1] : [0.32, 1],
@@ -122,8 +125,16 @@
 
             Plotly.newPlot(chartEl, traces, layout, {
                 responsive: true,
-                scrollZoom: true,
-                displaylogo: false
+                // 期間の指定は下のボタンとレンジスライダーで行う。
+                // ホイールや範囲ドラッグでのズームは、データの無い未来まで
+                // 動かせてしまうので無効にする。
+                scrollZoom: false,
+                doubleClick: false,
+                displaylogo: false,
+                modeBarButtonsToRemove: [
+                    'zoom2d', 'pan2d', 'select2d', 'lasso2d',
+                    'zoomIn2d', 'zoomOut2d', 'autoScale2d'
+                ]
             });
 
             statusEl.style.display = 'none';
@@ -135,7 +146,7 @@
 
         // 表示中の期間だけを見て縦軸を決める。全期間の高値に引っ張られると
         // 直近の値動きが潰れて読めなくなるため。
-        function yRange(values, fromIndex, toIndex, pad, fromZero) {
+        function minMax(values, fromIndex, toIndex) {
             var lo = Infinity, hi = -Infinity;
             for (var i = fromIndex; i <= toIndex; i++) {
                 var v = values[i];
@@ -143,16 +154,72 @@
                 if (v < lo) lo = v;
                 if (v > hi) hi = v;
             }
-            if (lo === Infinity) return null;
-            if (fromZero) return [0, hi * (1 + pad)];
+            return lo === Infinity ? null : [lo, hi];
+        }
+
+        function padded(lo, hi, pad, fromZero) {
+            if (fromZero) return [0, hi * (1 + pad) || 1];
             var margin = (hi - lo) * pad || Math.abs(hi) * pad || 1;
-            return [lo - margin, hi + margin];
+            // 株価・PERは負にならないので、下限が0を割らないようにする
+            return [Math.max(0, lo - margin), hi + margin];
         }
 
         function buildRangeButtons(payload, dates) {
             var p = payload.prices;
             var last = new Date(dates[dates.length - 1]);
             var first = new Date(dates[0]);
+            var dateMs = dates.map(function (d) { return new Date(d + 'T00:00:00').getTime(); });
+            var rescaling = false;
+
+            // 表示範囲に合わせた縦軸を組み立てる
+            function yUpdate(fromIndex, toIndex) {
+                var update = {};
+                var low = minMax(p.low, fromIndex, toIndex);
+                var high = minMax(p.high, fromIndex, toIndex);
+                if (low && high) update['yaxis.range'] = padded(low[0], high[1], 0.05);
+
+                var vol = minMax(p.volume, fromIndex, toIndex);
+                if (vol) update['yaxis2.range'] = padded(vol[0], vol[1], 0.1, true);
+
+                if (payload.has_per) {
+                    var per = minMax(payload.per, fromIndex, toIndex);
+                    if (per) update['yaxis3.range'] = padded(per[0], per[1], 0.1);
+                }
+                return update;
+            }
+
+            function indexRange(fromMs, toMs) {
+                var fromIndex = 0, toIndex = dates.length - 1;
+                while (fromIndex < toIndex && dateMs[fromIndex] < fromMs) fromIndex++;
+                while (toIndex > fromIndex && dateMs[toIndex] > toMs) toIndex--;
+                return [fromIndex, toIndex];
+            }
+
+            // レンジスライダーで過去に移動したときも縦軸を合わせ直す。
+            // これが無いと、直近の株価に合わせた縦軸のまま昔の安い時期を見ることになり、
+            // ローソク足がパネルの外へ出て何も見えなくなる。
+            chartEl.on('plotly_relayout', function (ev) {
+                if (rescaling) return;
+                // ウィンドウのリサイズなど、横軸が動いていないときは何もしない
+                var touchedX = Object.keys(ev || {}).some(function (k) {
+                    return k.indexOf('xaxis.range') === 0;
+                });
+                if (!touchedX) return;
+
+                var xr = chartEl.layout.xaxis.range;
+                if (!xr) return;
+                var span = indexRange(new Date(xr[0]).getTime(), new Date(xr[1]).getTime());
+                rescaling = true;
+                Plotly.relayout(chartEl, yUpdate(span[0], span[1])).then(function () {
+                    rescaling = false;
+                }, function () { rescaling = false; });
+
+                // スライダーで範囲を変えたらボタンの選択表示は外す
+                buttonsEl.querySelectorAll('button').forEach(function (b) {
+                    b.classList.remove('btn-primary');
+                    b.classList.add('btn-outline-secondary');
+                });
+            });
 
             function apply(range, btn) {
                 var fromIndex = 0;
@@ -164,24 +231,13 @@
                 }
                 var toIndex = dates.length - 1;
 
-                var update = {};
-                update['xaxis.range'] = range.days === null
-                    ? [dates[0], dates[toIndex]]
-                    : [dates[fromIndex], dates[toIndex]];
+                var update = yUpdate(fromIndex, toIndex);
+                update['xaxis.range'] = [dates[fromIndex], dates[toIndex]];
 
-                var priceRange = yRange(p.low, fromIndex, toIndex, 0.05);
-                var priceHigh = yRange(p.high, fromIndex, toIndex, 0.05);
-                if (priceRange && priceHigh) update['yaxis.range'] = [priceRange[0], priceHigh[1]];
-
-                var volRange = yRange(p.volume, fromIndex, toIndex, 0.1, true);
-                if (volRange) update['yaxis2.range'] = volRange;
-
-                if (payload.has_per) {
-                    var perRange = yRange(payload.per, fromIndex, toIndex, 0.1);
-                    if (perRange) update['yaxis3.range'] = perRange;
-                }
-
-                Plotly.relayout(chartEl, update);
+                rescaling = true;
+                Plotly.relayout(chartEl, update).then(function () {
+                    rescaling = false;
+                }, function () { rescaling = false; });
 
                 buttonsEl.querySelectorAll('button').forEach(function (b) {
                     b.classList.toggle('btn-primary', b === btn);
