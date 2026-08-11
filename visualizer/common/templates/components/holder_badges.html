@@ -1,0 +1,11 @@
+{# 保有ポートフォリオのラベル。holders が空なら何も出さない #}
+{% if holders %}
+<span class="holder-badges">
+    {% for h in holders %}
+    <span class="holder-badge {{ h.css }} text-white"
+          title="{{ h.label }}が保有{% if h.shares %} / {{ h.shares }}株{% endif %}{% if h.weight %} / ポートフォリオ比 {{ h.weight }}%{% endif %}">
+        {{ h.label }}
+    </span>
+    {% endfor %}
+</span>
+{% endif %}

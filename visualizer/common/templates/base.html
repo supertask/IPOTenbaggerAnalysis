@@ -123,6 +123,33 @@
             opacity: 1;
             transform: translateY(0);
         }
+
+        /* 保有ポートフォリオのラベル */
+        .holder-badges {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            vertical-align: middle;
+        }
+
+        .holder-badge {
+            font-size: 0.7rem;
+            font-weight: bold;
+            line-height: 1.2;
+            padding: 0.2rem 0.45rem;
+            border-radius: 0.25rem;
+            white-space: nowrap;
+            cursor: help;
+        }
+
+        .card-header .holder-badges {
+            margin-top: 0.35rem;
+        }
+
+        h1 .holder-badge {
+            font-size: 0.85rem;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>

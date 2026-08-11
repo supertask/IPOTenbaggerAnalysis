@@ -14,7 +14,9 @@
                 </ol>
             </nav>
             
-            <h1 class="mb-3">{{ company_name }} <small class="text-muted">({{ company_code }})</small></h1>
+            <h1 class="mb-3">{{ company_name }} <small class="text-muted">({{ company_code }})</small>
+                {% include 'components/holder_badges.html' %}
+            </h1>
             
             <!-- ハンバーガーメニュー -->
             {% include 'components/company/hamburger_menu.html' %}

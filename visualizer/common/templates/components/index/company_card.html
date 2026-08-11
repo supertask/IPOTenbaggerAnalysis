@@ -12,6 +12,7 @@
                 </a>
                 {% endif %}
             </h5>
+            {% with holders = company.holders %}{% include 'components/holder_badges.html' %}{% endwith %}
         </div>
         <div class="card-body">
             {% if show_code_subtitle and company.code %}
