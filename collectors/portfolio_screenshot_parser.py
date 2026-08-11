@@ -32,7 +32,11 @@ COLUMNS = [
 
 @dataclass
 class Holding:
-    """1銘柄の保有情報。数量・価格が読み取れない場合は None を入れる。"""
+    """1銘柄の保有情報。数量・価格が読み取れない場合は None を入れる。
+
+    投資信託は「口数」と「1万口あたりの基準価額」で表示されるため、
+    unit_divisor に 10000 を指定する（株式は既定の 1 のまま）。
+    """
 
     code: str
     name: str
@@ -42,12 +46,13 @@ class Holding:
     profit: Optional[int] = None
     accounts: List[str] = field(default_factory=list)
     note: str = ""
+    unit_divisor: int = 1
 
     @property
     def market_value(self) -> Optional[float]:
         if self.shares is None or self.price is None:
             return None
-        return self.shares * self.price
+        return self.shares * self.price / self.unit_divisor
 
 
 def merge_duplicates(holdings: List[Holding]) -> List[Holding]:
@@ -59,6 +64,7 @@ def merge_duplicates(holdings: List[Holding]) -> List[Holding]:
             merged[h.code] = Holding(
                 code=h.code, name=h.name, shares=h.shares, avg_cost=h.avg_cost,
                 price=h.price, profit=h.profit, accounts=list(h.accounts), note=h.note,
+                unit_divisor=h.unit_divisor,
             )
             continue
         if cur.shares is not None and h.shares is not None:
