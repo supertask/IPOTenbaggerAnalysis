@@ -23,6 +23,7 @@ from .chart_service import ChartService
 from visualizer import db as _index_db
 from visualizer import portfolio as _portfolio
 from visualizer import price_service as _price_service
+from visualizer import holdings_service as _holdings
 from visualizer import shareholders as _shareholders
 from visualizer import tenbagger_criteria as _criteria
 
@@ -387,6 +388,7 @@ def company_view(company_code):
         'holders': _portfolio.get_holders(company_code),
         'criteria': _criteria.evaluate_by_code(company_code, _current_per(company_code)),
         'shareholders': _shareholders.get_shareholders(company_code),
+        'holdings_history': _holdings.get_holdings_history(company_code),
         'lockup_markers': _price_service.get_lockup_markers(company_code),
     }
     

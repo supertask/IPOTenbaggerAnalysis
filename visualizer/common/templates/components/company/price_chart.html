@@ -99,6 +99,24 @@
                 });
             }
 
+            // 役員の持株が前期から減った時点。ロックアップの点線と紛れないよう
+            // マーカーで置き、凡例で消せるようにする
+            if ((payload.insider_sales || []).length) {
+                traces.push({
+                    type: 'scatter',
+                    mode: 'markers',
+                    name: '役員の持株が減少',
+                    x: payload.insider_sales.map(function (m) { return m.date; }),
+                    y: payload.insider_sales.map(function (m) { return m.close; }),
+                    text: payload.insider_sales.map(function (m) {
+                        return '役員の持株合計 ' + m.diff.toLocaleString() + '株';
+                    }),
+                    marker: { symbol: 'triangle-down', size: 11, color: '#c2185b' },
+                    xaxis: 'x', yaxis: 'y',
+                    hovertemplate: '%{text}<extra></extra>'
+                });
+            }
+
             if (payload.has_per) {
                 traces.push({
                     type: 'scatter',

@@ -99,6 +99,19 @@ CREATE TABLE officers_info (
     oldest_source_report_date   TEXT
 );
 
+-- 有価証券報告書に載る大株主と役員の所有株式数。年ごとに拾っておくと、
+-- 期をまたいで突き合わせて「誰が何株売った／買った」が追える。
+CREATE TABLE share_holdings (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_code TEXT NOT NULL,
+    report_date  TEXT NOT NULL,
+    holder_type  TEXT NOT NULL,   -- 'major'（大株主） / 'officer'（役員）
+    holder_name  TEXT NOT NULL,
+    shares       REAL,
+    ratio        REAL
+);
+CREATE INDEX idx_holdings_lookup ON share_holdings(company_code, report_date);
+
 CREATE TABLE competitors (
     company_code    TEXT NOT NULL,
     rank            INTEGER NOT NULL,
@@ -288,6 +301,16 @@ _METRIC_ID_PATTERN = "|".join(sorted(re.escape(i) for i in _METRIC_ELEMENT_IDS))
 _BUSINESS_ELEMENT_ID = "jpcrp_cor:DescriptionOfBusinessTextBlock"
 _OFFICERS_ELEMENT_ID = "jpcrp_cor:InformationAboutOfficersTextBlock"
 
+# 大株主と役員の持株。氏名と株数は別行なので、コンテキストIDで突き合わせる
+_HOLDING_ELEMENTS = {
+    "jpcrp_cor:NameMajorShareholders": ("major", "name"),
+    "jpcrp_cor:NumberOfSharesHeld": ("major", "shares"),
+    "jpcrp_cor:ShareholdingRatio": ("major", "ratio"),
+    "jpcrp_cor:NameInformationAboutDirectorsAndCorporateAuditors": ("officer", "name"),
+    "jpcrp_cor:NumberOfSharesHeldOrdinarySharesInformationAboutDirectorsAndCorporateAuditors":
+        ("officer", "shares"),
+}
+
 # XBRL TSVs from EDINET are UTF-16 LE with BOM; some legacy files are UTF-8.
 _FIN_ENCODINGS = ("utf-16", "utf-16-le", "utf-8-sig", "utf-8", "cp932")
 
@@ -373,6 +396,46 @@ def _iter_report_files() -> Iterable[tuple]:
                     yield code, report_type, _extract_report_date(tsv), tsv
 
 
+def _extract_holdings(df, code: str, report_date: str) -> list:
+    """大株主・役員の持株を (会社, 報告日, 種別, 氏名, 株数, 比率) の形で取り出す。
+
+    XBRLでは氏名・株数・比率がそれぞれ別行になっていて、同じコンテキストIDを
+    持つものが1人分にあたる。
+    """
+    hit = df[df["要素ID"].isin(_HOLDING_ELEMENTS)]
+    if hit.empty:
+        return []
+
+    people: dict = {}
+    for _, row in hit.iterrows():
+        holder_type, field = _HOLDING_ELEMENTS[row["要素ID"]]
+        context = row.get("コンテキストID")
+        if not context:
+            continue
+        entry = people.setdefault((holder_type, context), {})
+        entry[field] = row.get("値")
+
+    def number(value):
+        if value is None:
+            return None
+        text = str(value).replace(",", "").replace("△", "-").strip()
+        if text in ("", "-", "－", "―", "nan"):
+            return None
+        try:
+            return float(text)
+        except ValueError:
+            return None
+
+    rows = []
+    for (holder_type, _), entry in people.items():
+        name = entry.get("name")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        rows.append((code, report_date, holder_type, name.strip(),
+                     number(entry.get("shares")), number(entry.get("ratio"))))
+    return rows
+
+
 def _update_textblock_tracker(
     tracker: dict[str, dict], code: str, value: str, report_type: str, report_date: str
 ) -> None:
@@ -400,6 +463,7 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
     business_tracker: dict[str, dict] = {}
     officers_tracker: dict[str, dict] = {}
     file_rows: list[tuple] = []
+    holding_rows: list[tuple] = []
     processed = 0
     failed = 0
     started = time.time()
@@ -453,6 +517,10 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
                 continue
             _update_textblock_tracker(tracker, code, value, report_type, report_date)
 
+        # 大株主・役員の持株（有報のみ。届出書は上場前の姿なので比較に使わない）
+        if report_type == "annual":
+            holding_rows.extend(_extract_holdings(df, code, report_date))
+
         # Financial metrics: whitelist filter（抽出側と同じ部分一致）
         filtered = df[df["要素ID"].str.contains(_METRIC_ID_PATTERN, na=False, regex=True)]
         if filtered.empty:
@@ -490,6 +558,13 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
            VALUES (?,?,?,?,?)""",
         file_rows,
     )
+    conn.executemany(
+        """INSERT INTO share_holdings
+           (company_code, report_date, holder_type, holder_name, shares, ratio)
+           VALUES (?,?,?,?,?,?)""",
+        holding_rows,
+    )
+    logger.info("share holdings: %d rows", len(holding_rows))
     conn.executemany(
         """INSERT OR REPLACE INTO business_descriptions
            (company_code,

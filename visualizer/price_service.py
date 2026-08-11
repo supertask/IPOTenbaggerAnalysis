@@ -232,6 +232,35 @@ def get_per_series(code: str, prices: Dict[str, list]) -> Dict[str, list]:
     return {"dates": dates, "per": per}
 
 
+def get_split_factor(code: str, date: str) -> float:
+    """その日より後に起きた分割の累積倍率。
+
+    当時の株数にこれを掛けると、今の株数の基準に揃う。株式分割は
+    持株数を機械的に増やすので、揃えないと売買と見分けが付かない。
+    """
+    rows = _read_cache(code)
+    if not rows:
+        try:
+            rows = _fetch(code)
+        except Exception:
+            return 1.0
+        if rows:
+            _write_cache(code, rows)
+    if not rows:
+        return 1.0
+
+    factors = _split_factors(rows)
+    earlier = None
+    for row, factor in zip(rows, factors):
+        if row["date"] <= date:
+            earlier = factor
+        else:
+            break
+    if earlier is not None:
+        return earlier
+    return factors[0] if factors else 1.0
+
+
 def get_latest_per(code: str) -> Optional[float]:
     """直近のPER。株価かEPSが無ければ None"""
     prices = get_price_series(code)
@@ -319,6 +348,36 @@ def get_nikkei_series(dates: List[str]) -> List[Optional[float]]:
     return out
 
 
+def _insider_sale_markers(code: str, prices: Dict[str, list]) -> List[dict]:
+    """役員の持株合計が前期から減った時点を返す。
+
+    有報は年1回なので点でしか出せない。詳細は株主構成の「持株の推移」で見る。
+    """
+    from visualizer import holdings_service as _holdings
+
+    history = _holdings.get_holdings_history(code)
+    if not history or not history.get("officer_decreases"):
+        return []
+
+    close_by_date = {d: c for d, c in zip(prices["dates"], prices["close"]) if c is not None}
+    dates = prices["dates"]
+    markers = []
+    for item in history["officer_decreases"]:
+        date = item["date"]
+        if date not in close_by_date:
+            # 報告日が休場なら、その直前の営業日に寄せる
+            earlier = [d for d in dates if d <= date]
+            if not earlier:
+                continue
+            date = earlier[-1]
+        markers.append({
+            "date": date,
+            "close": close_by_date.get(date),
+            "diff": item["diff"],
+        })
+    return markers
+
+
 def get_chart_payload(code: str) -> Dict[str, object]:
     """フロントに渡す一式"""
     prices = get_price_series(code)
@@ -330,6 +389,7 @@ def get_chart_payload(code: str) -> Dict[str, object]:
         "per": per["per"],
         "nikkei": nikkei,
         "lockup": get_lockup_markers(code),
+        "insider_sales": _insider_sale_markers(code, prices),
         "per_limit": 40,
         "per_ideal": 20,
         "has_price": bool(prices["dates"]),

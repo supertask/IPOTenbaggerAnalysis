@@ -1,0 +1,70 @@
+{# 大株主・役員の持株推移。有報の年次データを期ごとに並べる #}
+{% if holdings_history %}
+<div class="mt-4">
+    <h6 class="mb-2">持株の推移</h6>
+    <ul class="nav nav-tabs flex-nowrap overflow-auto" id="holdingsTabs" role="tablist">
+        {% if holdings_history.major %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active text-nowrap" data-bs-toggle="tab"
+                    data-bs-target="#holdings-major" type="button" role="tab">大株主</button>
+        </li>
+        {% endif %}
+        {% if holdings_history.officer %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-nowrap {% if not holdings_history.major %}active{% endif %}"
+                    data-bs-toggle="tab" data-bs-target="#holdings-officer"
+                    type="button" role="tab">役員</button>
+        </li>
+        {% endif %}
+    </ul>
+    <div class="tab-content mt-2">
+        {% for key, table in [('major', holdings_history.major), ('officer', holdings_history.officer)] %}
+        {% if table %}
+        <div class="tab-pane fade {% if key == 'major' or not holdings_history.major %}show active{% endif %}"
+             id="holdings-{{ key }}" role="tabpanel">
+            <div class="table-responsive">
+                <table class="table table-sm holdings-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>{{ '株主名' if key == 'major' else '役員' }}</th>
+                            {% for d in table.dates %}<th class="num">{{ d[:7] }}</th>{% endfor %}
+                            <th class="num">増減</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in table.people %}
+                        <tr>
+                            <td class="holder-name">{{ p.name }}</td>
+                            {% for v in p['values'] %}
+                            <td class="num">{% if v is not none %}{{ '{:,.0f}'.format(v) }}{% else %}–{% endif %}</td>
+                            {% endfor %}
+                            <td class="num">
+                                {% if p.change is not none and p.change != 0 %}
+                                <span class="{% if p.change < 0 %}text-danger{% else %}text-success{% endif %}">
+                                    {{ '{:+,.0f}'.format(p.change) }}
+                                </span>
+                                {% elif p.change is not none %}±0{% else %}–{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if table.truncated %}
+            <div class="text-muted small mt-1">ほか{{ table.truncated }}名は省略しています。</div>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    <div class="text-muted small mt-2">
+        有価証券報告書に載る各期末時点の所有株式数です。期の途中の売買は表れません。
+        {% if holdings_history.split_adjusted %}
+        株式分割で株数が機械的に増えるぶんは、直近の株数に揃えて調整しています。
+        {% endif %}
+        {% if holdings_history.officer_decreases %}
+        役員の合計が減った期があります（株価チャートに印を出しています）。
+        {% endif %}
+    </div>
+</div>
+{% endif %}
