@@ -14,6 +14,7 @@ import logging
 import os
 import threading
 import time
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 from visualizer import db as _index_db
@@ -64,12 +65,17 @@ def _write_cache(code: str, rows: List[dict]) -> None:
         logger.warning("株価キャッシュの書き込みに失敗 %s: %s", path, e)
 
 
+def _symbol(code: str) -> str:
+    """yfinanceのシンボルにする。^N225 のような指数はそのまま使う"""
+    return code if code.startswith("^") else f"{code}.T"
+
+
 def _fetch(code: str) -> List[dict]:
     """yfinanceから日足を取る。auto_adjust=False で生値と分割イベントを受け取る"""
     import yfinance as yf
 
     with _fetch_lock:
-        hist = yf.Ticker(f"{code}.T").history(period="max", auto_adjust=False)
+        hist = yf.Ticker(_symbol(code)).history(period="max", auto_adjust=False)
 
     rows = []
     for index, row in hist.iterrows():
@@ -226,14 +232,101 @@ def get_per_series(code: str, prices: Dict[str, list]) -> Dict[str, list]:
     return {"dates": dates, "per": per}
 
 
+def get_latest_per(code: str) -> Optional[float]:
+    """直近のPER。株価かEPSが無ければ None"""
+    prices = get_price_series(code)
+    if not prices["dates"]:
+        return None
+    per = get_per_series(code, prices)["per"]
+    for value in reversed(per):
+        if value is not None:
+            return value
+    return None
+
+
+def get_lockup_markers(code: str) -> List[dict]:
+    """ロックアップ解除の目安を返す。
+
+    上場日から30日後・180日後と、初値の1.5倍に最初に到達した日。
+    いずれも売り圧力が出やすい（＝押し目になりやすい）地点として
+    株価チャートに縦線で示す。
+    """
+    from visualizer import tenbagger_criteria as _criteria
+
+    row = _criteria.get_company_row(code)
+    if not row:
+        return []
+
+    raw = str(row.get("上場日") or "").strip()
+    listing = None
+    for fmt in ("%Y/%m/%d", "%Y-%m-%d", "%Y年%m月%d日"):
+        try:
+            listing = datetime.strptime(raw, fmt)
+            break
+        except ValueError:
+            continue
+    if listing is None:
+        return []
+
+    markers = [
+        {"date": (listing + timedelta(days=30)).strftime("%Y-%m-%d"), "label": "LU 30日"},
+        {"date": (listing + timedelta(days=180)).strftime("%Y-%m-%d"), "label": "LU 180日"},
+    ]
+
+    initial = _to_float(row.get("初値"))
+    if initial and initial > 0:
+        prices = get_price_series(code)
+        target = initial * 1.5
+        for date, high in zip(prices["dates"], prices["high"]):
+            if high is not None and high >= target:
+                markers.append({"date": date, "label": "初値1.5倍"})
+                break
+
+    last = None
+    prices = get_price_series(code)
+    if prices["dates"]:
+        last = prices["dates"][-1]
+    # チャートの範囲外になる目安は出さない
+    return [m for m in markers if last is None or m["date"] <= last]
+
+
+def get_nikkei_series(dates: List[str]) -> List[Optional[float]]:
+    """日経平均を、対象銘柄の日付に合わせて返す。
+
+    市場全体が下げているのか、その銘柄だけが下げているのかを見分けるために重ねる。
+    水準が違いすぎて同じ軸には乗らないので、期間先頭を100とした指数にする。
+    """
+    if not dates:
+        return []
+    nikkei = get_price_series("^N225")
+    if not nikkei["dates"]:
+        return []
+
+    close_by_date = {d: c for d, c in zip(nikkei["dates"], nikkei["close"]) if c is not None}
+    out: List[Optional[float]] = []
+    last = None
+    for date in dates:
+        value = close_by_date.get(date)
+        if value is not None:
+            last = value
+        out.append(last)
+    return out
+
+
 def get_chart_payload(code: str) -> Dict[str, object]:
     """フロントに渡す一式"""
     prices = get_price_series(code)
     per = get_per_series(code, prices) if prices["dates"] else {"dates": [], "per": []}
+    nikkei = get_nikkei_series(prices["dates"]) if prices["dates"] else []
     return {
         "code": code,
         "prices": prices,
         "per": per["per"],
+        "nikkei": nikkei,
+        "lockup": get_lockup_markers(code),
+        "per_limit": 40,
+        "per_ideal": 20,
         "has_price": bool(prices["dates"]),
         "has_per": any(v is not None for v in per["per"]),
+        "has_nikkei": any(v is not None for v in nikkei),
     }
