@@ -1,4 +1,5 @@
-<div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-5th col-xxl-2">
+<div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-5th col-xxl-2 company-card-wrapper"
+     data-holders="{% if company.holders %}{% for h in company.holders %}{{ h.label }}{% if not loop.last %},{% endif %}{% endfor %}{% endif %}">
     <div class="card company-card">
         <div class="card-header">
             <h5 class="card-title">

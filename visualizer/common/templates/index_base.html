@@ -6,7 +6,9 @@
 <div class="container-fluid">
     <h1 class="mb-4 text-center">{% block page_heading %}{% endblock %}</h1>
     <p class="text-center mb-4">{% block page_description %}{% endblock %}</p>
-    
+
+    {% include 'components/index/holder_filter.html' %}
+
     {% if show_year_grouping and companies %}
         {% set has_ipo_year = companies[0].ipo_year is defined %}
         {% if has_ipo_year %}

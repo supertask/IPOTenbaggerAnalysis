@@ -1,0 +1,87 @@
+{# 保有ポートフォリオでの絞り込み。ラベルはページ上のカードから拾うので、
+   ポートフォリオが増えてもテンプレートの変更は要らない。
+   保有ラベルが1つも無いページではUI自体を出さない。 #}
+<div id="holder-filter" class="holder-filter mb-4 text-center" style="display: none;">
+    <div class="btn-group flex-wrap" role="group" aria-label="保有で絞り込み"></div>
+    <div class="filter-count text-muted small mt-2"></div>
+</div>
+
+<script>
+(function () {
+    document.addEventListener('DOMContentLoaded', function () {
+        var cards = Array.prototype.slice.call(
+            document.querySelectorAll('.company-card-wrapper'));
+        if (!cards.length) return;
+
+        // カードに付いている保有ラベルを集める（出現順を保つ）
+        var labels = [];
+        cards.forEach(function (card) {
+            (card.dataset.holders || '').split(',').forEach(function (label) {
+                label = label.trim();
+                if (label && labels.indexOf(label) === -1) labels.push(label);
+            });
+        });
+        if (!labels.length) return;   // 保有銘柄が1つも無ければ出さない
+
+        var container = document.getElementById('holder-filter');
+        var group = container.querySelector('.btn-group');
+        var countEl = container.querySelector('.filter-count');
+
+        var filters = [{ key: '', text: 'すべて' },
+                       { key: '*', text: '保有あり' }];
+        labels.forEach(function (label) {
+            filters.push({ key: label, text: label });
+        });
+
+        function matches(card, key) {
+            var holders = (card.dataset.holders || '').split(',')
+                .map(function (s) { return s.trim(); })
+                .filter(Boolean);
+            if (!key) return true;
+            if (key === '*') return holders.length > 0;
+            return holders.indexOf(key) !== -1;
+        }
+
+        function apply(key) {
+            var shown = 0;
+            cards.forEach(function (card) {
+                var ok = matches(card, key);
+                card.style.display = ok ? '' : 'none';
+                if (ok) shown++;
+            });
+
+            // 表示カードが無くなった年見出しは隠す
+            document.querySelectorAll('.year-heading').forEach(function (heading) {
+                var row = heading.nextElementSibling;
+                var visible = row ? row.querySelectorAll(
+                    '.company-card-wrapper:not([style*="display: none"])').length : 0;
+                heading.style.display = visible ? '' : 'none';
+                if (row) row.style.display = visible ? '' : 'none';
+            });
+
+            countEl.textContent = key
+                ? shown + ' / ' + cards.length + ' 社を表示中'
+                : cards.length + ' 社';
+
+            group.querySelectorAll('button').forEach(function (btn) {
+                var active = btn.dataset.key === key;
+                btn.classList.toggle('btn-primary', active);
+                btn.classList.toggle('btn-outline-primary', !active);
+            });
+        }
+
+        filters.forEach(function (f) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-outline-primary btn-sm';
+            btn.dataset.key = f.key;
+            btn.textContent = f.text;
+            btn.addEventListener('click', function () { apply(f.key); });
+            group.appendChild(btn);
+        });
+
+        container.style.display = '';
+        apply('');
+    });
+})();
+</script>
