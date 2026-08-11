@@ -19,6 +19,7 @@ from .config import (
 from .data_service import DataService
 from .chart_service import ChartService
 from visualizer import db as _index_db
+from visualizer import portfolio as _portfolio
 
 # ロギングの設定
 logging.basicConfig(
@@ -77,6 +78,7 @@ def load_companies_data() -> Tuple[list, bool]:
     db_result = _load_companies_from_db()
     if db_result is not None:
         logger.info(f"企業を現在何倍株で並べ替えました。企業数: {len(db_result)}")
+        _portfolio.annotate(db_result)
         return db_result, True
     try:
         #logger.info(f"ALL_COMPANIES_PATH: {ALL_COMPANIES_PATH}")
@@ -104,6 +106,7 @@ def load_companies_data() -> Tuple[list, bool]:
                     })
                 
                 logger.info(f"企業を現在何倍株で並べ替えました。企業数: {len(companies)}")
+                _portfolio.annotate(companies)
                 return companies, True
             else:
                 missing_columns = [col for col in required_columns if col not in df.columns]
@@ -295,7 +298,8 @@ def company_view(company_code):
         'competitors': competitors,
         'charts': charts,
         'business_description': business_description,
-        'officers_info': officers_info
+        'officers_info': officers_info,
+        'holders': _portfolio.get_holders(company_code),
     }
     
     return data, None, 200
