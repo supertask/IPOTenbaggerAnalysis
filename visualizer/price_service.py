@@ -269,8 +269,10 @@ def get_lockup_markers(code: str) -> List[dict]:
         return []
 
     markers = [
-        {"date": (listing + timedelta(days=30)).strftime("%Y-%m-%d"), "label": "LU 30日"},
-        {"date": (listing + timedelta(days=180)).strftime("%Y-%m-%d"), "label": "LU 180日"},
+        {"date": (listing + timedelta(days=30)).strftime("%Y-%m-%d"),
+         "label": "ロックアップ解除の目安（上場30日後）", "short": "LU30"},
+        {"date": (listing + timedelta(days=180)).strftime("%Y-%m-%d"),
+         "label": "ロックアップ解除の目安（上場180日後）", "short": "LU180"},
     ]
 
     initial = _to_float(row.get("初値"))
@@ -279,7 +281,11 @@ def get_lockup_markers(code: str) -> List[dict]:
         target = initial * 1.5
         for date, high in zip(prices["dates"], prices["high"]):
             if high is not None and high >= target:
-                markers.append({"date": date, "label": "初値1.5倍"})
+                markers.append({
+                    "date": date,
+                    "label": f"初値の1.5倍（{target:,.0f}円）に到達",
+                    "short": "1.5倍",
+                })
                 break
 
     last = None

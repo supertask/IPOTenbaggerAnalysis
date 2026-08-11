@@ -170,19 +170,37 @@
                 });
             }
 
-            // ロックアップ解除の目安。売りが出やすく、押し目になることもある地点
-            (payload.lockup || []).forEach(function (m) {
+            // ロックアップ解除の目安。売りが出やすく、押し目になることもある地点。
+            // 日付が近いとラベルが重なるので、短い表記にして高さを段違いにする。
+            var lockup = (payload.lockup || []).slice().sort(function (a, b) {
+                return a.date < b.date ? -1 : 1;
+            });
+            lockup.forEach(function (m, i) {
                 layout.shapes.push({
                     type: 'line', xref: 'x', yref: 'paper',
                     x0: m.date, x1: m.date, y0: layout.yaxis.domain[0], y1: 1,
                     line: { color: '#fd7e14', width: 1, dash: 'dash' }, layer: 'below'
                 });
+                // 画面が狭いと日付が離れていてもラベルは重なるので、隣同士は必ず段を変える
+                var level = i % 3;
                 layout.annotations.push({
-                    x: m.date, y: 1, xref: 'x', yref: 'paper',
-                    text: m.label, showarrow: false, font: { size: 10, color: '#fd7e14' },
-                    yanchor: 'bottom', xanchor: 'left'
+                    x: m.date, y: 1 + level * 0.045, xref: 'x', yref: 'paper',
+                    text: m.short || m.label, showarrow: false,
+                    font: { size: 9, color: '#fd7e14' },
+                    yanchor: 'bottom', xanchor: 'left',
+                    bgcolor: 'rgba(255,255,255,0.75)',
+                    hovertext: m.label, captureevents: true
                 });
             });
+            if (lockup.length) {
+                layout.margin.t = 40;   // ずらしたラベルのぶん上に余白を作る
+            }
+
+            // 先に表示しておく。display:none のまま描画すると幅が取れず、
+            // Plotlyが既定の700pxで描いて画面からはみ出す。
+            statusEl.style.display = 'none';
+            chartEl.style.display = '';
+            noteEl.style.display = '';
 
             Plotly.newPlot(chartEl, traces, layout, {
                 responsive: true,
@@ -198,10 +216,7 @@
                 ]
             });
 
-            statusEl.style.display = 'none';
-            chartEl.style.display = '';
-            noteEl.style.display = '';
-
+            Plotly.Plots.resize(chartEl);
             buildRangeButtons(payload, dates);
         }
 
