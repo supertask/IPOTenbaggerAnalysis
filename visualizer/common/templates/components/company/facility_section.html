@@ -1,0 +1,102 @@
+{# 拠点数の推移と、拠点あたりの採算を競合と並べた比較 #}
+{% if facility %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0">拠点あたりの採算</h5>
+        {% if facility.ratio_to_peers %}
+        <span class="badge {% if facility.ratio_to_peers >= 1 %}bg-success{% else %}bg-secondary{% endif %}">
+            競合中央値の {{ '%.1f'|format(facility.ratio_to_peers) }}倍
+        </span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if facility.peers %}
+        <div class="table-responsive mb-3">
+            <table class="table table-sm facility-table mb-0">
+                <thead>
+                    <tr>
+                        <th>企業</th>
+                        <th class="num">期</th>
+                        <th class="num">拠点数</th>
+                        <th class="num">1拠点あたり売上</th>
+                        <th class="num">1拠点あたり利益</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="table-active">
+                        <td><strong>{{ company_name }}</strong></td>
+                        <td class="num">{{ facility.own.latest.date[:7] }}</td>
+                        <td class="num">{{ '{:,.0f}'.format(facility.own.latest.count) }}{{ facility.own.latest.unit }}</td>
+                        <td class="num">{% if facility.own.latest.sales_per is not none %}{{ '%.1f'|format(facility.own.latest.sales_per) }}百万{% else %}–{% endif %}</td>
+                        <td class="num"><strong>{% if facility.own.latest.profit_per is not none %}{{ '%.2f'|format(facility.own.latest.profit_per) }}百万{% else %}–{% endif %}</strong></td>
+                    </tr>
+                    {% for p in facility.peers %}
+                    <tr>
+                        <td>{{ p.name }}</td>
+                        <td class="num">{{ p.latest.date[:7] }}</td>
+                        <td class="num">{{ '{:,.0f}'.format(p.latest.count) }}{{ p.latest.unit }}</td>
+                        <td class="num">{% if p.latest.sales_per is not none %}{{ '%.1f'|format(p.latest.sales_per) }}百万{% else %}–{% endif %}</td>
+                        <td class="num">{% if p.latest.profit_per is not none %}{{ '%.2f'|format(p.latest.profit_per) }}百万{% else %}–{% endif %}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        {% if facility.has_series %}
+        <div id="facility-chart" style="min-height: 320px;"></div>
+        {% endif %}
+
+        <div class="text-muted small mt-2">
+            拠点数は有価証券報告書の本文（{{ facility.own.sources or '本文' }}）から取っています。
+            標準化された開示項目ではないため、取れる企業と取れない企業があります。
+            {% if facility.own.candidates %}
+            この期の他の候補値: {{ facility.own.candidates }}。
+            {% endif %}
+            拠点あたりの水準は業態によって桁が違うので、単体の数字ではなく競合との比で見てください。
+        </div>
+    </div>
+</div>
+
+{% if facility.has_series %}
+<script>
+(function () {
+    var POINTS = {{ facility.own.points|tojson }};
+    document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('facility-chart');
+        if (!el || typeof Plotly === 'undefined') return;
+        var dates = POINTS.map(function (p) { return p.date; });
+        Plotly.newPlot(el, [
+            {
+                type: 'bar', name: '拠点数', x: dates,
+                y: POINTS.map(function (p) { return p.count; }),
+                marker: { color: '#b0bec5' }, yaxis: 'y'
+            },
+            {
+                type: 'scatter', mode: 'lines+markers', name: '1拠点あたり利益（百万円）',
+                x: dates, y: POINTS.map(function (p) { return p.profit_per; }),
+                line: { color: '#d32f2f' }, connectgaps: false, yaxis: 'y2'
+            },
+            {
+                type: 'scatter', mode: 'lines+markers', name: '1拠点あたり売上（百万円）',
+                x: dates, y: POINTS.map(function (p) { return p.sales_per; }),
+                line: { color: '#1976d2', dash: 'dot' }, connectgaps: false,
+                visible: 'legendonly', yaxis: 'y2'
+            }
+        ], {
+            height: 320,
+            margin: { l: 55, r: 55, t: 10, b: 40 },
+            legend: { orientation: 'h', y: 1.15 },
+            hovermode: 'x unified',
+            dragmode: false,
+            xaxis: { type: 'category' },
+            yaxis: { title: { text: '拠点数' }, rangemode: 'tozero' },
+            yaxis2: { title: { text: '1拠点あたり（百万円）' }, overlaying: 'y',
+                      side: 'right', rangemode: 'tozero' }
+        }, { responsive: true, displaylogo: false, scrollZoom: false });
+    });
+})();
+</script>
+{% endif %}
+{% endif %}
