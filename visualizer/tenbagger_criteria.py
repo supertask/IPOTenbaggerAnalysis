@@ -277,8 +277,13 @@ def evaluate(row: Optional[dict], current_per: Optional[float] = None) -> Option
     manual = _load_manual().get(str(row.get("コード") or "").strip().upper(), {})
     manual_model = (manual.get("分類") or "").strip()
     if manual_model:
-        add(2, "成長性の高いビジネスモデル", PASS, manual_model, required=True,
-            evidence=[{"label": "手動指定", "value": manual_model}])
+        model_evidence = [{"label": "分類", "value": manual_model}]
+        if (manual.get("分類根拠") or "").strip():
+            model_evidence.append({"label": "根拠", "value": manual["分類根拠"].strip()})
+        # 「その他」は3つの型のどれにも当てはまらないという判断なので不適合にする
+        status = FAIL if manual_model.startswith("その他") else PASS
+        add(2, "成長性の高いビジネスモデル", status, manual_model, required=True,
+            evidence=model_evidence)
     else:
         model_evidence = []
         found = []
@@ -333,18 +338,30 @@ def evaluate(row: Optional[dict], current_per: Optional[float] = None) -> Option
         add(5, "黒字企業", FAIL, f"直近 {net[-1]:,.0f}百万円", evidence=net_evidence)
 
     # 6 ニッチトップ（人の判断が要る）
+    manual_niche = (manual.get("ニッチ") or "").strip()
+    manual_niche_reason = (manual.get("ニッチ根拠") or "").strip()
     niche = _hits(business, NICHE_HINTS)
-    niche_evidence = []
-    if niche:
-        niche_evidence.append({"label": "検出した語", "value": "／".join(niche[:5])})
-        niche_evidence.append({"label": "該当箇所", "value": _snippet(business, niche[0], 60)})
-    add(6, "ニッチ市場でトップ／オンリーワン", UNKNOWN,
-        "要確認（" + ("／".join(niche[:3]) + " の記述あり" if niche else "手がかりなし") + "）",
-        evidence=niche_evidence)
+    if manual_niche:
+        add(6, "ニッチ市場でトップ／オンリーワン", PASS,
+            manual_niche_reason[:40] or "該当",
+            evidence=[{"label": "根拠", "value": manual_niche_reason or manual_niche}])
+    else:
+        niche_evidence = []
+        if niche:
+            niche_evidence.append({"label": "検出した語", "value": "／".join(niche[:5])})
+            niche_evidence.append({"label": "該当箇所", "value": _snippet(business, niche[0], 60)})
+        add(6, "ニッチ市場でトップ／オンリーワン", UNKNOWN,
+            "要確認（" + ("／".join(niche[:3]) + " の記述あり" if niche else "手がかりなし") + "）",
+            evidence=niche_evidence)
 
     # 7 保証ビジネス
+    manual_warranty = (manual.get("保証") or "").strip()
     warranty = _hits(business, WARRANTY_HINTS)
-    if warranty:
+    if manual_warranty:
+        add(7, "保証ビジネス", PASS, "保証事業が主力",
+            evidence=[{"label": "根拠", "value": (manual.get("分類根拠") or "").strip()
+                       or "手動で該当と判断"}])
+    elif warranty:
         add(7, "保証ビジネス", PASS, "／".join(warranty[:2]),
             evidence=[{"label": "検出した語", "value": "／".join(warranty)},
                       {"label": "該当箇所", "value": _snippet(business, warranty[0], 60)}])
