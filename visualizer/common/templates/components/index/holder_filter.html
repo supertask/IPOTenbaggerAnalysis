@@ -3,6 +3,14 @@
    保有ラベルが1つも無いページではUI自体を出さない。 #}
 <div id="holder-filter" class="holder-filter mb-4 text-center" style="display: none;">
     <div class="btn-group flex-wrap" role="group" aria-label="保有で絞り込み"></div>
+    <div class="btn-group flex-wrap ms-2" role="group" aria-label="条件で絞り込み" id="criteria-filter"></div>
+    <div class="mt-2">
+        <label class="text-muted small me-1" for="company-sort">並び順:</label>
+        <select id="company-sort" class="form-select form-select-sm d-inline-block w-auto">
+            <option value="">既定</option>
+            <option value="criteria">条件の該当数が多い順</option>
+        </select>
+    </div>
     <div class="filter-count text-muted small mt-2"></div>
 </div>
 
@@ -25,7 +33,11 @@
 
         var container = document.getElementById('holder-filter');
         var group = container.querySelector('.btn-group');
+        var criteriaGroup = document.getElementById('criteria-filter');
+        var sortEl = document.getElementById('company-sort');
         var countEl = container.querySelector('.filter-count');
+        var currentHolder = '';
+        var requiredOnly = false;
 
         var filters = [{ key: '', text: 'すべて' },
                        { key: '*', text: '保有あり' }];
@@ -37,12 +49,14 @@
             var holders = (card.dataset.holders || '').split(',')
                 .map(function (s) { return s.trim(); })
                 .filter(Boolean);
+            if (requiredOnly && !card.dataset.criteriaRequired) return false;
             if (!key) return true;
             if (key === '*') return holders.length > 0;
             return holders.indexOf(key) !== -1;
         }
 
         function apply(key) {
+            currentHolder = key;
             var shown = 0;
             cards.forEach(function (card) {
                 var ok = matches(card, key);
@@ -59,7 +73,7 @@
                 if (row) row.style.display = visible ? '' : 'none';
             });
 
-            countEl.textContent = key
+            countEl.textContent = (key || requiredOnly)
                 ? shown + ' / ' + cards.length + ' 社を表示中'
                 : cards.length + ' 社';
 
@@ -79,6 +93,48 @@
             btn.addEventListener('click', function () { apply(f.key); });
             group.appendChild(btn);
         });
+
+        // 条件の該当数が付いているページでは、必須条件での絞り込みと並べ替えも出す
+        var hasCriteria = cards.some(function (c) { return c.dataset.criteria !== ''; });
+        if (hasCriteria) {
+            var reqBtn = document.createElement('button');
+            reqBtn.type = 'button';
+            reqBtn.className = 'btn btn-outline-success btn-sm';
+            reqBtn.textContent = '必須条件に✕なし';
+            reqBtn.title = 'ビジネスモデル・売上・利益・PERのどれにも明確な不適合が無い銘柄だけを表示します';
+            reqBtn.addEventListener('click', function () {
+                requiredOnly = !requiredOnly;
+                reqBtn.classList.toggle('btn-success', requiredOnly);
+                reqBtn.classList.toggle('text-white', requiredOnly);
+                reqBtn.classList.toggle('btn-outline-success', !requiredOnly);
+                apply(currentHolder);
+            });
+            criteriaGroup.appendChild(reqBtn);
+
+            sortEl.addEventListener('change', function () {
+                if (sortEl.value !== 'criteria') {
+                    location.reload();   // 既定の並びはサーバ側で決まっている
+                    return;
+                }
+                // 年ごとの見出しがあると並べ替えの意味が薄れるので1つの行にまとめる
+                var rows = Array.prototype.slice.call(document.querySelectorAll('.row'))
+                    .filter(function (r) { return r.querySelector('.company-card-wrapper'); });
+                if (!rows.length) return;
+                var target = rows[0];
+                document.querySelectorAll('.year-heading').forEach(function (h) {
+                    h.style.display = 'none';
+                });
+                rows.slice(1).forEach(function (r) { r.style.display = 'none'; });
+                target.style.display = '';
+                cards.slice().sort(function (a, b) {
+                    return (parseInt(b.dataset.criteria || '-1', 10)) -
+                           (parseInt(a.dataset.criteria || '-1', 10));
+                }).forEach(function (card) { target.appendChild(card); });
+                apply(currentHolder);
+            });
+        } else {
+            sortEl.parentElement.style.display = 'none';
+        }
 
         container.style.display = '';
         apply('');

@@ -1,5 +1,7 @@
 <div class="col-6 col-sm-6 col-md-4 col-lg-3 col-xl-5th col-xxl-2 company-card-wrapper"
-     data-holders="{% if company.holders %}{% for h in company.holders %}{{ h.label }}{% if not loop.last %},{% endif %}{% endfor %}{% endif %}">
+     data-holders="{% if company.holders %}{% for h in company.holders %}{{ h.label }}{% if not loop.last %},{% endif %}{% endfor %}{% endif %}"
+     data-criteria="{{ company.criteria_passed if company.criteria_passed is not none else '' }}"
+     data-criteria-required="{{ '1' if company.criteria_required_ok else '' }}">
     <div class="card company-card">
         <div class="card-header">
             <h5 class="card-title">
@@ -14,6 +16,12 @@
                 {% endif %}
             </h5>
             {% with holders = company.holders %}{% include 'components/holder_badges.html' %}{% endwith %}
+            {% if company.criteria_passed is not none %}
+            <span class="criteria-count-badge {% if company.criteria_required_ok %}bg-success text-white{% elif company.criteria_passed >= 6 %}bg-warning text-dark{% else %}bg-light text-muted border{% endif %}"
+                  title="テンバガー条件 {{ company.criteria_passed }}/{{ company.criteria_total }} 該当{% if company.criteria_required_ok %} / 必須条件に✕なし{% endif %}">
+                条件 {{ company.criteria_passed }}/{{ company.criteria_total }}
+            </span>
+            {% endif %}
         </div>
         <div class="card-body">
             {% if show_code_subtitle and company.code %}
