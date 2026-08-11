@@ -175,3 +175,6 @@ scripts/verify_shots/
 
 # 株価チャート用のyfinanceキャッシュ（数時間で取り直すので残す意味がない）
 data/cache/prices/
+
+# 実験の答え合わせ用データ（sample.py で再生成できる）
+experiments/ai_signal/answers.tsv
