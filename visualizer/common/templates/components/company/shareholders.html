@@ -1,0 +1,42 @@
+{# 株主構成。ロックアップの条件は解除時期の売り圧力を読むために出す #}
+{% if shareholders %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">株主構成</h5>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            {% for label, value, css in shareholders.summary %}
+            <span class="badge {{ css }} me-1">{{ label }} {{ '%.1f'|format(value) }}%</span>
+            {% endfor %}
+        </div>
+
+        {% if shareholders.rows %}
+        <div class="table-responsive">
+            <table class="table table-sm shareholder-table mb-0">
+                <thead>
+                    <tr><th>株主名</th><th class="ratio">比率</th><th>ロックアップ</th></tr>
+                </thead>
+                <tbody>
+                    {% for s in shareholders.rows %}
+                    <tr>
+                        <td>
+                            {{ s.name }}
+                            {% if s.is_ceo %}<span class="badge bg-primary">社長</span>{% endif %}
+                        </td>
+                        <td class="ratio">{{ '%.2f'|format(s.ratio) }}%</td>
+                        <td class="text-muted">{{ s.lockup }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <div class="text-muted small mt-2">
+            ロックアップは上場前からの株主にかかる売却制限です。解除の時期（30日・180日・初値1.5倍など）は
+            売りが出て株価が下がりやすい一方、買い場になることもあります。株価チャートに解除の目安を表示しています。
+        </div>
+    </div>
+</div>
+{% endif %}
