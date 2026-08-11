@@ -172,3 +172,6 @@ data/output/index/
 
 # 検証スクリプトが出力するスクリーンショット
 scripts/verify_shots/
+
+# 株価チャート用のyfinanceキャッシュ（数時間で取り直すので残す意味がない）
+data/cache/prices/

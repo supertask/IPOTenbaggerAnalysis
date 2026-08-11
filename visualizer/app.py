@@ -5,6 +5,8 @@ import logging
 from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from werkzeug.exceptions import NotFound
 
+from visualizer import price_service
+
 # ロギングの設定
 logging.basicConfig(
     level=logging.DEBUG,
@@ -312,7 +314,12 @@ def create_next_tenbagger_app():
         if error:
             return jsonify({"error": error}), status_code
         return jsonify(data), status_code
-    
+
+    @app.route('/api/price_history/<company_code>')
+    def get_price_history(company_code):
+        """株価・出来高・PERの時系列を返すAPI"""
+        return jsonify(price_service.get_chart_payload(company_code))
+
     return app
 
 def create_past_tenbagger_app():
@@ -379,7 +386,12 @@ def create_past_tenbagger_app():
         data = request.json
         response, status_code = past_tenbagger_get_securities_report_diff(company_code, data)
         return jsonify(response), status_code
-    
+
+    @app.route('/api/price_history/<company_code>')
+    def get_price_history(company_code):
+        """株価・出来高・PERの時系列を返すAPI"""
+        return jsonify(price_service.get_chart_payload(company_code))
+
     return app
 
 def create_x_bagger_app():

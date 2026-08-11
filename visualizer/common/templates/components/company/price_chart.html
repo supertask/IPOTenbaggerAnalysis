@@ -1,0 +1,212 @@
+{# 株価・出来高・PERの時系列。データはAPIから非同期で取る #}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0">株価</h5>
+        <div class="btn-group btn-group-sm" role="group" id="price-range-buttons"></div>
+    </div>
+    <div class="card-body">
+        <div id="price-chart-status" class="text-muted small">株価を読み込んでいます...</div>
+        <div id="price-chart" style="min-height: 520px; display: none;"></div>
+        <div id="price-chart-note" class="text-muted small mt-2" style="display: none;">
+            株価・出来高は株式分割を調整済み。PERは終値 ÷ 直近の有価証券報告書の1株当たり当期純利益（実績）で、
+            EPSは発表後の分割に合わせて調整しています。
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var CODE = {{ company_code|tojson }};
+    var APP = {{ app_type|tojson }};
+
+    // 期間ボタン。添付のチャートに合わせて代表的なレンジを用意する
+    var RANGES = [
+        { key: '1m',  label: '1ヶ月', days: 31 },
+        { key: '3m',  label: '3ヶ月', days: 92 },
+        { key: '6m',  label: '6ヶ月', days: 183 },
+        { key: '1y',  label: '1年',   days: 365 },
+        { key: '3y',  label: '3年',   days: 365 * 3 },
+        { key: '5y',  label: '5年',   days: 365 * 5 },
+        { key: 'all', label: '全期間', days: null }
+    ];
+
+    document.addEventListener('DOMContentLoaded', function () {
+        var statusEl = document.getElementById('price-chart-status');
+        var chartEl = document.getElementById('price-chart');
+        var noteEl = document.getElementById('price-chart-note');
+        var buttonsEl = document.getElementById('price-range-buttons');
+
+        fetch('/' + APP + '/api/price_history/' + encodeURIComponent(CODE))
+            .then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.json();
+            })
+            .then(function (payload) {
+                if (!payload.has_price) {
+                    statusEl.textContent = 'この銘柄の株価データを取得できませんでした。';
+                    return;
+                }
+                render(payload);
+            })
+            .catch(function (err) {
+                statusEl.textContent = '株価の取得に失敗しました: ' + err.message;
+            });
+
+        function render(payload) {
+            var p = payload.prices;
+            var dates = p.dates;
+
+            var traces = [{
+                type: 'candlestick',
+                name: '株価',
+                x: dates,
+                open: p.open, high: p.high, low: p.low, close: p.close,
+                increasing: { line: { color: '#d32f2f' } },
+                decreasing: { line: { color: '#1976d2' } },
+                xaxis: 'x', yaxis: 'y'
+            }, {
+                type: 'bar',
+                name: '出来高',
+                x: dates,
+                y: p.volume,
+                marker: { color: '#b0a24a' },
+                xaxis: 'x', yaxis: 'y2',
+                hovertemplate: '出来高 %{y:,}<extra></extra>'
+            }];
+
+            if (payload.has_per) {
+                traces.push({
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'PER（実績）',
+                    x: dates,
+                    y: payload.per,
+                    line: { color: '#7b1fa2', width: 1.5 },
+                    connectgaps: false,
+                    xaxis: 'x', yaxis: 'y3',
+                    hovertemplate: 'PER %{y:.1f}倍<extra></extra>'
+                });
+            }
+
+            // PERが無い銘柄では下段を作らず、そのぶん株価と出来高を広く使う
+            var hasPer = !!payload.has_per;
+            var layout = {
+                height: 620,
+                margin: { l: 20, r: 70, t: 10, b: 30 },
+                showlegend: true,
+                legend: { orientation: 'h', y: 1.1 },
+                hovermode: 'x unified',
+                dragmode: 'pan',
+                xaxis: {
+                    type: 'date',
+                    // 目盛りを一番下の段に付ける（既定だと株価と出来高の間に出る）
+                    anchor: hasPer ? 'y3' : 'y2',
+                    rangeslider: { visible: true, thickness: 0.07 },
+                    // 休場日を詰めて、間隔が空かないようにする
+                    rangebreaks: [{ bounds: ['sat', 'mon'] }]
+                },
+                yaxis:  {
+                    domain: hasPer ? [0.46, 1] : [0.32, 1],
+                    title: { text: '株価（円）' }, side: 'right', zeroline: false
+                },
+                yaxis2: {
+                    domain: hasPer ? [0.24, 0.42] : [0.0, 0.28],
+                    title: { text: '出来高' }, side: 'right', rangemode: 'tozero'
+                }
+            };
+            if (hasPer) {
+                layout.yaxis3 = {
+                    domain: [0.0, 0.20], title: { text: 'PER（倍）' }, side: 'right'
+                };
+            }
+
+            Plotly.newPlot(chartEl, traces, layout, {
+                responsive: true,
+                scrollZoom: true,
+                displaylogo: false
+            });
+
+            statusEl.style.display = 'none';
+            chartEl.style.display = '';
+            noteEl.style.display = '';
+
+            buildRangeButtons(payload, dates);
+        }
+
+        // 表示中の期間だけを見て縦軸を決める。全期間の高値に引っ張られると
+        // 直近の値動きが潰れて読めなくなるため。
+        function yRange(values, fromIndex, toIndex, pad, fromZero) {
+            var lo = Infinity, hi = -Infinity;
+            for (var i = fromIndex; i <= toIndex; i++) {
+                var v = values[i];
+                if (v === null || v === undefined) continue;
+                if (v < lo) lo = v;
+                if (v > hi) hi = v;
+            }
+            if (lo === Infinity) return null;
+            if (fromZero) return [0, hi * (1 + pad)];
+            var margin = (hi - lo) * pad || Math.abs(hi) * pad || 1;
+            return [lo - margin, hi + margin];
+        }
+
+        function buildRangeButtons(payload, dates) {
+            var p = payload.prices;
+            var last = new Date(dates[dates.length - 1]);
+            var first = new Date(dates[0]);
+
+            function apply(range, btn) {
+                var fromIndex = 0;
+                if (range.days !== null) {
+                    var from = new Date(last.getTime() - range.days * 86400000);
+                    if (from < first) from = first;
+                    var fromStr = from.toISOString().slice(0, 10);
+                    while (fromIndex < dates.length - 1 && dates[fromIndex] < fromStr) fromIndex++;
+                }
+                var toIndex = dates.length - 1;
+
+                var update = {};
+                update['xaxis.range'] = range.days === null
+                    ? [dates[0], dates[toIndex]]
+                    : [dates[fromIndex], dates[toIndex]];
+
+                var priceRange = yRange(p.low, fromIndex, toIndex, 0.05);
+                var priceHigh = yRange(p.high, fromIndex, toIndex, 0.05);
+                if (priceRange && priceHigh) update['yaxis.range'] = [priceRange[0], priceHigh[1]];
+
+                var volRange = yRange(p.volume, fromIndex, toIndex, 0.1, true);
+                if (volRange) update['yaxis2.range'] = volRange;
+
+                if (payload.has_per) {
+                    var perRange = yRange(payload.per, fromIndex, toIndex, 0.1);
+                    if (perRange) update['yaxis3.range'] = perRange;
+                }
+
+                Plotly.relayout(chartEl, update);
+
+                buttonsEl.querySelectorAll('button').forEach(function (b) {
+                    b.classList.toggle('btn-primary', b === btn);
+                    b.classList.toggle('btn-outline-secondary', b !== btn);
+                });
+            }
+
+            var spanDays = (last - first) / 86400000;
+            var defaultBtn = null;
+            RANGES.forEach(function (range) {
+                // 上場から日が浅い銘柄に長い期間のボタンを出しても意味がない
+                if (range.days !== null && range.days > spanDays * 1.5) return;
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'btn btn-outline-secondary';
+                btn.textContent = range.label;
+                btn.addEventListener('click', function () { apply(range, btn); });
+                buttonsEl.appendChild(btn);
+                if (range.key === '1y' || (defaultBtn === null && range.key === 'all')) {
+                    defaultBtn = btn;
+                    defaultBtn._range = range;
+                }
+            });
+            if (defaultBtn) apply(defaultBtn._range, defaultBtn);
+        }
+    });
+})();
+</script>
