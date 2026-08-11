@@ -179,3 +179,4 @@ data/cache/prices/
 # 実験の答え合わせ用データ（sample.py で再生成できる）
 experiments/ai_signal/answers.tsv
 experiments/ai_signal/answers2.tsv
+data/output/facilities/
