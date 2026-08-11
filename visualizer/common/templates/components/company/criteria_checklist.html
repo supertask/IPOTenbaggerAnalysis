@@ -1,0 +1,40 @@
+{# テンバガー条件11カ条のチェックリスト #}
+{% if criteria %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0">テンバガー条件</h5>
+        <div>
+            <span class="badge bg-secondary">{{ criteria.passed }} / {{ criteria.total }} 該当</span>
+            {% if criteria.required_no_fail %}
+            <span class="badge bg-success">必須条件に✕なし（{{ criteria.required_passed }}/{{ criteria.required_total }} OK）</span>
+            {% else %}
+            <span class="badge bg-danger">必須条件に✕ {{ criteria.required_failed|length }}件</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="criteria-grid">
+            {% for item in criteria['items'] %}
+            <div class="criteria-item criteria-{{ item.status }}">
+                <span class="criteria-mark">
+                    {%- if item.status == 'pass' %}✓
+                    {%- elif item.status == 'partial' %}△
+                    {%- elif item.status == 'fail' %}✕
+                    {%- else %}?{% endif -%}
+                </span>
+                <span class="criteria-title">
+                    {{ item.no }}. {{ item.title }}
+                    {% if item.required %}<span class="criteria-required">必須</span>{% endif %}
+                </span>
+                <span class="criteria-detail">{{ item.detail }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="text-muted small mt-3">
+            満たす数が多いほど候補として有力という基準で、全部を満たす必要はありません。
+            条件2と6は文章からの自動判定が難しいため「要確認」のままにしています。
+            条件3〜5は上場時の目論見書に載る5年分の業績を見ているので、上場から年数が経った企業では現在の姿と離れます。
+        </div>
+    </div>
+</div>
+{% endif %}

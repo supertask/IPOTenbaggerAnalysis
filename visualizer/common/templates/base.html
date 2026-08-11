@@ -150,6 +150,64 @@
             font-size: 0.85rem;
             vertical-align: middle;
         }
+
+        /* テンバガー条件のチェックリスト */
+        .criteria-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 0.4rem 1.2rem;
+        }
+
+        .criteria-item {
+            display: grid;
+            grid-template-columns: 1.4rem minmax(0, 1fr);
+            grid-template-areas: "mark title" ".    detail";
+            align-items: baseline;
+            padding: 0.3rem 0.5rem;
+            border-radius: 0.25rem;
+            border-left: 3px solid transparent;
+        }
+
+        .criteria-mark { grid-area: mark; font-weight: bold; }
+        .criteria-title { grid-area: title; }
+        .criteria-detail {
+            grid-area: detail;
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
+
+        .criteria-pass    { border-left-color: #198754; background-color: #f1f8f4; }
+        .criteria-pass .criteria-mark { color: #198754; }
+        .criteria-partial { border-left-color: #ffc107; background-color: #fffaf0; }
+        .criteria-partial .criteria-mark { color: #b8860b; }
+        .criteria-fail    { border-left-color: #dc3545; background-color: #fdf3f4; }
+        .criteria-fail .criteria-mark { color: #dc3545; }
+        .criteria-unknown { border-left-color: #adb5bd; background-color: #f8f9fa; }
+        .criteria-unknown .criteria-mark { color: #6c757d; }
+
+        .criteria-required {
+            font-size: 0.7rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: #0d6efd;
+            border-radius: 0.2rem;
+            padding: 0.05rem 0.3rem;
+            margin-left: 0.3rem;
+            vertical-align: middle;
+        }
+
+        /* 一覧カードの条件バッジ */
+        .criteria-count-badge {
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 0.2rem 0.45rem;
+            border-radius: 0.25rem;
+            white-space: nowrap;
+        }
+
+        /* 株主構成 */
+        .shareholder-table td, .shareholder-table th { padding: 0.3rem 0.5rem; }
+        .shareholder-table .ratio { text-align: right; white-space: nowrap; }
     </style>
 </head>
 <body>
