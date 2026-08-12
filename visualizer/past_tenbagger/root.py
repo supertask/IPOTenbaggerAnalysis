@@ -23,6 +23,7 @@ from visualizer import portfolio as _portfolio
 from visualizer import price_service as _price_service
 from visualizer import facility_service as _facility
 from visualizer import holdings_service as _holdings
+from visualizer import profile_service as _profile
 from visualizer import shareholders as _shareholders
 from visualizer import tenbagger_criteria as _criteria
 
@@ -320,6 +321,7 @@ def company_view(company_code):
         'shareholders': _shareholders.get_shareholders(company_code),
         'holdings_history': _holdings.get_holdings_history(company_code),
         'facility': _facility.get_facility_view(company_code, competitors),
+        'business_profile': _profile.get_profile(company_code),
         'lockup_markers': _price_service.get_lockup_markers(company_code),
     }
     
