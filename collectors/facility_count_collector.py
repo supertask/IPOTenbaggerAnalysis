@@ -64,8 +64,26 @@ MIN_COUNT, MAX_COUNT = 3, 20000
 # これを自社の拠点として拾い、1拠点あたりの利益が桁違いに小さくなる。
 NEGATIVE_CONTEXT = ("導入", "提携", "取引先", "掲載", "全国の", "市場",
                     "業界", "顧客", "関わる", "契約先", "加盟企業")
+
+# 総数ではなく動いたぶんの数。これらは必ず数値の手前に来るので前しか見ない。
+# 「2026年3月末で95拠点であり、今後も積極的な新規拠点展開を」のように、
+# 総数のあとに出てくることがあり、後ろまで見ると正しい値まで落ちる
+NEGATIVE_BEFORE = ("新規", "新設", "開設", "純増", "譲り受け", "改装")
 # 数値の前後どれだけを見るか
 CONTEXT_BEFORE, CONTEXT_AFTER = 45, 15
+
+# 直後に増減や開設が来るものは、動いたぶんであって総数ではない。
+#   「前年同期比18拠点増」「ホスピス施設11施設を新規開設したことによる」
+# 距離を切るのは、総数のあとに続くだけの文と区別するため。
+#   「95拠点であり、今後も積極的な新規拠点展開を予定しています」は総数
+DELTA_AFTER = re.compile(r"^[^。]{0,8}?(?:[増減]|新規|開設)")
+
+# 直前にこれがあれば総数とみなし、上の打ち消しより優先する。
+# 「新規出店12店舗（閉店1店舗）を実施し、当連結会計年度末の店舗数は73店舗」の
+# ように、総数の直前に新規出店の話が来ることがあるため
+POSITIVE_BEFORE = ("店舗数", "拠点数", "施設数", "事業所数", "教室数", "校数",
+                   "合計", "総数", "末時点", "末現在", "運営し")
+NEAR_BEFORE, NEAR_AFTER = 18, 8
 
 ENCODINGS = ("utf-16", "utf-16-le", "utf-8-sig", "utf-8", "cp932")
 
@@ -100,10 +118,22 @@ def _candidates(text: str):
         head = body[:match.start()].rstrip()
         if head.endswith(("約", "計約")):
             continue
-        window = body[max(0, match.start() - CONTEXT_BEFORE):
-                      match.end() + CONTEXT_AFTER]
-        if any(word in window for word in NEGATIVE_CONTEXT):
+        # 「前年同期比18拠点増」は増えたぶんの数
+        if DELTA_AFTER.match(body[match.end():match.end() + NEAR_AFTER]):
             continue
+        near_before = body[max(0, match.start() - NEAR_BEFORE):match.start()]
+        # すぐ手前に打ち消しがあるものは、総数の言い回しでも自社の数ではない。
+        # 「導入も含む導入店舗数は258店舗」は「店舗数は」が付いていても
+        # 自社の店舗ではなく、自社製品を入れた他社の店舗
+        if any(word in near_before for word in NEGATIVE_CONTEXT + NEGATIVE_BEFORE):
+            continue
+        if not any(word in near_before for word in POSITIVE_BEFORE):
+            before = body[max(0, match.start() - CONTEXT_BEFORE):match.start()]
+            after = body[match.end():match.end() + CONTEXT_AFTER]
+            if any(word in before for word in NEGATIVE_BEFORE):
+                continue
+            if any(word in before + after for word in NEGATIVE_CONTEXT):
+                continue
         out.append((value, unit))
     return out
 

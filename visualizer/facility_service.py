@@ -40,6 +40,18 @@ _cache: Optional[Dict[str, Dict[str, dict]]] = None
 _cache_mtime: Optional[float] = None
 
 
+def _sane_share(value: Optional[float], cost: Optional[float]) -> Optional[float]:
+    """売上原価の内訳として筋が通らない値を落とす。
+
+    売上原価明細書は本文からの抽出なので、別の行の数字を掴むことがある。
+    サンウェルズは売上264億に対し労務費91.6兆円という値が入っていた。
+    仕入高は在庫を積めば売上原価を超えうるが、そこまで大きくは離れない。
+    """
+    if value is None or not cost or value <= 0:
+        return None
+    return value if value <= cost * 1.2 else None
+
+
 def _num(value) -> Optional[float]:
     try:
         f = float(value)
@@ -219,12 +231,15 @@ def _load_cost_structure() -> Dict[str, dict]:
                 if current and row["報告日"] <= current["date"]:
                     continue
                 cost = _num(row.get("売上原価_百万円"))
-                labor = _num(row.get("労務費_百万円"))
+                labor = _sane_share(_num(row.get("労務費_百万円")), cost)
+                purchase = _sane_share(_num(row.get("仕入高_百万円")), cost)
                 latest[code] = {
                     "date": row["報告日"],
+                    # 原価率はXBRLのタグ付き値なので、内訳が壊れていても使える
                     "cost_ratio": _num(row.get("原価率_％")),
-                    "purchase_ratio": _num(row.get("仕入高対原価_％")),
-                    "purchase": _num(row.get("仕入高_百万円")),
+                    "purchase_ratio": (purchase / cost * 100
+                                       if purchase is not None and cost else None),
+                    "purchase": purchase,
                     "labor": labor,
                     "labor_ratio": (labor / cost * 100
                                     if labor is not None and cost else None),
