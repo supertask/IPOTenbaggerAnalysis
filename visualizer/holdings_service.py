@@ -83,26 +83,60 @@ def _split_factors(company_code: str, rows: List[dict]) -> Dict[tuple, float]:
     """
     from visualizer import price_service
 
-    as_of = {}
-    for r in rows:
-        if r["holder_type"] == "major":
-            # 期末が取れない古い書類は提出日で代用する
-            as_of.setdefault(("major", r["report_date"]),
-                             (r["period_end"] or r["report_date"],
-                              _REGISTER_LAG_DAYS))
-        else:
-            as_of.setdefault(("officer", r["report_date"]),
-                             (r["report_date"], 0))
-
-    factors = {}
-    for key, (on, lag) in as_of.items():
+    def factor(on: str, lag: int) -> float:
         try:
-            factors[key] = price_service.get_split_factor(
+            return price_service.get_split_factor(
                 company_code, on, register_lag_days=lag)
         except Exception as e:
             logger.warning("分割倍率の取得に失敗 %s %s: %s", company_code, on, e)
-            factors[key] = 1.0
+            return 1.0
+
+    factors = {}
+    for r in rows:
+        if r["holder_type"] != "major":
+            continue
+        key = ("major", r["report_date"])
+        if key not in factors:
+            # 期末が取れない古い書類は提出日で代用する
+            factors[key] = factor(r["period_end"] or r["report_date"],
+                                  _REGISTER_LAG_DAYS)
+
+    officers = [r for r in rows
+                if r["holder_type"] == "officer" and r["shares"] is not None]
+    if officers:
+        candidates = {
+            "提出日": {("officer", r["report_date"]): factor(r["report_date"], 0)
+                       for r in officers},
+            "期末": {("officer", r["report_date"]):
+                     factor(r["period_end"] or r["report_date"], _REGISTER_LAG_DAYS)
+                     for r in officers},
+        }
+        best = min(candidates, key=lambda k: _split_jumps(officers, candidates[k]))
+        factors.update(candidates[best])
     return factors
+
+
+def _split_jumps(rows: List[dict], factors: Dict[tuple, float]) -> int:
+    """調整後の系列で、隣の期と約2倍・約半分になる箇所を数える。
+
+    分割調整の基準日がずれていると、ここが跳ねる。役員の株数は有報の
+    「役員の状況」に載るが、提出日現在の株数を書く会社と、期末の株数を
+    そのまま残す会社があり、どちらかに決め打つと片方が必ず壊れる。
+    実際にGENDAは期末、エランは提出日で合う。跳ねの少ないほうを採る。
+    """
+    per_name: Dict[str, List[float]] = {}
+    for r in sorted(rows, key=lambda r: r["report_date"]):
+        value = r["shares"] * factors.get(("officer", r["report_date"]), 1.0)
+        per_name.setdefault(r["holder_name"], []).append(value)
+    jumps = 0
+    for values in per_name.values():
+        for before, after in zip(values, values[1:]):
+            if not before or not after:
+                continue
+            ratio = after / before
+            if 1.8 <= ratio <= 2.2 or 0.45 <= ratio <= 0.56:
+                jumps += 1
+    return jumps
 
 
 def _build(rows: List[dict], holder_type: str, factors: Dict[tuple, float]) -> Optional[dict]:
