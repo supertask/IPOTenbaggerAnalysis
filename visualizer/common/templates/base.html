@@ -306,6 +306,18 @@
         }
         .help-table td { padding: 0.2rem 0; line-height: 1.6; }
 
+        /* スマホでは見出しを上に重ねる。横に並べると本文の幅が無くなる */
+        @media (max-width: 576px) {
+            .help-table, .help-table tbody, .help-table tr,
+            .help-table th, .help-table td { display: block; width: auto; }
+            .help-table th {
+                white-space: normal;
+                font-weight: bold;
+                padding: 0.5rem 0 0;
+            }
+            .help-table tr:first-child th { padding-top: 0; }
+        }
+
         /* 事業と経営陣の読み解き */
         .profile-list { margin: 0; }
         .profile-list dt {

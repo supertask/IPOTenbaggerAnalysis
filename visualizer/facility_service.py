@@ -112,7 +112,7 @@ def _apply_overrides(data: Dict[str, Dict[str, dict]]) -> None:
         data.setdefault(code, {})[date] = {
             "count": count,
             "unit": (row.get("単位") or "拠点").strip(),
-            "sources": "有報を読んで確認",
+            "sources": "本文（読んで確認した値）",
             "candidates": "",
         }
 
