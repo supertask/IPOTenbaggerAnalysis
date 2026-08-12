@@ -24,6 +24,9 @@ FACILITY_TSV = os.path.join(
     BASE_DIR, "data", "output", "facilities", "facility_counts.tsv")
 # 本文からの自動抽出を人が上書きするファイル。保有銘柄だけ埋めている
 OVERRIDE_TSV = os.path.join(BASE_DIR, "data", "meta", "facility_override.tsv")
+# 期中の報告書から拾った拠点数。保有銘柄のみ（期中の書類をそれしか落としていない）
+INTERIM_TSV = os.path.join(
+    BASE_DIR, "data", "output", "facilities", "facility_counts_interim.tsv")
 CAPEX_TSV = os.path.join(BASE_DIR, "data", "output", "facilities", "capex.tsv")
 COST_TSV = os.path.join(
     BASE_DIR, "data", "output", "facilities", "cost_structure.tsv")
@@ -115,6 +118,39 @@ def _apply_overrides(data: Dict[str, Dict[str, dict]]) -> None:
             "sources": "本文（読んで確認した値）",
             "candidates": "",
         }
+
+
+_interim_cache: Optional[Dict[str, Dict[str, dict]]] = None
+_interim_mtime: Optional[float] = None
+
+
+def _load_interim() -> Dict[str, Dict[str, dict]]:
+    """期中の報告書から拾った拠点数。有報より新しい数字が分かる"""
+    global _interim_cache, _interim_mtime
+    if not os.path.exists(INTERIM_TSV):
+        return {}
+    mtime = os.path.getmtime(INTERIM_TSV)
+    if _interim_cache is not None and _interim_mtime == mtime:
+        return _interim_cache
+
+    data: Dict[str, Dict[str, dict]] = {}
+    try:
+        with open(INTERIM_TSV, encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f, delimiter="\t"):
+                count = _num(row.get("拠点数"))
+                if not count:
+                    continue
+                data.setdefault(row["コード"], {})[row["報告日"]] = {
+                    "count": count,
+                    "unit": (row.get("単位") or "拠点").strip(),
+                    "sources": (row.get("出所") or "").strip(),
+                }
+    except OSError as e:
+        logger.warning("期中の拠点数を読めませんでした: %s", e)
+        return {}
+
+    _interim_cache, _interim_mtime = data, mtime
+    return data
 
 
 _capex_cache: Optional[Dict[str, Dict[str, float]]] = None
@@ -270,6 +306,15 @@ def get_facility_view(company_code, competitors: Optional[List[dict]] = None
     if code not in data:
         return None
 
+    # 期中の報告書から拾った、有報より新しい拠点数。1拠点あたりの計算には
+    # 使わない（期中の売上・利益は半期ぶんで、年次の分子と噛み合わない）
+    interim = _load_interim().get(code) or {}
+    latest_interim = None
+    if interim:
+        date = max(interim)
+        if date > max(data[code]):
+            latest_interim = {"date": date, **interim[date]}
+
     peer_codes = [str(c.get("code")).strip() for c in (competitors or [])
                   if c.get("code") and str(c.get("code")).strip() in data]
     financials = _financials([code] + peer_codes)
@@ -317,11 +362,18 @@ def get_facility_view(company_code, competitors: Optional[List[dict]] = None
         if entry and entry.get("cost_ratio") is not None:
             peer_costs.append({"name": peer.get("name") or peer_code, **entry})
 
+    # 期中の点は棒だけ描く。1拠点あたりの線は年次の点だけを結ぶ
+    interim_points = [{"date": d, "count": v["count"]}
+                      for d, v in sorted(interim.items())
+                      if d not in data[code]]
+
     return {
         "own": own,
         "peers": sorted(peers, key=lambda p: -(p["latest"]["profit_per"] or 0)),
         "ratio_to_peers": ratio,
-        "has_series": len(own["points"]) >= 2,
+        "latest_interim": latest_interim,
+        "interim_points": interim_points,
+        "has_series": len(own["points"]) + len(interim_points) >= 2,
         "planned_cost": planned,
         "cost_structure": own_cost,
         "peer_cost_structures": sorted(peer_costs, key=lambda p: p["cost_ratio"]),

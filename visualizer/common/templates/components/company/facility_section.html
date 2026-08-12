@@ -23,6 +23,9 @@
                 <tr><th>1拠点あたり</th><td>売上（利益）÷ 拠点数。同じ期どうし</td></tr>
                 <tr><th>競合との比</th><td>競合の「1拠点あたり利益」の中央値との倍率。
                     水準は業態で桁が違うので、この比で見てください</td></tr>
+                <tr><th>期中の拠点数</th><td>四半期・半期報告書にも書かれているので、そこからも拾っています
+                    （保有銘柄のみ）。グラフの薄いほうの棒がそれです。売上・利益は半期ぶんで年次と噛み合わないため、
+                    1拠点あたりの計算には使わず、最新の規模を見るためだけに出しています</td></tr>
                 <tr><th>取れる企業</th><td>拠点数が本文から拾えた919社。拠点数を開示しない企業のほうが多いです</td></tr>
                 <tr><th>注意</th><td>拠点数は年によって連結・単体など別定義を拾うことがあります。
                     また本文には「導入先の店舗数」など自社の拠点でない数も出てくるため、
@@ -61,6 +64,17 @@
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+        {% endif %}
+
+        {% if facility.latest_interim %}
+        <div class="alert alert-light border py-2 px-3 mb-3">
+            <strong>直近</strong>
+            {{ '{:,.0f}'.format(facility.latest_interim.count) }}{{ facility.latest_interim.unit }}
+            <span class="text-muted small">
+                （{{ facility.latest_interim.date[:7] }}の期中報告書より。上の表は年次の売上・利益と
+                期をそろえるため、有報の値を使っています）
+            </span>
         </div>
         {% endif %}
 
@@ -140,25 +154,51 @@
 <script>
 (function () {
     var POINTS = {{ facility.own.points|tojson }};
+    var INTERIM = {{ facility.interim_points|tojson }};
     document.addEventListener('DOMContentLoaded', function () {
         var el = document.getElementById('facility-chart');
         if (!el || typeof Plotly === 'undefined') return;
-        var dates = POINTS.map(function (p) { return p.date; });
+        // 年次と期中を日付順に混ぜる。棒は両方、1拠点あたりの線は年次だけ
+        var dates = POINTS.map(function (p) { return p.date; })
+            .concat(INTERIM.map(function (p) { return p.date; }))
+            .sort();
+        var countByDate = {};
+        POINTS.forEach(function (p) { countByDate[p.date] = p.count; });
+        INTERIM.forEach(function (p) { countByDate[p.date] = p.count; });
+        var interimDates = {};
+        INTERIM.forEach(function (p) { interimDates[p.date] = true; });
+        var perByDate = {};
+        POINTS.forEach(function (p) { perByDate[p.date] = p; });
         Plotly.newPlot(el, [
             {
                 type: 'bar', name: '拠点数', x: dates,
-                y: POINTS.map(function (p) { return p.count; }),
-                marker: { color: '#b0bec5' }, yaxis: 'y'
+                y: dates.map(function (d) { return countByDate[d]; }),
+                marker: {
+                    color: dates.map(function (d) {
+                        return interimDates[d] ? '#dfe6e9' : '#b0bec5';
+                    })
+                },
+                customdata: dates.map(function (d) {
+                    return interimDates[d] ? '期中' : '有報';
+                }),
+                hovertemplate: '%{y:,}（%{customdata}）<extra></extra>',
+                yaxis: 'y'
             },
             {
                 type: 'scatter', mode: 'lines+markers', name: '1拠点あたり利益（百万円）',
-                x: dates, y: POINTS.map(function (p) { return p.profit_per; }),
-                line: { color: '#d32f2f' }, connectgaps: false, yaxis: 'y2'
+                x: dates,
+                y: dates.map(function (d) {
+                    return perByDate[d] ? perByDate[d].profit_per : null;
+                }),
+                line: { color: '#d32f2f' }, connectgaps: true, yaxis: 'y2'
             },
             {
                 type: 'scatter', mode: 'lines+markers', name: '1拠点あたり売上（百万円）',
-                x: dates, y: POINTS.map(function (p) { return p.sales_per; }),
-                line: { color: '#1976d2', dash: 'dot' }, connectgaps: false,
+                x: dates,
+                y: dates.map(function (d) {
+                    return perByDate[d] ? perByDate[d].sales_per : null;
+                }),
+                line: { color: '#1976d2', dash: 'dot' }, connectgaps: true,
                 visible: 'legendonly', yaxis: 'y2'
             }
         ], {

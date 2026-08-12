@@ -13,6 +13,7 @@
 """
 from __future__ import annotations
 
+import argparse
 import csv
 import os
 import re
@@ -25,6 +26,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "data", "output", "index", "visualizer.db")
 OUT_DIR = os.path.join(BASE_DIR, "data", "output", "facilities")
 OUT_PATH = os.path.join(OUT_DIR, "facility_counts.tsv")
+# 期中の報告書から拾ったぶん。有報より新しい拠点数が分かるが、期中の売上・利益は
+# 半期ぶんなので、1拠点あたりの計算には混ぜられない。ファイルを分けて持つ
+INTERIM_PATH = os.path.join(OUT_DIR, "facility_counts_interim.tsv")
 
 # 拾いに行くセクション。前に置いたものほど信頼して使う
 SOURCE_BLOCKS = [
@@ -146,17 +150,27 @@ def extract_from_report(path: str):
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--interim", action="store_true",
+                        help="有報ではなく期中の報告書（四半期・半期）から拾う")
+    args = parser.parse_args()
+
     if not os.path.exists(DB_PATH):
         print(f"インデックスが見つかりません: {DB_PATH}", file=sys.stderr)
         print("先に python -m visualizer.build_index を実行してください", file=sys.stderr)
         return 1
 
+    report_type = "quarterly" if args.interim else "annual"
+    out_path = INTERIM_PATH if args.interim else OUT_PATH
+
     conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     reports = list(conn.execute(
         """SELECT company_code, report_date, file_path FROM report_files
-           WHERE report_type = 'annual' ORDER BY company_code, report_date"""))
-    print(f"有価証券報告書 {len(reports)}件を調べます", file=sys.stderr)
+           WHERE report_type = ? ORDER BY company_code, report_date""",
+        (report_type,)))
+    label = "期中の報告書" if args.interim else "有価証券報告書"
+    print(f"{label} {len(reports)}件を調べます", file=sys.stderr)
 
     os.makedirs(OUT_DIR, exist_ok=True)
     rows = []
@@ -177,7 +191,7 @@ def main() -> int:
             print(f"  {index}/{len(reports)}件 ({index / elapsed:.0f}件/秒) "
                   f"抽出 {len(rows)}件", file=sys.stderr)
 
-    with open(OUT_PATH, "w", encoding="utf-8", newline="") as f:
+    with open(out_path, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(
             f, fieldnames=["コード", "報告日", "拠点数", "単位", "出所", "他の候補"],
             delimiter="\t")
@@ -188,10 +202,10 @@ def main() -> int:
     total_companies = {r["company_code"] for r in reports}
     units = Counter(r["単位"] for r in rows)
     print(f"\n抽出 {len(rows)}件 / {len(companies)}社"
-          f"（有報がある{len(total_companies)}社中 "
+          f"（{label}がある{len(total_companies)}社中 "
           f"{len(companies) / max(len(total_companies), 1) * 100:.0f}%）", file=sys.stderr)
     print("単位の内訳:", dict(units.most_common(8)), file=sys.stderr)
-    print(f"出力: {OUT_PATH}", file=sys.stderr)
+    print(f"出力: {out_path}", file=sys.stderr)
     return 0
 
 
