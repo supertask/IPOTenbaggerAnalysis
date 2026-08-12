@@ -27,6 +27,9 @@
             <!-- テンバガー条件のチェックリスト -->
             {% include 'components/company/criteria_checklist.html' %}
 
+            <!-- 買う・持ち続けるの総括（保有銘柄のみ） -->
+            {% include 'components/company/judgment.html' %}
+
             <!-- 競合企業セクション -->
             {% include 'components/company/competitors.html' %}
 
@@ -39,9 +42,6 @@
             <!-- 株主構成 -->
             {% include 'components/company/shareholders.html' %}
             
-            <!-- 事業と経営陣の読み解き（保有銘柄のみ） -->
-            {% include 'components/company/business_profile.html' %}
-
             <!-- 事業の内容セクション -->
             {% include 'components/company/business_section.html' %}
             

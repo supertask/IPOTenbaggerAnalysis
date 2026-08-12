@@ -1,8 +1,11 @@
-"""保有銘柄の「事業の内容」「役員の状況」をAIが読み解いた結果を返す。
+"""保有銘柄について、AIが読み解いた結果と、買う・持ち続けるの総括を返す。
 
-有報の該当セクションは原文をそのまま並べても量が多く、競合と見比べるのが
-難しい。収益の源泉・競合との違い・経営陣の経歴が事業のどこに効いているか、
-といった固定の項目に落として比較できるようにする。
+有報の該当セクションは原文を並べても量が多く、競合と見比べるのが難しい。
+収益の源泉・競合との違い・経営陣の経歴が事業のどこに効いているか、といった
+固定の項目に落として比較できるようにする。
+
+さらに大事なのは、事業の解説で終わらせないこと。買う・持ち続けるかを決めるには
+判定と、持ち続ける条件・降りる条件が要る。それを「総括」として分けて持つ。
 
 数字を扱う他のサービスと違って、ここに入るのは判断であって抽出ではない。
 画面でもAI由来であることを明示する。対象は保有銘柄のみ
@@ -13,22 +16,47 @@ from __future__ import annotations
 import csv
 import logging
 import os
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROFILE_TSV = os.path.join(BASE_DIR, "data", "meta", "business_profile.tsv")
 
-# 表示する順番と見出し。TSVの列名と対応する
-SECTIONS = [
+# 事業の内容カードに出す
+BUSINESS_SECTIONS = [
     ("収益の源泉", "誰に何を売って、どこで利益が出ているか"),
     ("稼ぎ方の型", "テンバガー条件でいうビジネスモデルの分類"),
     ("競合との違い", "同じ土俵の会社と比べて何が違うか"),
-    ("経営陣の経歴", "社長・主要役員の前職"),
-    ("経歴と事業の噛み合い", "その経歴が業績のどこに効いているか"),
+    ("事業の弱み", "事業として崩れうる点"),
+    # 総括を書く前の行が残っているあいだの受け皿
     ("気をつける点", "崩れるとしたらどこか"),
 ]
+
+# 役員の状況カードに出す
+OFFICER_SECTIONS = [
+    ("経営陣の経歴", "社長・主要役員の前職"),
+    ("経歴と事業の噛み合い", "その経歴が業績のどこに効いているか"),
+    ("経営陣の懸念", "持株の増減、同族集中、承継など"),
+]
+
+# 総括カードに出す
+JUDGMENT_SECTIONS = [
+    ("買う理由", "なぜ持つ価値があるか"),
+    ("持ち続ける条件", "何が続いていれば持つのか"),
+    ("降りる条件", "何が起きたら売るのか"),
+    ("株価水準", "PERと高値からの位置"),
+    ("見たデータ", "使ったもの／見ていないもの"),
+]
+
+# 判定の見え方。順に強気から弱気
+VERDICT_STYLES = {
+    "買い増し検討": "bg-success",
+    "継続保有": "bg-primary",
+    "様子見": "bg-warning text-dark",
+    "縮小検討": "bg-danger",
+    "判断保留": "bg-secondary",
+}
 
 _cache: Optional[Dict[str, dict]] = None
 _cache_mtime: Optional[float] = None
@@ -57,23 +85,54 @@ def _load() -> Dict[str, dict]:
     return data
 
 
-def get_profile(company_code) -> Optional[dict]:
-    """詳細ページ用。書かれていない銘柄は None"""
+def _sections(row: dict, spec: List[tuple]) -> List[dict]:
+    items = []
+    for key, hint in spec:
+        value = (row.get(key) or "").strip()
+        if value:
+            items.append({"label": key, "hint": hint, "text": value})
+    return items
+
+
+def _meta(row: dict) -> dict:
+    return {
+        "source_date": (row.get("出所報告日") or "").strip(),
+        "written_on": (row.get("作成日") or "").strip(),
+    }
+
+
+def get_business_profile(company_code) -> Optional[dict]:
+    """事業の内容カードに載せる読み解き"""
     row = _load().get(str(company_code).strip())
     if not row:
         return None
+    sections = _sections(row, BUSINESS_SECTIONS)
+    return {"sections": sections, **_meta(row)} if sections else None
 
-    # キー名を items にしない。Jinjaで dict.items と衝突する
-    sections = []
-    for key, hint in SECTIONS:
-        value = (row.get(key) or "").strip()
-        if value:
-            sections.append({"label": key, "hint": hint, "text": value})
+
+def get_officer_profile(company_code) -> Optional[dict]:
+    """役員の状況カードに載せる読み解き"""
+    row = _load().get(str(company_code).strip())
+    if not row:
+        return None
+    sections = _sections(row, OFFICER_SECTIONS)
+    return {"sections": sections, **_meta(row)} if sections else None
+
+
+def get_judgment(company_code) -> Optional[dict]:
+    """買う・持ち続けるの総括。判定が書かれていない銘柄は None"""
+    row = _load().get(str(company_code).strip())
+    if not row:
+        return None
+    verdict = (row.get("判定") or "").strip()
+    if not verdict:
+        return None
+    sections = _sections(row, JUDGMENT_SECTIONS)
     if not sections:
         return None
-
     return {
+        "verdict": verdict,
+        "verdict_css": VERDICT_STYLES.get(verdict, "bg-secondary"),
         "sections": sections,
-        "source_date": (row.get("出所報告日") or "").strip(),
-        "written_on": (row.get("作成日") or "").strip(),
+        **_meta(row),
     }

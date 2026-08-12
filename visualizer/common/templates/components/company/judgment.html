@@ -1,0 +1,45 @@
+{# 買う・持ち続けるの総括。判定が書かれている銘柄だけ出す #}
+{% if judgment %}
+<div class="card mb-4 judgment-card">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0">
+            総括
+            <button type="button" class="section-help" data-help="help-judgment"
+                    title="どうやって作っているか">?</button>
+        </h5>
+        <span class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="badge {{ judgment.verdict_css }} judgment-verdict">{{ judgment.verdict }}</span>
+            <span class="badge bg-warning text-dark">AIによる解釈</span>
+        </span>
+    </div>
+    <div class="card-body">
+        <div id="help-judgment" class="section-help-panel" hidden>
+            <table class="help-table">
+                <tr><th>元にしたもの</th><td>有価証券報告書の本文と財務データ、株価とPER、テンバガー条件、
+                    1拠点あたりの採算と原価の構成、大株主と役員の持株の推移、上場時の諸元。
+                    <code>collectors/holding_judgment_dump.py</code> でまとめて出したものを読んでいます。</td></tr>
+                <tr><th>見ていないもの</th><td><strong>直近の適時開示（TDnet）は見ていません。</strong>
+                    手元にあるのが2011〜2015年ぶんだけのため、業績修正や大株主の異動は反映されていません。
+                    月次開示も収集していません。</td></tr>
+                <tr><th>判定の意味</th><td>買い増し検討 / 継続保有 / 様子見 / 縮小検討 / 判断保留 の5段階。
+                    保有している銘柄でも、崩れの兆候があればそう書いています。</td></tr>
+                <tr><th>使い方</th><td>これは判断であって事実ではありません。「降りる条件」に書いた事象が
+                    起きていないかを、決算のたびに確かめるのが本来の使い道です。</td></tr>
+            </table>
+        </div>
+
+        <dl class="profile-list mb-0">
+            {% for item in judgment.sections %}
+            <dt class="judgment-{{ loop.index }}">{{ item.label }}<span class="profile-hint">{{ item.hint }}</span></dt>
+            <dd>{{ item.text }}</dd>
+            {% endfor %}
+        </dl>
+
+        <div class="text-muted small mt-3">
+            {% if judgment.source_date %}{{ judgment.source_date }}の有価証券報告書と、それ以降の株価をもとに{% endif %}
+            {% if judgment.written_on %}{{ judgment.written_on }}時点で書いたものです。{% endif %}
+            決算や大きな開示があれば見直してください。
+        </div>
+    </div>
+</div>
+{% endif %}

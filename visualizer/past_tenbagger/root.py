@@ -321,7 +321,9 @@ def company_view(company_code):
         'shareholders': _shareholders.get_shareholders(company_code),
         'holdings_history': _holdings.get_holdings_history(company_code),
         'facility': _facility.get_facility_view(company_code, competitors),
-        'business_profile': _profile.get_profile(company_code),
+        'business_profile': _profile.get_business_profile(company_code),
+        'officer_profile': _profile.get_officer_profile(company_code),
+        'judgment': _profile.get_judgment(company_code),
         'lockup_markers': _price_service.get_lockup_markers(company_code),
     }
     

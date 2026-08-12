@@ -4,6 +4,11 @@
         <h5 class="mb-0">事業の内容</h5>
     </div>
     <div class="card-body">
+        {# 原文より先に読み解きを置く。原文はその下の証拠 #}
+        {% with reading = business_profile, help_id = 'help-business-reading' %}
+            {% include 'components/company/ai_reading.html' %}
+        {% endwith %}
+
         <ul class="nav nav-tabs flex-nowrap overflow-auto" id="businessTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active text-nowrap"

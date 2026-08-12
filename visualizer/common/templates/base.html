@@ -390,6 +390,26 @@
             .help-table tr:first-child th { padding-top: 0; }
         }
 
+        /* 原文の上に置く読み解き。原文と地続きに見えないよう枠で囲う */
+        .ai-reading {
+            border: 1px solid #ffe08a;
+            border-left: 3px solid #ffc107;
+            border-radius: 0.25rem;
+            background-color: #fffdf5;
+            padding: 0.7rem 0.9rem;
+        }
+        .ai-reading-head {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        /* 総括。判定を目立たせる */
+        .judgment-card { border-color: #adb5bd; }
+        .judgment-card > .card-header { background-color: #f8f9fa; }
+        .judgment-verdict { font-size: 0.85rem; padding: 0.35rem 0.6rem; }
+
         /* 事業と経営陣の読み解き */
         .profile-list { margin: 0; }
         .profile-list dt {

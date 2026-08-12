@@ -1,0 +1,36 @@
+{# 事業カード・役員カードの先頭に差し込む読み解き。
+   reading（{sections, source_date, written_on}）と help_id を渡して使う #}
+{% if reading %}
+<div class="ai-reading mb-3">
+    <div class="ai-reading-head">
+        <span class="badge bg-warning text-dark">AIによる解釈</span>
+        <button type="button" class="section-help" data-help="{{ help_id }}"
+                title="どうやって作っているか">?</button>
+        <span class="text-muted small">
+            下の原文を読んだうえでの解釈です。原文はこの下に置いてあります。
+        </span>
+    </div>
+
+    <div id="{{ help_id }}" class="section-help-panel mt-2" hidden>
+        <table class="help-table">
+            <tr><th>元にしたもの</th><td>有価証券報告書の本文と、競合企業の同じセクション。
+                このページの数字（PER、1拠点あたり利益、原価率、持株の推移など）も突き合わせています。</td></tr>
+            <tr><th>ほかと違う点</th><td>他の項目は決まった手順で数字を取り出したものですが、
+                ここだけは<strong>読んだうえでの解釈</strong>です。間違っている可能性があります。</td></tr>
+            <tr><th>対象</th><td>テンバガーX・自分・お気に入りの銘柄のみ。それ以外では出ません。</td></tr>
+        </table>
+    </div>
+
+    <dl class="profile-list mb-0 mt-2">
+        {% for item in reading.sections %}
+        <dt>{{ item.label }}<span class="profile-hint">{{ item.hint }}</span></dt>
+        <dd>{{ item.text }}</dd>
+        {% endfor %}
+    </dl>
+
+    <div class="text-muted small mt-2">
+        {% if reading.source_date %}{{ reading.source_date }}の有価証券報告書より。{% endif %}
+        {% if reading.written_on %}{{ reading.written_on }}時点の読み解きです。{% endif %}
+    </div>
+</div>
+{% endif %}
