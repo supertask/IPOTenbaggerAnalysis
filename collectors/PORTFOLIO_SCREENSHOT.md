@@ -89,6 +89,20 @@ write_tsv(rows, "tenbagger_x")   # -> data/output/portfolio/tenbagger_x.tsv
 
 TSVの列: `銘柄コード / 銘柄名 / 保有株数 / 取得単価 / 現在値 / 評価額 / 評価損益 / 保有割合% / 口座区分`
 
+## 保有銘柄を増やしたあとにやること
+
+`data/output/portfolio/*.tsv` は保有銘柄の一覧としてほかからも参照される。
+銘柄を足したら、期中の報告書も取り直す。
+
+```bash
+python collectors/interim_report_collector.py
+python -m visualizer.build_index
+```
+
+`interim_report_collector.py` は、大株主が載る期中の報告書（中間期の四半期報告書と
+半期報告書）をこの一覧の銘柄ぶんだけ取得する。これで持株の推移が年1回から年2回になる。
+全上場企業には広げていない（`docs/TODO.md` に見積りあり）。
+
 ## 実績
 
 - 2026-08-10 テンバガーX氏のポートフォリオ（31銘柄 + 非開示1件、判明分 248,477,300円）

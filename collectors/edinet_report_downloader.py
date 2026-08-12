@@ -39,7 +39,10 @@ class EdinetReportDownloader:
         self.DOC_TYPE_CODE_SECURITIES_REGISTRATION = '030'  # 有価証券届出書
         self.DOC_TYPE_CODE_SECURITIES_REPORT = '120'  # 有価証券報告書
         self.DOC_TYPE_CODE_QUARTERLY_REPORT = '140'  # 四半期報告書
-        
+        # 四半期報告書は2024年4月に廃止され、半期報告書に置き換わった。
+        # 大株主の状況が載るのはどちらも中間期のものだけなので、両方追う必要がある
+        self.DOC_TYPE_CODE_SEMIANNUAL_REPORT = '160'  # 半期報告書
+
         #self.current_dir = os.path.dirname(os.path.abspath(__file__))
         #print(self.current_dir)
 
@@ -205,9 +208,10 @@ class EdinetReportDownloader:
                 continue # 上場廃止である可能性があるのでスキップ
 
             if meta['csvFlag'] == '1' and (
-                meta['docTypeCode'] == self.DOC_TYPE_CODE_SECURITIES_REPORT or 
+                meta['docTypeCode'] == self.DOC_TYPE_CODE_SECURITIES_REPORT or
                 meta['docTypeCode'] == self.DOC_TYPE_CODE_SECURITIES_REGISTRATION or
-                meta['docTypeCode'] == self.DOC_TYPE_CODE_QUARTERLY_REPORT):
+                meta['docTypeCode'] == self.DOC_TYPE_CODE_QUARTERLY_REPORT or
+                meta['docTypeCode'] == self.DOC_TYPE_CODE_SEMIANNUAL_REPORT):
                 if self.is_debug:
                     print(f"name = {meta['filerName']}, docDescription = {meta['docDescription']}, docId = {meta['docID']}")
                 tsv_rows.append([date_str, edinet_code, meta['docTypeCode'], meta['docID']])
