@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FACILITY_TSV = os.path.join(
     BASE_DIR, "data", "output", "facilities", "facility_counts.tsv")
+# 本文からの自動抽出を人が上書きするファイル。保有銘柄だけ埋めている
+OVERRIDE_TSV = os.path.join(BASE_DIR, "data", "meta", "facility_override.tsv")
 CAPEX_TSV = os.path.join(BASE_DIR, "data", "output", "facilities", "capex.tsv")
 COST_TSV = os.path.join(
     BASE_DIR, "data", "output", "facilities", "cost_structure.tsv")
@@ -69,8 +71,50 @@ def _load() -> Dict[str, Dict[str, dict]]:
         logger.warning("拠点数ファイルを読めませんでした: %s", e)
         return {}
 
+    _apply_overrides(data)
     _cache, _cache_mtime = data, mtime
     return data
+
+
+def _apply_overrides(data: Dict[str, Dict[str, dict]]) -> None:
+    """人が確かめた拠点数で上書きする。
+
+    本文からの抽出は「導入先の店舗数」や「新規開設数」を自社の拠点として
+    拾うことがあり、数字だけでは自社のものか判別できない。保有銘柄は
+    有報を読んで確かめた値をここに置き、抽出より優先する。
+    拠点数を空にした行は、拠点あたりの採算が意味を持たない業態として外す。
+    """
+    if not os.path.exists(OVERRIDE_TSV):
+        return
+    try:
+        with open(OVERRIDE_TSV, encoding="utf-8", newline="") as f:
+            rows = list(csv.DictReader(f, delimiter="\t"))
+    except OSError as e:
+        logger.warning("拠点数の上書きを読めませんでした: %s", e)
+        return
+
+    for row in rows:
+        code = (row.get("コード") or "").strip()
+        if not code:
+            continue
+        count = _num(row.get("拠点数"))
+        date = (row.get("報告日") or "").strip()
+        if count is None:
+            # 業態として拠点あたりを出さない
+            data.pop(code, None)
+            continue
+        if not date:
+            # 報告日の指定が無ければ、抽出できている一番新しい期を差し替える
+            existing = data.get(code)
+            if not existing:
+                continue
+            date = max(existing)
+        data.setdefault(code, {})[date] = {
+            "count": count,
+            "unit": (row.get("単位") or "拠点").strip(),
+            "sources": "有報を読んで確認",
+            "candidates": "",
+        }
 
 
 _capex_cache: Optional[Dict[str, Dict[str, float]]] = None

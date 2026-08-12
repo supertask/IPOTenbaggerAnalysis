@@ -50,6 +50,19 @@ COUNT_RE = re.compile(rf"([0-9][0-9,]{{0,6}})\s*(?:の|)({_UNIT_RE})")
 # 拾った数値の常識的な範囲。1〜2は文章の綾で出やすく、数万は市場規模の話
 MIN_COUNT, MAX_COUNT = 3, 20000
 
+# 自社の拠点ではない数字を落とすための手がかり。有報の本文には
+#
+#   「ＣＳセット導入施設数は…2,830施設となりました」（＝取引先の医療機関）
+#   「全国の訪問看護ステーション数は…約18,000事業所へ」（＝市場規模）
+#   「Skip Cartの…導入店舗数は258店舗」（＝自社製品の導入先、社外を含む）
+#
+# のように、同じ「○○店舗」の形で他社の数が出てくる。数だけ見ていると
+# これを自社の拠点として拾い、1拠点あたりの利益が桁違いに小さくなる。
+NEGATIVE_CONTEXT = ("導入", "提携", "取引先", "掲載", "全国の", "市場",
+                    "業界", "顧客", "関わる", "契約先", "加盟企業")
+# 数値の前後どれだけを見るか
+CONTEXT_BEFORE, CONTEXT_AFTER = 45, 15
+
 ENCODINGS = ("utf-16", "utf-16-le", "utf-8-sig", "utf-8", "cp932")
 
 
@@ -66,16 +79,28 @@ def _read(path: str):
 
 
 def _candidates(text: str):
-    """(数値, 単位) の候補を返す"""
+    """(数値, 単位) の候補を返す。自社の拠点でなさそうな出現は落とす"""
     body = re.sub(r"<[^>]+>", " ", text).replace("&#160;", " ")
+    body = re.sub(r"[ \t　]+", " ", body)
     out = []
-    for raw, unit in COUNT_RE.findall(body):
+    for match in COUNT_RE.finditer(body):
+        raw, unit = match.group(1), match.group(2)
         try:
             value = int(raw.replace(",", ""))
         except ValueError:
             continue
-        if MIN_COUNT <= value <= MAX_COUNT:
-            out.append((value, unit))
+        if not (MIN_COUNT <= value <= MAX_COUNT):
+            continue
+        # 「約18,000事業所」のように概数で書かれるのは市場規模の話。
+        # 自社の拠点数は期末時点の実数なので概数にはならない
+        head = body[:match.start()].rstrip()
+        if head.endswith(("約", "計約")):
+            continue
+        window = body[max(0, match.start() - CONTEXT_BEFORE):
+                      match.end() + CONTEXT_AFTER]
+        if any(word in window for word in NEGATIVE_CONTEXT):
+            continue
+        out.append((value, unit))
     return out
 
 
