@@ -1,5 +1,25 @@
 # TODO
 
+## お気に入り銘柄をTSVに書き出す
+
+重いデータ（期中の報告書、AIによる読み解きなど）の対象は「保有銘柄系」に絞っている
+（方針は `CLAUDE.md`）。その3区分のうち、自分とテンバガーXは
+`data/output/portfolio/*.tsv` にあるが、**お気に入りはGoogleスプレッドシートにしか無く、
+コードからは見えていない**。
+
+`data/output/portfolio/favorites.tsv` として同じ形式で書き出せば、
+`portfolio_codes()` が読むので自動で対象に入る。列は
+`銘柄コード / 銘柄名 / …`（`collectors/PORTFOLIO_SCREENSHOT.md` 参照。
+最低限、先頭に「銘柄コード」を含む列があればよい）。
+
+書き出したあとにやること:
+
+```bash
+python collectors/interim_report_collector.py
+python -m visualizer.build_index
+python collectors/facility_count_collector.py --interim
+```
+
 ## AI分析を保有外の銘柄にも広げる
 
 テンバガー条件のうち、機械では判定しきれない3つをAIに任せたい。
