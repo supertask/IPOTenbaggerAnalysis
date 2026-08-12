@@ -2,9 +2,11 @@
 {% if holders %}
 <span class="holder-badges">
     {% for h in holders %}
+    {# 比率はラベルに出す。title だけだとスマホでは触れられず見えない。
+       株数の比ではなく評価額の比なので、単位を付けて取り違えを防ぐ #}
     <span class="holder-badge {{ h.css }} text-white"
-          title="{{ h.label }}が保有{% if h.shares %} / {{ h.shares }}株{% endif %}{% if h.weight %} / ポートフォリオ比 {{ h.weight }}%{% endif %}">
-        {{ h.label }}
+          title="{{ h.label }}のポートフォリオに占める割合（評価額ベース）{% if h.weight %} {{ h.weight }}%{% endif %}{% if h.shares %} / 保有 {{ h.shares }}株{% endif %}{% if h.value %} / 評価額 {{ h.value }}円{% endif %}">
+        {{ h.label }}{% if h.weight %} <span class="holder-weight">金額比 {{ h.weight }}%</span>{% endif %}
     </span>
     {% endfor %}
 </span>

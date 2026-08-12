@@ -7,10 +7,12 @@
 `data/output/portfolio/*.tsv` にあるが、**お気に入りはGoogleスプレッドシートにしか無く、
 コードからは見えていない**。
 
-`data/output/portfolio/favorites.tsv` として同じ形式で書き出せば、
-`portfolio_codes()` が読むので自動で対象に入る。列は
-`銘柄コード / 銘柄名 / …`（`collectors/PORTFOLIO_SCREENSHOT.md` 参照。
-最低限、先頭に「銘柄コード」を含む列があればよい）。
+スプレッドシートの「お気に入り」タブは見出し（銘柄コード / 銘柄名 / メモ）だけ
+入れてあり、中身はまだ空。埋まったら `data/output/portfolio/favorites.tsv` として
+同じ形式で書き出せば、`portfolio_codes()` が読むので自動で対象に入る。
+`visualizer/portfolio.py` のラベル側は登録済みなので、TSVを置けば画面にも出る。
+
+お気に入りは保有していない監視銘柄なので、株数や金額の列は要らない。
 
 書き出したあとにやること:
 

@@ -22,6 +22,8 @@ PORTFOLIO_DIR = os.path.join(BASE_DIR, "data", "output", "portfolio")
 PORTFOLIOS = [
     ("tenbagger_x", "テンバガーX", "bg-danger"),
     ("myself", "自分", "bg-primary"),
+    # 保有はしていない監視銘柄。株数や金額は入らない
+    ("favorites", "お気に入り", "bg-secondary"),
 ]
 
 # {銘柄コード: [{"label", "css", "shares", "weight"}, ...]}
@@ -36,6 +38,15 @@ def _signature():
         path = os.path.join(PORTFOLIO_DIR, f"{stem}.tsv")
         sig.append((stem, os.path.getmtime(path) if os.path.exists(path) else None))
     return tuple(sig)
+
+
+def _thousands(value) -> str:
+    """桁区切りを入れる。数字でなければそのまま返す"""
+    text = (value or "").strip()
+    try:
+        return f"{float(text):,.0f}"
+    except (TypeError, ValueError):
+        return text
 
 
 def _load() -> Dict[str, List[dict]]:
@@ -54,7 +65,8 @@ def _load() -> Dict[str, List[dict]]:
                     holders.setdefault(code, []).append({
                         "label": label,
                         "css": css,
-                        "shares": (row.get("保有株数") or "").strip(),
+                        "shares": _thousands(row.get("保有株数")),
+                        "value": _thousands(row.get("評価額")),
                         "weight": (row.get("保有割合%") or "").strip(),
                     })
         except OSError as e:
