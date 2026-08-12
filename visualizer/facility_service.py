@@ -157,37 +157,6 @@ def _load_cost_structure() -> Dict[str, dict]:
     return latest
 
 
-def _opening_cost(code: str, points: List[dict]) -> Optional[dict]:
-    """1拠点あたりの出店額。設備投資額 ÷ その期に増えた拠点数
-
-    拠点が減った期や、増加が無い期は計算できない。設備投資には本社や
-    システムへの投資も含まれるので、出店だけの費用ではない点に注意。
-    """
-    capex = _load_capex().get(code) or {}
-    if len(points) < 2 or not capex:
-        return None
-
-    samples = []
-    for previous, current in zip(points, points[1:]):
-        added = current["count"] - previous["count"]
-        amount = capex.get(current["date"])
-        if amount is None or added <= 0:
-            continue
-        samples.append({
-            "date": current["date"],
-            "added": added,
-            "capex": amount,
-            "per_new": amount / added,
-        })
-    if not samples:
-        return None
-
-    values = sorted(s["per_new"] for s in samples)
-    middle = (values[len(values) // 2] if len(values) % 2
-              else (values[len(values) // 2 - 1] + values[len(values) // 2]) / 2)
-    return {"samples": samples[-5:], "median": middle, "count": len(samples)}
-
-
 def _financials(codes) -> Dict[str, Dict[str, Dict[str, float]]]:
     """{銘柄: {報告日: {sales, profit}}}"""
     conn = _index_db.get_conn()
@@ -287,16 +256,12 @@ def get_facility_view(company_code, competitors: Optional[List[dict]] = None
         if middle > 0:
             ratio = own["latest"]["profit_per"] / middle
 
-    # 出店単価。安く出せているかを見る材料
+    # 出店単価は、会社が計画として書いた「投資予定額 ÷ 予定店舗数」だけを使う。
+    # 設備投資額 ÷ 増えた拠点数でも計算できるが、フランチャイズ店は加盟企業が
+    # 投資するため分母と分子が対応せず、実態と大きくずれる
+    # （フィットイージーは実績19百万に対し、会社の計画は114百万）。
     _load_capex()
-    opening = _opening_cost(code, own["points"])
     planned = _planned_cache.get(code)
-    peer_openings = []
-    for peer in peers:
-        series = _series(peer["code"], data[peer["code"]], financials)
-        cost = _opening_cost(peer["code"], series["points"]) if series else None
-        if cost:
-            peer_openings.append({"name": peer["name"], "median": cost["median"]})
 
     # 原価の構成。拠点数に依存しないので、拠点数の定義揺れの影響を受けずに比べられる
     costs = _load_cost_structure()
@@ -313,9 +278,7 @@ def get_facility_view(company_code, competitors: Optional[List[dict]] = None
         "peers": sorted(peers, key=lambda p: -(p["latest"]["profit_per"] or 0)),
         "ratio_to_peers": ratio,
         "has_series": len(own["points"]) >= 2,
-        "opening_cost": opening,
         "planned_cost": planned,
-        "peer_opening_costs": sorted(peer_openings, key=lambda p: p["median"]),
         "cost_structure": own_cost,
         "peer_cost_structures": sorted(peer_costs, key=lambda p: p["cost_ratio"]),
     }
