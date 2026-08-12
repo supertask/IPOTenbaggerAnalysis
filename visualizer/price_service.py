@@ -407,4 +407,45 @@ def get_chart_payload(code: str) -> Dict[str, object]:
         "has_price": bool(prices["dates"]),
         "has_per": any(v is not None for v in per["per"]),
         "has_nikkei": any(v is not None for v in nikkei),
+        "quality": _price_quality(prices),
     }
+
+
+# 直近の値動きが無いとみなす日数。連休や年末年始を跨いでも足りる長さ
+_STALE_DAYS = 30
+
+
+def _price_quality(prices: Dict[str, list]) -> Optional[dict]:
+    """チャートとして読めない株価かどうかを返す。読めるなら None
+
+    TOKYO PRO Market の銘柄などは全日の出来高がゼロで、値も動かない。
+    そのまま描くと「線が引かれない壊れたチャート」に見えるので、
+    描く前に理由を出す。
+    """
+    dates = prices.get("dates") or []
+    if not dates:
+        return None
+
+    volumes = [v for v in (prices.get("volume") or []) if v is not None]
+    if volumes and not any(v > 0 for v in volumes):
+        return {"kind": "no_trade",
+                "message": "この銘柄は全期間で出来高がゼロです。"
+                           "売買がほとんど成立しておらず、株価チャートとしては読めません。",
+                "hint": "TOKYO PRO Market など、一般の投資家が売買しにくい市場の銘柄で起こります。"}
+
+    closes = [c for c in (prices.get("close") or []) if c is not None]
+    if closes and len(set(closes)) == 1:
+        return {"kind": "flat",
+                "message": f"株価が全期間で{closes[0]:,.0f}円のまま動いていません。",
+                "hint": "売買が成立していないか、株価の配信が止まっている可能性があります。"}
+
+    try:
+        latest = datetime.strptime(dates[-1], "%Y-%m-%d")
+    except ValueError:
+        return None
+    gap = (datetime.now() - latest).days
+    if gap > _STALE_DAYS:
+        return {"kind": "stale",
+                "message": f"株価が{dates[-1]}以降取得できていません（{gap}日前）。",
+                "hint": "上場廃止・市場変更・銘柄コードの変更が起きていないか確かめてください。"}
+    return None

@@ -5,6 +5,7 @@
         <div class="btn-group btn-group-sm" role="group" id="price-range-buttons"></div>
     </div>
     <div class="card-body">
+        <div id="price-chart-warning" class="alert alert-warning py-2 px-3" style="display: none;"></div>
         <div id="price-chart-status" class="text-muted small">株価を読み込んでいます...</div>
         <div id="price-chart" style="min-height: 520px; display: none;"></div>
         <div id="price-chart-note" class="text-muted small mt-2" style="display: none;">
@@ -35,6 +36,7 @@
 
     document.addEventListener('DOMContentLoaded', function () {
         var statusEl = document.getElementById('price-chart-status');
+        var warnEl = document.getElementById('price-chart-warning');
         var chartEl = document.getElementById('price-chart');
         var noteEl = document.getElementById('price-chart-note');
         var buttonsEl = document.getElementById('price-range-buttons');
@@ -48,6 +50,18 @@
                 if (!payload.has_price) {
                     statusEl.textContent = 'この銘柄の株価データを取得できませんでした。';
                     return;
+                }
+                // 売買が成立していない銘柄などは、描いても読めないので理由を出す。
+                // 止まっているだけなら、断り書きを添えたうえで描く
+                if (payload.quality) {
+                    warnEl.innerHTML = '<strong>' + payload.quality.message + '</strong>'
+                        + '<div class="small mt-1">' + payload.quality.hint + '</div>';
+                    warnEl.style.display = '';
+                    if (payload.quality.kind !== 'stale') {
+                        statusEl.style.display = 'none';
+                        buttonsEl.style.display = 'none';
+                        return;
+                    }
                 }
                 render(payload);
             })
