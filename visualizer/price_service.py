@@ -232,11 +232,16 @@ def get_per_series(code: str, prices: Dict[str, list]) -> Dict[str, list]:
     return {"dates": dates, "per": per}
 
 
-def get_split_factor(code: str, date: str) -> float:
+def get_split_factor(code: str, date: str, register_lag_days: int = 0) -> float:
     """その日より後に起きた分割の累積倍率。
 
     当時の株数にこれを掛けると、今の株数の基準に揃う。株式分割は
     持株数を機械的に増やすので、揃えないと売買と見分けが付かない。
+
+    register_lag_days は、株主名簿の株数に使うときの猶予。国内の分割は
+    期末を基準日にして翌日を効力発生日とすることが多く、株価が落ちる
+    権利落ち日は基準日の数営業日前に来る。そのため期末時点の名簿は
+    まだ分割前の株数のままで、権利落ち日で切ると1期だけ半分に見える。
     """
     rows = _read_cache(code)
     if not rows:
@@ -250,9 +255,16 @@ def get_split_factor(code: str, date: str) -> float:
         return 1.0
 
     factors = _split_factors(rows)
+    cutoff = date
+    if register_lag_days:
+        try:
+            cutoff = (datetime.strptime(date, "%Y-%m-%d")
+                      - timedelta(days=register_lag_days)).strftime("%Y-%m-%d")
+        except ValueError:
+            pass
     earlier = None
     for row, factor in zip(rows, factors):
-        if row["date"] <= date:
+        if row["date"] <= cutoff:
             earlier = factor
         else:
             break

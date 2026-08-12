@@ -99,12 +99,18 @@ CREATE TABLE officers_info (
     oldest_source_report_date   TEXT
 );
 
--- 有価証券報告書に載る大株主と役員の所有株式数。年ごとに拾っておくと、
--- 期をまたいで突き合わせて「誰が何株売った／買った」が追える。
+-- 報告書に載る大株主と役員の所有株式数。期をまたいで突き合わせると
+-- 「誰が何株売った／買った」が追える。
+-- 大株主は有報のほか、期中の報告書（中間期の四半期報告書・半期報告書）にも
+-- 載るので、保有銘柄については年2回に増える。役員は有報にしか載らない。
 CREATE TABLE share_holdings (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     company_code TEXT NOT NULL,
     report_date  TEXT NOT NULL,
+    -- 株数が「いつ時点か」。提出日は期末の2〜3ヶ月あとなので、
+    -- 分割の調整を提出日でやると1期だけ株数が半分に見える
+    period_end   TEXT,
+    report_type  TEXT NOT NULL,   -- 'annual'（有報） / 'quarterly'（期中）
     holder_type  TEXT NOT NULL,   -- 'major'（大株主） / 'officer'（役員）
     holder_name  TEXT NOT NULL,
     shares       REAL,
@@ -300,6 +306,7 @@ _METRIC_ID_PATTERN = "|".join(sorted(re.escape(i) for i in _METRIC_ELEMENT_IDS))
 
 _BUSINESS_ELEMENT_ID = "jpcrp_cor:DescriptionOfBusinessTextBlock"
 _OFFICERS_ELEMENT_ID = "jpcrp_cor:InformationAboutOfficersTextBlock"
+_PERIOD_END_ELEMENT_ID = "jpdei_cor:CurrentPeriodEndDateDEI"
 
 # 大株主と役員の持株。氏名と株数は別行なので、コンテキストIDで突き合わせる
 _HOLDING_ELEMENTS = {
@@ -396,8 +403,20 @@ def _iter_report_files() -> Iterable[tuple]:
                     yield code, report_type, _extract_report_date(tsv), tsv
 
 
-def _extract_holdings(df, code: str, report_date: str) -> list:
-    """大株主・役員の持株を (会社, 報告日, 種別, 氏名, 株数, 比率) の形で取り出す。
+def _period_end(df) -> Optional[str]:
+    """その報告書が「いつ時点」のものかを返す。取れなければ None"""
+    hit = df[df["要素ID"] == _PERIOD_END_ELEMENT_ID]
+    if hit.empty:
+        return None
+    value = hit.iloc[0].get("値")
+    if not isinstance(value, str) or not _DATE_RE.match(value.strip()):
+        return None
+    return value.strip()
+
+
+def _extract_holdings(df, code: str, report_type: str, report_date: str,
+                      period_end: Optional[str]) -> list:
+    """大株主・役員の持株を (会社, 報告日, 期末, 報告書種別, 種別, 氏名, 株数, 比率) で。
 
     XBRLでは氏名・株数・比率がそれぞれ別行になっていて、同じコンテキストIDを
     持つものが1人分にあたる。
@@ -431,8 +450,9 @@ def _extract_holdings(df, code: str, report_date: str) -> list:
         name = entry.get("name")
         if not isinstance(name, str) or not name.strip():
             continue
-        rows.append((code, report_date, holder_type, name.strip(),
-                     number(entry.get("shares")), number(entry.get("ratio"))))
+        rows.append((code, report_date, period_end, report_type, holder_type,
+                     name.strip(), number(entry.get("shares")),
+                     number(entry.get("ratio"))))
     return rows
 
 
@@ -504,11 +524,13 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
             failed += 1
             continue
 
-        # Business description / officers — track latest AND oldest per company
-        for elem_id, tracker in (
+        # Business description / officers — track latest AND oldest per company.
+        # 期中の報告書にも事業の内容の枠はあるが、中身は「重要な変更はありません」
+        # 程度しか書かれない。最新として採用すると事業情報が空同然になる
+        for elem_id, tracker in (() if report_type == "quarterly" else (
             (_BUSINESS_ELEMENT_ID, business_tracker),
             (_OFFICERS_ELEMENT_ID, officers_tracker),
-        ):
+        )):
             hit = df[df["要素ID"] == elem_id]
             if hit.empty:
                 continue
@@ -517,9 +539,13 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
                 continue
             _update_textblock_tracker(tracker, code, value, report_type, report_date)
 
-        # 大株主・役員の持株（有報のみ。届出書は上場前の姿なので比較に使わない）
-        if report_type == "annual":
-            holding_rows.extend(_extract_holdings(df, code, report_date))
+        # 大株主・役員の持株。届出書は上場前の姿なので比較に使わない。
+        # 期中の報告書は大株主だけが載る（第1・第3四半期には無く、
+        # 中間期の四半期報告書と半期報告書にだけ載る）ので、
+        # 要素が無ければ _extract_holdings が空を返して素通りする
+        if report_type in ("annual", "quarterly"):
+            holding_rows.extend(_extract_holdings(
+                df, code, report_type, report_date, _period_end(df)))
 
         # Financial metrics: whitelist filter（抽出側と同じ部分一致）
         filtered = df[df["要素ID"].str.contains(_METRIC_ID_PATTERN, na=False, regex=True)]
@@ -560,8 +586,9 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
     )
     conn.executemany(
         """INSERT INTO share_holdings
-           (company_code, report_date, holder_type, holder_name, shares, ratio)
-           VALUES (?,?,?,?,?,?)""",
+           (company_code, report_date, period_end, report_type, holder_type,
+            holder_name, shares, ratio)
+           VALUES (?,?,?,?,?,?,?,?)""",
         holding_rows,
     )
     logger.info("share holdings: %d rows", len(holding_rows))
@@ -717,9 +744,29 @@ def build(target: Path) -> None:
     finally:
         conn.close()
 
-    if target.exists():
-        target.unlink()
-    tmp.rename(target)
+    _swap_in(tmp, target)
+
+
+def _swap_in(tmp: Path, target: Path, attempts: int = 30, wait: float = 10.0) -> None:
+    """新しいDBを本番の場所へ差し替える。
+
+    Windowsでは、visualizerが読み取り用に開いているあいだファイルを消せない。
+    45分かけたビルドをここで捨てるのは惜しいので、しばらく粘ってから諦める。
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            if target.exists():
+                target.unlink()
+            tmp.rename(target)
+            return
+        except PermissionError:
+            if attempt == 1:
+                logger.warning(
+                    "[index] %s が使用中です。visualizerを止めてください "
+                    "（最大%d分待ちます）", target, int(attempts * wait / 60))
+            if attempt == attempts:
+                raise
+            time.sleep(wait)
 
 
 def main(argv: list[str] | None = None) -> int:

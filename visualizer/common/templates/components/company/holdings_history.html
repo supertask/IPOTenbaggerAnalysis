@@ -1,7 +1,33 @@
-{# 大株主・役員の持株推移。有報の年次データを期ごとに並べる #}
+{# 大株主・役員の持株推移。報告書に載る各期末時点の株数を期ごとに並べる #}
 {% if holdings_history %}
 <div class="mt-4">
-    <h6 class="mb-2">持株の推移</h6>
+    <h6 class="mb-2">
+        持株の推移
+        <button type="button" class="section-help" data-help="help-holdings"
+                title="どのデータをどう計算しているか">?</button>
+    </h6>
+    <div id="help-holdings" class="section-help-panel" hidden>
+        <table class="help-table">
+            <tr><th>大株主</th><td>報告書の「大株主の状況」。XBRLのタグ付き値（氏名・所有株式数・所有割合）を
+                コンテキストIDで1人分ずつ組にしています。上位10名までが開示対象です。</td></tr>
+            <tr><th>役員</th><td>「役員の状況」の所有株式数。<strong>有価証券報告書にしか載りません</strong>ので年1回のままです。
+                なお大株主は期末時点、役員は提出日現在と基準日が違います（同じ有報でも2〜3ヶ月ずれます）。</td></tr>
+            <tr><th>取得頻度</th><td>有報（年1回）に加えて、期中の報告書からも大株主を拾っています。
+                ただし大株主が載るのは中間期のものだけで、第1・第3四半期報告書には載りません。
+                したがって<strong>最大でも年2回</strong>です。四半期報告書は2024年4月に廃止され、
+                以降は半期報告書から取っています。<span class="text-muted">中は書類の負荷が大きいため、
+                期中の報告書はテンバガーX・自分の保有銘柄だけ取得しています。</span></td></tr>
+            <tr><th>増減</th><td>直近と、その1つ前に記録がある期との差です。「中」の列があるときは
+                半年ぶんの差になります。</td></tr>
+            <tr><th>氏名の表記ゆれ</th><td>「（信託口）」の全角・半角や空白の入り方が書類ごとに違うため、
+                そのままだと同じ株主が2行に分かれて片方が「–」になり、売ったように見えます。
+                表記を揃えて同じ行にまとめています。</td></tr>
+            <tr><th>株式分割</th><td>報告書の株数は当時のままなので、そのあとの分割の累積倍率を掛けて
+                今の基準に揃えています。これをしないと分割が買い増しに見えます。</td></tr>
+            <tr><th>限界</th><td>各期末の断面なので、期の途中で売って買い戻した動きは表れません。
+                上位10名から外れた人は「–」になり、売却と区別が付きません。</td></tr>
+        </table>
+    </div>
     <ul class="nav nav-tabs flex-nowrap overflow-auto" id="holdingsTabs" role="tablist">
         {% if holdings_history.major %}
         <li class="nav-item" role="presentation">
@@ -27,7 +53,12 @@
                     <thead>
                         <tr>
                             <th>{{ '株主名' if key == 'major' else '役員' }}</th>
-                            {% for d in table.dates %}<th class="num">{{ d[:7] }}</th>{% endfor %}
+                            {% for c in table.columns %}
+                            <th class="num{% if c.interim %} holdings-interim{% endif %}"
+                                {% if c.interim %}title="期中の報告書（中間期）"{% endif %}>
+                                {{ c.date[:7] }}{% if c.interim %}<span class="holdings-interim-mark">中</span>{% endif %}
+                            </th>
+                            {% endfor %}
                             <th class="num">増減</th>
                         </tr>
                     </thead>
@@ -58,7 +89,10 @@
         {% endfor %}
     </div>
     <div class="text-muted small mt-2">
-        有価証券報告書に載る各期末時点の所有株式数です。期の途中の売買は表れません。
+        各期末時点の所有株式数です。期の途中の売買は表れません。
+        {% if holdings_history.has_interim %}
+        「中」の付いた列は期中の報告書（中間期）から取ったものです。
+        {% endif %}
         {% if holdings_history.split_adjusted %}
         株式分割で株数が機械的に増えるぶんは、直近の株数に揃えて調整しています。
         {% endif %}
