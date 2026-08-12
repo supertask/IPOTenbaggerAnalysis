@@ -29,7 +29,8 @@
                     <tr>
                         <td class="name">
                             {{ s.name }}
-                            {% if s.is_ceo %}<span class="badge bg-primary">社長</span>{% endif %}
+                            {# 名前に「（社長）」と入っている会社もあるので重ねない #}
+                            {% if s.is_ceo and '社長' not in s.name %}<span class="badge bg-primary">社長</span>{% endif %}
                         </td>
                         <td class="ratio">{{ '%.2f'|format(s.ratio) }}%</td>
                         {# 上位株主に対する比なので、集中しているかが一目で分かる #}

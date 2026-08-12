@@ -306,9 +306,32 @@
             white-space: nowrap;
         }
 
-        /* 狭い画面では棒を出さない。名前と比率の幅を優先する */
+        /* 狭い画面では3列に詰めきれない。株主名を1行目、比率と棒を2行目に置く。
+           表のまま列を詰めると、名前が1文字ずつ折り返されて縦に伸びる */
         @media (max-width: 576px) {
-            .shareholder-table .bar { display: none; }
+            .shareholder-table, .shareholder-table tbody { display: block; }
+            .shareholder-table thead { display: none; }
+            .shareholder-table tr {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                grid-template-areas: "name ratio" "bar lockup";
+                align-items: center;
+                gap: 0.2rem 0.6rem;
+                padding: 0.5rem 0;
+                border-bottom: 1px solid #f1f3f5;
+            }
+            .shareholder-table td {
+                display: block;
+                width: auto;
+                padding: 0;
+                border: 0;
+            }
+            .shareholder-table .name   { grid-area: name; }
+            .shareholder-table .ratio  { grid-area: ratio; font-weight: bold; }
+            /* PC側で 1px を指定しているので、ここで戻さないと棒が潰れる */
+            .shareholder-table .bar    { grid-area: bar; width: auto; }
+            .shareholder-table .lockup { grid-area: lockup; }
+            .ratio-track { width: 100%; }
         }
 
         /* 節ごとの「?」ボタンと、その中身 */

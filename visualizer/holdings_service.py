@@ -9,6 +9,7 @@
 """
 from __future__ import annotations
 
+import html
 import logging
 import re
 import unicodedata
@@ -25,6 +26,12 @@ MAX_HOLDERS = 12
 _NOTE_SUFFIX = re.compile(r"[（(]注[^）)]*[）)]\s*$")
 
 
+def _display_name(name: str) -> str:
+    """XBRLの値には &amp; のまま入っているものがある。そのまま出すと
+    テンプレート側でもう一度エスケープされ「&amp;」と表示される"""
+    return html.unescape(name)
+
+
 def _name_key(name: str) -> str:
     """同じ株主を同じ行にまとめるための照合キー。
 
@@ -32,7 +39,7 @@ def _name_key(name: str) -> str:
     入り方が違ったりする。そのままだと同一人物が別行に分かれ、
     片方が「–」になるので売却したように見えてしまう。
     """
-    text = unicodedata.normalize("NFKC", name)
+    text = unicodedata.normalize("NFKC", _display_name(name))
     text = _NOTE_SUFFIX.sub("", text)
     return "".join(text.split())
 
@@ -119,7 +126,7 @@ def _build(rows: List[dict], holder_type: str, factors: Dict[tuple, float]) -> O
         key = _name_key(r["holder_name"])
         adjusted = r["shares"] * factors.get((holder_type, r["report_date"]), 1.0)
         by_name.setdefault(key, {})[r["report_date"]] = adjusted
-        display[key] = r["holder_name"]
+        display[key] = _display_name(r["holder_name"])
 
     people = []
     for key, per_date in by_name.items():
