@@ -12,20 +12,37 @@
         </div>
 
         {% if shareholders.rows %}
+        {% set top = shareholders.rows[0].ratio or 1 %}
+        {# ロックアップが1件も無い会社では、空の列を出さない #}
+        {% set has_lockup = shareholders.rows | selectattr('lockup') | list | length > 0 %}
         <div class="table-responsive">
             <table class="table table-sm shareholder-table mb-0">
                 <thead>
-                    <tr><th>株主名</th><th class="ratio">比率</th><th>ロックアップ</th></tr>
+                    <tr>
+                        <th class="name">株主名</th>
+                        <th class="ratio" colspan="2">比率</th>
+                        {% if has_lockup %}<th class="lockup">ロックアップ</th>{% endif %}
+                    </tr>
                 </thead>
                 <tbody>
                     {% for s in shareholders.rows %}
                     <tr>
-                        <td>
+                        <td class="name">
                             {{ s.name }}
                             {% if s.is_ceo %}<span class="badge bg-primary">社長</span>{% endif %}
                         </td>
                         <td class="ratio">{{ '%.2f'|format(s.ratio) }}%</td>
-                        <td class="text-muted">{{ s.lockup }}</td>
+                        {# 上位株主に対する比なので、集中しているかが一目で分かる #}
+                        <td class="bar">
+                            <span class="ratio-track">
+                                <span class="ratio-bar" style="width: {{ (s.ratio / top * 100)|round(1) }}%"></span>
+                            </span>
+                        </td>
+                        {% if has_lockup %}
+                        <td class="lockup">
+                            {% if s.lockup %}<span class="lockup-tag">{{ s.lockup }}</span>{% endif %}
+                        </td>
+                        {% endif %}
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -35,10 +52,12 @@
 
         {% include 'components/company/holdings_history.html' %}
 
+        {% if shareholders.rows and has_lockup %}
         <div class="text-muted small mt-2">
             ロックアップは上場前からの株主にかかる売却制限です。解除の時期（30日・180日・初値1.5倍など）は
             売りが出て株価が下がりやすい一方、買い場になることもあります。株価チャートに解除の目安を表示しています。
         </div>
+        {% endif %}
     </div>
 </div>
 {% endif %}
