@@ -15,16 +15,16 @@
     </div>
     <div class="card-body">
         <div id="help-facility" class="section-help-panel" hidden>
+            <p class="mb-2">すべて<strong>有価証券報告書</strong>から取っています。</p>
             <table class="help-table">
-                <tr><th>拠点数</th><td>有価証券報告書の本文（事業の内容 / MD&amp;A / 業績等の概要 / 経営方針）から
-                    「○○店舗」のような記述を拾っています。標準化された開示項目ではないためタグが無く、
-                    文章から取るしかありません。複数の箇所に同じ数字が出るものを優先しています。</td></tr>
-                <tr><th>売上・利益</th><td>XBRLの当期値（売上高、営業利益。無い場合は経常利益）。こちらはタグ付けされているので確実です。</td></tr>
-                <tr><th>1拠点あたり</th><td>売上（利益）÷ 拠点数。同じ期の値どうしで割っています。</td></tr>
-                <tr><th>競合との比</th><td>競合企業のうち拠点数が取れた会社の「1拠点あたり利益」の中央値と比べた倍率です。
-                    1拠点あたりの水準は業態で桁が違うので、単体の数字ではなくこの比で見てください。</td></tr>
-                <tr><th>注意</th><td>拠点数は年によって連結・単体など別の定義の数字を拾うことがあります。
-                    推移が不自然に飛んでいる期は疑ってください。</td></tr>
+                <tr><th>拠点数</th><td>本文（事業の内容 / MD&amp;A / 業績等の概要 / 経営方針）の「○○店舗」という記述。
+                    タグが無いので文章から拾っており、複数箇所に出る数字を優先</td></tr>
+                <tr><th>売上・利益</th><td>財務諸表の当期値（売上高、営業利益。無ければ経常利益）</td></tr>
+                <tr><th>1拠点あたり</th><td>売上（利益）÷ 拠点数。同じ期どうし</td></tr>
+                <tr><th>競合との比</th><td>競合の「1拠点あたり利益」の中央値との倍率。
+                    水準は業態で桁が違うので、この比で見てください</td></tr>
+                <tr><th>取れる企業</th><td>拠点数が取れた961社のうち、売上・利益と揃う856社</td></tr>
+                <tr><th>注意</th><td>拠点数は年によって連結・単体など別定義を拾うことがあります</td></tr>
             </table>
         </div>
 
@@ -80,16 +80,12 @@
                         title="どのデータをどう計算しているか">?</button>
             </h6>
             <div id="help-cost" class="section-help-panel" hidden>
+                <p class="mb-2">すべて<strong>有価証券報告書</strong>から取っています。</p>
                 <table class="help-table">
-                    <tr><th>原価率</th><td>売上原価 ÷ 売上高。どちらもXBRLのタグ付き値なので確実です。
-                        ほとんどの企業で取れます。</td></tr>
-                    <tr><th>仕入が原価に<br>占める割合</th><td>当期仕入高 ÷ 売上原価。仕入高は「売上原価明細書」の本文から拾っています。
-                        この表はテキストにすると金額と構成比が連結するため、桁区切りの形に厳密に一致させたうえで、
-                        項目名の直後の2つ目の数字（＝当期）を取っています。</td></tr>
-                    <tr><th>労務費が原価に<br>占める割合</th><td>労務費 ÷ 売上原価。仕入高と同じ明細書から取っています。</td></tr>
-                    <tr><th>取れない場合</th><td>売上原価明細書は製造業・小売業を中心とした開示で、
-                        サービス業では作成しない企業が多く、内訳は7%の企業でしか取れません。
-                        建材や設備品の単価そのものは、どの企業も開示していません。</td></tr>
+                    <tr><th>原価率</th><td>売上原価 ÷ 売上高（財務諸表の数字）</td></tr>
+                    <tr><th>仕入 / 労務費</th><td>「売上原価明細書」の当期仕入高・労務費 ÷ 売上原価</td></tr>
+                    <tr><th>取れる企業</th><td>原価率は3,619社。内訳は売上原価明細書を出している268社のみ
+                        （サービス業では作らない企業が多い）</td></tr>
                 </table>
             </div>
             <table class="table table-sm facility-table mb-2">
@@ -134,24 +130,6 @@
         </div>
     </div>
 </div>
-
-<script>
-(function () {
-    // 「?」を押すと、その節がどのデータをどう計算しているかを開く
-    document.addEventListener('DOMContentLoaded', function () {
-        document.querySelectorAll('.section-help').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var panel = document.getElementById(btn.dataset.help);
-                if (!panel) return;
-                var open = panel.hasAttribute('hidden');
-                if (open) { panel.removeAttribute('hidden'); }
-                else { panel.setAttribute('hidden', ''); }
-                btn.classList.toggle('is-open', open);
-            });
-        });
-    });
-})();
-</script>
 
 {% if facility.has_series %}
 <script>
