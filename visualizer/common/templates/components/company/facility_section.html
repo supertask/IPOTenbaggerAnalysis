@@ -2,7 +2,11 @@
 {% if facility %}
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <h5 class="mb-0">拠点あたりの採算</h5>
+        <h5 class="mb-0">
+            拠点あたりの採算
+            <button type="button" class="section-help" data-help="help-facility"
+                    title="どのデータをどう計算しているか">?</button>
+        </h5>
         {% if facility.ratio_to_peers %}
         <span class="badge {% if facility.ratio_to_peers >= 1 %}bg-success{% else %}bg-secondary{% endif %}">
             競合中央値の {{ '%.1f'|format(facility.ratio_to_peers) }}倍
@@ -10,6 +14,20 @@
         {% endif %}
     </div>
     <div class="card-body">
+        <div id="help-facility" class="section-help-panel" hidden>
+            <table class="help-table">
+                <tr><th>拠点数</th><td>有価証券報告書の本文（事業の内容 / MD&amp;A / 業績等の概要 / 経営方針）から
+                    「○○店舗」のような記述を拾っています。標準化された開示項目ではないためタグが無く、
+                    文章から取るしかありません。複数の箇所に同じ数字が出るものを優先しています。</td></tr>
+                <tr><th>売上・利益</th><td>XBRLの当期値（売上高、営業利益。無い場合は経常利益）。こちらはタグ付けされているので確実です。</td></tr>
+                <tr><th>1拠点あたり</th><td>売上（利益）÷ 拠点数。同じ期の値どうしで割っています。</td></tr>
+                <tr><th>競合との比</th><td>競合企業のうち拠点数が取れた会社の「1拠点あたり利益」の中央値と比べた倍率です。
+                    1拠点あたりの水準は業態で桁が違うので、単体の数字ではなくこの比で見てください。</td></tr>
+                <tr><th>注意</th><td>拠点数は年によって連結・単体など別の定義の数字を拾うことがあります。
+                    推移が不自然に飛んでいる期は疑ってください。</td></tr>
+            </table>
+        </div>
+
         {% if facility.peers %}
         <div class="table-responsive mb-3">
             <table class="table table-sm facility-table mb-0">
@@ -56,7 +74,24 @@
 
         {% if facility.cost_structure and facility.cost_structure.cost_ratio %}
         <div class="mb-3">
-            <h6 class="mb-2">原価の構成</h6>
+            <h6 class="mb-2">
+                原価の構成
+                <button type="button" class="section-help" data-help="help-cost"
+                        title="どのデータをどう計算しているか">?</button>
+            </h6>
+            <div id="help-cost" class="section-help-panel" hidden>
+                <table class="help-table">
+                    <tr><th>原価率</th><td>売上原価 ÷ 売上高。どちらもXBRLのタグ付き値なので確実です。
+                        ほとんどの企業で取れます。</td></tr>
+                    <tr><th>仕入が原価に<br>占める割合</th><td>当期仕入高 ÷ 売上原価。仕入高は「売上原価明細書」の本文から拾っています。
+                        この表はテキストにすると金額と構成比が連結するため、桁区切りの形に厳密に一致させたうえで、
+                        項目名の直後の2つ目の数字（＝当期）を取っています。</td></tr>
+                    <tr><th>労務費が原価に<br>占める割合</th><td>労務費 ÷ 売上原価。仕入高と同じ明細書から取っています。</td></tr>
+                    <tr><th>取れない場合</th><td>売上原価明細書は製造業・小売業を中心とした開示で、
+                        サービス業では作成しない企業が多く、内訳は7%の企業でしか取れません。
+                        建材や設備品の単価そのものは、どの企業も開示していません。</td></tr>
+                </table>
+            </div>
             <table class="table table-sm facility-table mb-2">
                 <thead>
                     <tr><th>企業</th><th class="num">期</th><th class="num">原価率</th>
@@ -82,8 +117,6 @@
                 </tbody>
             </table>
             <div class="small text-muted">
-                原価率は売上原価 ÷ 売上高。仕入と労務費の内訳は「売上原価明細書」を出している企業でのみ分かります
-                （製造業・小売業が中心で、サービス業では作成しない企業が多い）。
                 建材や設備品の単価そのものは開示されないため、安く仕入れているかは構成比から推し量ることになります。
             </div>
         </div>
@@ -94,15 +127,31 @@
         {% endif %}
 
         <div class="text-muted small mt-2">
-            拠点数は有価証券報告書の本文（{{ facility.own.sources or '本文' }}）から取っています。
-            標準化された開示項目ではないため、取れる企業と取れない企業があります。
+            拠点数の出所: 有報の{{ facility.own.sources or '本文' }}。
             {% if facility.own.candidates %}
             この期の他の候補値: {{ facility.own.candidates }}。
             {% endif %}
-            拠点あたりの水準は業態によって桁が違うので、単体の数字ではなく競合との比で見てください。
         </div>
     </div>
 </div>
+
+<script>
+(function () {
+    // 「?」を押すと、その節がどのデータをどう計算しているかを開く
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.section-help').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var panel = document.getElementById(btn.dataset.help);
+                if (!panel) return;
+                var open = panel.hasAttribute('hidden');
+                if (open) { panel.removeAttribute('hidden'); }
+                else { panel.setAttribute('hidden', ''); }
+                btn.classList.toggle('is-open', open);
+            });
+        });
+    });
+})();
+</script>
 
 {% if facility.has_series %}
 <script>
