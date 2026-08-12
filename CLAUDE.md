@@ -1,51 +1,40 @@
 # このリポジトリで作業するときの前提
 
-セットアップ・デプロイの手順は `README.md`、これからやることは `docs/TODO.md` にある。
-ここには、コードを読んだだけでは分からない方針を書く。
+セットアップ・デプロイは `README.md`、これからやることは `docs/TODO.md`。
+手順の詳細はスキルに置いてある。
+
+| スキル | 使うとき |
+|---|---|
+| `holding-profile` | 保有銘柄の「事業と経営陣の読み解き」を書く／直すとき |
+| `facility-count` | 拠点数の抽出判定（`facility_count_collector.py`）を触るとき |
 
 ## いちばん大事な方針: 重いデータは保有銘柄だけ
 
 有価証券報告書・適時開示・期中の報告書のように、**全上場企業ぶんを取ると量が跳ね上がる
 データは、保有銘柄だけを対象にする。** それ以外の銘柄は従来どおり（有報の年1回など）。
 
-理由は2つある。
-
 - **ディスク**。全銘柄に広げると数万件の書類になり、PCに収まらなくなる恐れがある
-  （現状でもインデックスのDBだけで2.1GB、有報のTSVが44,000件ある）
+  （現状でもインデックスのDBが2.1GB、有報のTSVが44,000件）
 - **トークン**。AIに読ませる処理を全銘柄でやると消費が激しい
 
-保有銘柄とは次の3つを指す。
+保有銘柄は次の3区分。大元はGoogleスプレッドシート「保有割合」で、タブが区分に対応する。
 
 | 区分 | 置き場所 | 株数・金額 |
 |---|---|---|
-| 自分のポートフォリオ | `data/output/portfolio/myself.tsv` | あり |
-| テンバガーXのポートフォリオ | `data/output/portfolio/tenbagger_x.tsv` | あり |
+| 自分 | `data/output/portfolio/myself.tsv` | あり |
+| テンバガーX | `data/output/portfolio/tenbagger_x.tsv` | あり |
 | お気に入り | `data/output/portfolio/favorites.tsv`（未作成） | 無し（保有していない監視銘柄） |
 
-大元はGoogleスプレッドシート「保有割合」で、タブが区分に対応する。
-自分とテンバガーXは保有株数・取得単価・現在値・評価額・評価損益・保有割合%を持ち、
-お気に入りは銘柄コードと銘柄名だけでよい。書き起こしの手順は
-`collectors/PORTFOLIO_SCREENSHOT.md`。
+対象を取るときは `collectors/holding_profile_dump.py` の `portfolio_codes()`。
+`data/output/portfolio/*.tsv` を読むので、TSVを足せば自動で対象に入る。
+画面のラベルは `visualizer/portfolio.py` の `PORTFOLIOS`。
 
-コードから対象を取るときは `collectors/holding_profile_dump.py` の `portfolio_codes()`
-を使う。`data/output/portfolio/*.tsv` を読むので、TSVを足せば自動で対象に入る。
-画面のラベル（誰が持っているか）は `visualizer/portfolio.py` の `PORTFOLIOS` で、
-ファイル名・表示名・色をここに並べている。
+この方針で絞っているもの: 期中の報告書の取得（`interim_report_collector.py`）、
+期中の拠点数（`facility_count_collector.py --interim`）、`data/meta/` の
+`business_profile.tsv` `business_model.tsv` `facility_override.tsv`。
 
-この方針で絞っているもの:
-
-- `collectors/interim_report_collector.py` … 期中の報告書（四半期・半期）の取得
-- `collectors/facility_count_collector.py --interim` … 期中の拠点数
-- `data/meta/business_profile.tsv` … 事業と経営陣のAIによる読み解き
-- `data/meta/business_model.tsv` … ビジネスモデルの分類（テンバガー条件2・6・7）
-- `data/meta/facility_override.tsv` … 拠点数の抽出誤りの手直し
-
-### AIによる処理の分担
-
-- **保有銘柄** … Claudeで読んで、結果をTSVに手で書く。数が少なく、判断の質が
-  投資判断に直結するため
-- **それ以外** … 将来 OpenRouter の無料モデルで一括処理する（`docs/TODO.md`）。
-  量が多くコストをかけられないので、精度より網羅を優先する
+AIの分担は、保有銘柄はClaudeで読んでTSVに書く、それ以外は将来 OpenRouter の
+無料モデルで一括（`docs/TODO.md`）。
 
 ## データの扱い
 
@@ -72,26 +61,7 @@ AIの解釈が入るのは `data/meta/business_profile.tsv` と `business_model.
 - 四半期報告書は2024年4月に廃止され、半期報告書に置き換わった
 - **株数の分割調整**は提出日ではなく株数の時点で行う。国内の分割は期末を基準日にして
   翌日に効力が出るのが通例で、株価が落ちる権利落ち日はその数営業日前に来る
-- **拠点数はタグ付けされていない**。本文から拾うしかなく、次を自社の拠点として
-  拾う事故が起きる。実際にどれもやらかしている
-
-  | 誤って拾うもの | 本文の例 | 正しい値 |
-  |---|---|---|
-  | 導入先の店舗数 | 「Skip Cartの…導入店舗数は258店舗」 | 352店舗（141A） |
-  | 増えたぶんの数 | 「支援先主要拠点数は106（前年同期比18拠点増）」 | 95拠点（9158） |
-  | 新規開設の数 | 「ホスピス施設11施設を新規開設した」 | 59施設（7061） |
-  | 改装した数 | 「19店舗を改装しており」 | 352店舗（141A） |
-  | 翌期の計画値 | 「翌事業年度末の店舗数を80店舗と計画」 | 73店舗（6574） |
-  | 市場規模 | 「全国の訪問看護ステーション数は…約18,000事業所」 | 95拠点（9158） |
-  | 顧客の数 | 「705病院」（医療情報会社の顧客） | 拠点の概念なし（3902） |
-
-  「新規」は数値の**前にも後ろにも**来る（「新規施設（11施設）」／
-  「11施設を新規開設」）。一方「95拠点であり、今後も積極的な新規拠点展開を」の
-  ように総数のあとに続くだけのこともあるので、後ろは8文字までしか見ない。
-
-  `facility_count_collector.py` が前後の語で落としているが、取りこぼしは残る。
-  **判定を触ったら、上の実例で当て直すこと**（片方を直すともう片方が壊れやすい）。
-  それでも誤るものは `facility_override.tsv` に書く（拠点数を空にすれば非表示）
+- **拠点数はタグ付けされていない**。本文から拾うため取り違えが起きる（→ `facility-count`）
 - **売上原価明細書**はサービス業では作らない企業が多く、仕入・労務費の内訳は
   全体の7%（268社）でしか取れない
 
@@ -100,9 +70,7 @@ AIの解釈が入るのは `data/meta/business_profile.tsv` と `business_model.
 `python -m visualizer.build_index` で `data/output/index/visualizer.db` を作る。
 44,000件の書類を読むので**45分ほどかかる**。スキーマを変えたら
 `visualizer/db.py` の `SCHEMA_VERSION` を上げる（上げないと古いDBを読み続ける）。
-
-visualizerが起動したままだとWindowsでは差し替えに失敗するので、
-ビルド中はアプリを止めておくのが確実（止め忘れても5分は待つようにしてある）。
+ビルド中はvisualizerを止めておく（Windowsでは開いたままだと差し替えに失敗する）。
 
 ## 動作確認
 
@@ -112,12 +80,10 @@ python scripts/verify_visualizer_deep.py    # 3アプリの主要ページとAPI
 ```
 
 画面を変えたら**スマホ幅（390px）でも確認する**。ユーザーはスマホで見ている。
-横スクロールが出ていないかを見ること（`document.documentElement.scrollWidth -
-clientWidth` が 0 であること）。表は `.table-responsive` に入れる。
+`document.documentElement.scrollWidth - clientWidth` が 0 であること。
+表は `.table-responsive` に入れる。
 
 ## 環境
 
 - Windows。`EDINET_API_KEY` はユーザーの環境変数に設定済み（コミットしない）
 - `.venv` はプロジェクト直下。pyenv-win の Python 3.12.3
-- NTFSで使えないファイル名がリポジトリに含まれるため、cloneには
-  `core.protectNTFS=false` が要る（詳細は `docs/TODO.md` 以前の経緯）
