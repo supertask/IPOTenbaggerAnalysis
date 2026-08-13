@@ -11,9 +11,12 @@ gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 
 | スキル | 使うとき | 画面のどこ |
 |---|---|---|
-| `holding-review` | 保有銘柄の事業・経営陣・財務指標の読み解きと総括を書く／直すとき（四半期ごと） | 「事業の内容」「役員の状況」の各カード先頭、「財務指標の比較」の直下、「総括」カード |
-| `disclosure-reading` | 大株主が動いた理由を開示から書くとき | 「株主構成」→「持株の推移」→「5%超の売買」タブの理由の下 |
+| `holding-review` | **画面に出るAIの解釈を書く／直すとき**（四半期ごと） | 事業の内容 / 役員の状況 / 財務指標の比較 / 総括カード / 「5%超の売買」タブの理由の下 |
 | `facility-count` | 拠点数の抽出判定（`facility_count_collector.py`）を触るとき | 「拠点あたりの採算」カードの拠点数 |
+
+`holding-review` の書き先は2つ。`business_profile.tsv`（1銘柄1行）と
+`disclosure_reading.tsv`（1開示1行）。**粒度が違うのでTSVは分けているが、
+読む材料が重なるので手順は1つ。** 開示のPDFを2回読まないため。
 
 投資本（リンチ『株で勝つ』・清原『我が投資術』・テンバガー投資家X）の抜き書きは
 `.claude/skills/holding-review/references/investor-books.md`。

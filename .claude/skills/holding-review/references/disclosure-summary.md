@@ -1,9 +1,7 @@
----
-name: disclosure-reading
-description: 適時開示のPDFを読んで「5%超の売買」に出す要約を書く。data/meta/disclosure_reading.tsv に落とす。大株主が動いた理由を画面に出したいとき、規則で抜いた一文が意味を成していないときに使う。
----
-
 # 開示を読んで、なぜ動いたかを1〜2文で書く
+
+`holding-review` の手順4-2から呼ばれる。**書き先だけが別のTSV**で、
+1開示1行・URLがキーなので `business_profile.tsv` には入らない。
 
 `data/meta/disclosure_reading.tsv` に1開示1行。詳細ページの
 **「株主構成」→「持株の推移」→「5%超の売買」タブ**の、理由タグの下に出る。
@@ -83,6 +81,20 @@ python collectors/disclosure_pdf.py 212A --match 売出 --grep 目的 流通株�
   （書いていないことを書いている）
 ```
 
+### 3-2. 本が「開示から読め」と言っていること
+
+指標の話は `holding-review/references/investor-books.md` にまとめてあるが、
+**開示を読むときに効くものが1つある。**
+
+ピーター・リンチ『株で勝つ』の売りサイン。
+
+> 借入金が過去五回の四半期の間連続して減少していたのに、直近の四半期レポートを
+> 見ると二五〇〇万ドルも増えている。
+
+**水準ではなく向きの変化。** 減り続けていた借入金が急に増えたら、
+その理由が開示に書かれているかを探す。書かれていなければ、
+それ自体が「降りる条件」の材料になる（`holding-review`）。
+
 ### 4. 守ること
 
 - **書いてあることだけ書く。** 推測は入れない。開示は会社の言い分なので、
@@ -114,7 +126,8 @@ python -m visualizer.app
 
 ## 関わりのあるもの
 
-- `.claude/skills/holding-profile/SKILL.md` … 総括を書くときに、ここの要約を読む
+- `../SKILL.md` … 総括を書くときに、ここの要約を読む。同じPDFを2回読まないよう、
+  **開示を読むのは1回にして、総括と要約を同じときに書く**
 - `collectors/disclosure_summary.py` … 規則の抜き出しと `--dump`
 - `collectors/disclosure_pdf.py` … 1件を詳しく読む
 - `visualizer/large_holding_service.py` … AI要約を優先し、無ければ規則の結果を出す

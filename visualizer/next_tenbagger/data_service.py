@@ -669,6 +669,8 @@ class DataService:
         DataService._calculate_debt(metrics_data)
         DataService._calculate_payout_ratio(metrics_data)
         DataService._calculate_inventory_signal(metrics_data)
+        DataService._calculate_net_cash(metrics_data)
+        DataService._calculate_psr(metrics_data)
         
         # 四半期純利益がない場合は親会社株主に帰属する当期純利益を使用
         if '四半期純利益' not in metrics_data and '親会社株主に帰属する当期純利益' in metrics_data:
@@ -1065,6 +1067,58 @@ class DataService:
                 metrics_data['在庫の伸び − 売上の伸び'] = gap
         except Exception as e:
             logger.error(f"在庫シグナルの計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_net_cash(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """ネットキャッシュと、その時価総額に対する比率（清原達郎の定義）。
+
+            ネットキャッシュ = 流動資産 + 投資有価証券×70% − 負債
+            ネットキャッシュ比率 = ネットキャッシュ / 時価総額
+
+        「見るべきは会社が赤字になろうがなるまいが同じ値段で売れる資産が
+        どれほどあるか」（我が投資術）。PBRは減損で簡単に変わるので使わず、
+        これでPERを補うという考え方。
+
+        投資有価証券を70%に割り引くのは、売るときに簿価では売れないため。
+        負債は有利子負債ではなく**負債の全額**を引く。
+        """
+        try:
+            current = metrics_data.get('流動資産') or {}
+            securities = metrics_data.get('投資有価証券') or {}
+            liabilities = metrics_data.get('負債合計') or {}
+            if not current or not liabilities:
+                return
+            net = {}
+            for date in set(current) & set(liabilities):
+                net[date] = (current[date]
+                             + (securities.get(date) or 0) * 0.7
+                             - liabilities[date])
+            if not net:
+                return
+            metrics_data['ネットキャッシュ'] = net
+
+            ratio = DataService._ratio(net, metrics_data.get('時価総額（PER×当期純利益）') or {})
+            if ratio:
+                metrics_data['ネットキャッシュ比率'] = ratio
+        except Exception as e:
+            logger.error(f"ネットキャッシュの計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_psr(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """PSR（時価総額 ÷ 売上高）。
+
+        エミン・ユルマズが10倍株の一次スクリーニングの筆頭に置いている指標で、
+        目安は1倍未満。利益が安定しない成長企業ではPERが使えないが、
+        売上は赤字でも出るので比べられる。
+        """
+        try:
+            psr = DataService._ratio(
+                metrics_data.get('時価総額（PER×当期純利益）') or {},
+                metrics_data.get('売上高') or {})
+            if psr:
+                metrics_data['PSR（時価総額÷売上高）'] = psr
+        except Exception as e:
+            logger.error(f"PSRの計算中にエラー: {e}", exc_info=True)
 
     @staticmethod
     def _eps_growth_percent(eps: Dict[str, float], years: int = 3) -> Dict[str, float]:
