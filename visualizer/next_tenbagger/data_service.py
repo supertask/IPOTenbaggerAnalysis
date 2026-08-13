@@ -1098,8 +1098,19 @@ class DataService:
             metrics_data['ネットキャッシュ'] = net
 
             ratio = DataService._ratio(net, metrics_data.get('時価総額（PER×当期純利益）') or {})
-            if ratio:
-                metrics_data['ネットキャッシュ比率'] = ratio
+            if not ratio:
+                return
+            metrics_data['ネットキャッシュ比率'] = ratio
+
+            # 清原の使い方はこちら。比率そのものに閾値があるのではなく、
+            # 「手元の現金で自社株買いをしたらPERが何倍になるか」に直して、
+            # ネットキャッシュがゼロの会社と同じ土俵で比べる。
+            # 「PERが15倍でネットキャッシュ比率0.3倍なら、調整PERは15×(1−0.3)」
+            per = metrics_data.get('PER（株価収益率）') or {}
+            adjusted = {d: per[d] * (1 - ratio[d])
+                        for d in set(per) & set(ratio) if per[d] > 0}
+            if adjusted:
+                metrics_data['キャッシュニュートラルPER'] = adjusted
         except Exception as e:
             logger.error(f"ネットキャッシュの計算中にエラー: {e}", exc_info=True)
 
