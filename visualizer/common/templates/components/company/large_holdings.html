@@ -1,0 +1,81 @@
+{# 5%超の株主の売買。大量保有報告書から。持株の推移と違って理由が書いてある #}
+{% if large_holdings and large_holdings.events %}
+<div class="mt-4">
+    <h6 class="mb-2">
+        5%超の株主の売買
+        <button type="button" class="section-help" data-help="help-large-holdings"
+                title="どのデータをどう計算しているか">?</button>
+    </h6>
+    <div id="help-large-holdings" class="section-help-panel" hidden>
+        <table class="help-table">
+            <tr><th>出所</th><td>大量保有報告書（EDINET）。5%を超えて持つ人は、
+                <strong>保有割合が1%動くたびに5営業日以内</strong>に提出する義務があります。
+                上の「持株の推移」が各期末の断面なのに対し、こちらは<strong>日付単位</strong>で追えます。</td></tr>
+            <tr><th>理由</th><td>「事由」は提出の理由（1%以上の減少など）、
+                「目的」は本人が書いた保有の目的です。目的は届出の定型文なので、
+                <strong>売った本当の理由まで書いてあるとは限りません</strong>。
+                そこは適時開示の本文を見る必要があります。</td></tr>
+            <tr><th>増減</th><td>同じ人の前回の株数との差です。<strong>売った・買ったの判定は
+                株数で行っています。</strong>事由は共同保有者の合計に対して書かれるため、
+                本人が1株も売っていなくても「1％以上の減少」と載ります。
+                増資があると株数が動かなくても割合だけ落ちるので、それは「希薄化」と出しています。</td></tr>
+            <tr><th>日付</th><td>提出義務が生じた日（実際に売買した日）です。提出日はその数営業日後になります。</td></tr>
+            <tr><th>限界</th><td><strong>5%以上を持つ人しか出てきません。</strong>
+                創業者・資産管理会社・VC・機関投資家が中心で、
+                5%未満に落ちたあとの売却は追えなくなります。
+                持株が動かない届出（契約の締結など）は省いています。</td></tr>
+        </table>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-sm large-holdings-table mb-0">
+            <thead>
+                <tr>
+                    <th>日付</th>
+                    <th>保有者</th>
+                    <th class="num">株数</th>
+                    <th class="num">増減</th>
+                    <th class="num">割合</th>
+                    <th>事由・目的</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in large_holdings.events %}
+                <tr>
+                    <td class="text-nowrap">
+                        {{ e.date }}
+                        {% if e.action %}
+                        {% set tone = 'down' if e.action == '減らした' else ('up' if e.action == '増やした' else 'flat') %}
+                        <span class="lvh-action lvh-{{ tone }}">{{ e.action }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="holder-name">{{ e.name }}</td>
+                    <td class="num">{{ '{:,.0f}'.format(e.shares) }}</td>
+                    <td class="num">
+                        {% if e.share_diff %}
+                        <span class="{% if e.share_diff < 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ '{:+,.0f}'.format(e.share_diff) }}
+                        </span>
+                        {% else %}–{% endif %}
+                    </td>
+                    <td class="num">
+                        {% if e.ratio is not none %}{{ '{:.2%}'.format(e.ratio) }}{% else %}–{% endif %}
+                    </td>
+                    <td class="lvh-reason">
+                        {% if e.reason %}<div>{{ e.reason }}</div>{% endif %}
+                        {% if e.purpose %}
+                        <div class="text-muted small" title="{{ e.purpose }}">
+                            {% if e.purpose_tag %}<span class="lvh-purpose">{{ e.purpose_tag }}</span>{% endif %}
+                            {{ e.purpose }}
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="text-muted small mt-2">
+        5%を超えて持つ株主だけが対象です。持株が動いた届出のみ並べています（全{{ large_holdings.total }}件中）。
+    </div>
+</div>
+{% endif %}

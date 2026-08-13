@@ -53,6 +53,8 @@
 
         {% include 'components/company/holdings_history.html' %}
 
+        {% include 'components/company/large_holdings.html' %}
+
         {% if shareholders.rows and has_lockup %}
         <div class="text-muted small mt-2">
             ロックアップは上場前からの株主にかかる売却制限です。解除の時期（30日・180日・初値1.5倍など）は

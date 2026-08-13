@@ -460,6 +460,31 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+
+        /* 5%超の株主の売買（大量保有報告書）。理由を読ませたいので折り返す */
+        .large-holdings-table { font-size: 0.85rem; }
+        .large-holdings-table td, .large-holdings-table th { padding: 0.3rem 0.5rem; }
+        .large-holdings-table .num { text-align: right; white-space: nowrap; }
+        .large-holdings-table .holder-name { white-space: nowrap; }
+        .large-holdings-table .lvh-reason { min-width: 16rem; }
+        .lvh-action {
+            font-size: 0.65rem;
+            border-radius: 0.2rem;
+            padding: 0 0.2rem;
+            margin-left: 0.25rem;
+            vertical-align: text-top;
+        }
+        .lvh-down { color: #b02a37; background-color: #fdecea; }
+        .lvh-up   { color: #146c43; background-color: #eaf6ec; }
+        .lvh-flat { color: #6c757d; background-color: #f1f3f5; }
+        .lvh-purpose {
+            font-size: 0.65rem;
+            color: #495057;
+            background-color: #f1f3f5;
+            border-radius: 0.2rem;
+            padding: 0 0.25rem;
+            margin-right: 0.25rem;
+        }
     </style>
 </head>
 <body>
