@@ -13,8 +13,10 @@ from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 
 class TDnetDisclosureScraper:
-    def __init__(self):
-        self.ipo_years = self.get_ipo_years()
+    def __init__(self, years=None, codes=None, headless=True):
+        self.ipo_years = sorted(years or self.get_ipo_years())
+        self.only_codes = set(codes or [])
+        self.headless = headless
         self.ipo_tsv_path = f"data/output/kiso_urls/companies_%s.tsv"
         self.output_dir = "data/output/tdnet"
         if not os.path.exists(self.output_dir):
@@ -25,7 +27,7 @@ class TDnetDisclosureScraper:
 
     def init_playwright(self):
         self.playwright = sync_playwright().start()
-        self.browser = self.playwright.chromium.launch(headless=False)
+        self.browser = self.playwright.chromium.launch(headless=self.headless)
         self.page = self.browser.new_page()
         
         # User Agentを設定
@@ -124,12 +126,17 @@ class TDnetDisclosureScraper:
             
             disclosure_table = self.page.locator(f'#{opened_table_id}')
             
-            # さらに表示ボタンがあるかチェック
+            # さらに表示ボタンがあるかチェック。表示されていないことがあり、
+            # そのまま click すると既定の30秒を待たされる。短く切って諦める
             more_info_button = disclosure_table.locator('input[type="button"][value="さらに表示"]')
             if more_info_button.count() > 0:
-                more_info_button.click()
-                time.sleep(random.uniform(1.6, 2))
-                print(f"Finished to click 「{doc_type}」 の「さらに表示する」: {company_code}")
+                try:
+                    more_info_button.scroll_into_view_if_needed(timeout=3000)
+                    more_info_button.click(timeout=5000)
+                    time.sleep(random.uniform(1.6, 2))
+                    print(f"Finished to click 「{doc_type}」 の「さらに表示する」: {company_code}")
+                except Exception:
+                    print(f"「さらに表示」を押せず、1ページ目のみ取得: {company_code} 「{doc_type}」")
 
             rows = disclosure_table.locator('tr').all()
             print(f"Finished to get table 「{doc_type}」 rows: {company_code}")
@@ -207,23 +214,44 @@ class TDnetDisclosureScraper:
         return existing_disclosures
 
     def scrape_and_save(self):
+        # 銘柄を指定したときは、その銘柄がどの年のファイルに属するかを引く。
+        # 2011年より前に上場した会社はどの年にも無いので、other にまとめる
+        leftover = set(self.only_codes)
+
         for ipo_year in self.ipo_years:
             companies = self.read_companies(self.ipo_tsv_path % ipo_year)
+            if self.only_codes:
+                companies = [c for c in companies if c[0] in self.only_codes]
+                leftover -= {c[0] for c in companies}
+                if not companies:
+                    continue
             self.disclosure_tsv_path = os.path.join(self.output_dir, f"disclosures_{ipo_year}.tsv")
-            
+
             # 既存の企業コードを取得
             existing_companies = self.get_existing_companies(ipo_year)
-            print(f"Year {ipo_year}: {len(existing_companies)} companies already scraped")
+            print(f"Year {ipo_year}: {len(companies)}社が対象 "
+                  f"（取得済み {len(existing_companies)}社）")
 
             for index, company in enumerate(companies):
                 code, name = company
-                
+
                 # 既に同じ企業がスクレイピング済みの場合はスキップ
                 if code in existing_companies:
                     print(f"Skipping {code} ({name}) - already scraped")
                     continue
-                    
+
                 self.scrape_disclosure(index, code, name, ipo_year)
+
+        if leftover:
+            # 上場が古くて年の一覧に無い会社
+            self.disclosure_tsv_path = os.path.join(self.output_dir, "disclosures_other.tsv")
+            existing = self.get_existing_companies("other")
+            print(f"年の一覧に無い銘柄: {len(leftover)}社 → disclosures_other.tsv")
+            for index, code in enumerate(sorted(leftover)):
+                if code in existing:
+                    print(f"Skipping {code} - already scraped")
+                    continue
+                self.scrape_disclosure(index, code, code, "other")
 
     def scrape_disclosure(self, index, code, name, ipo_year):
         self.init_playwright()
@@ -281,6 +309,7 @@ class TDnetDisclosureScraper:
             print("No new disclosures to save")
 
     def save_last_index(self, index):
+        os.makedirs("etc/tmp", exist_ok=True)
         with open("etc/tmp/last_index.txt", "w") as file:
             file.write(str(index))
 
@@ -293,6 +322,38 @@ class TDnetDisclosureScraper:
     def close(self):
         self.close_playwright()
 
+def _portfolio_codes():
+    """保有銘柄のコード。data/output/portfolio/*.tsv から拾う"""
+    codes = []
+    for path in sorted(glob.glob("data/output/portfolio/*.tsv")):
+        with open(path, encoding="utf-8", newline="") as f:
+            rows = list(csv.DictReader(f, delimiter="\t"))
+        if not rows:
+            continue
+        key = next((k for k in rows[0] if "コード" in k), None)
+        for row in rows:
+            code = (row.get(key) or "").strip()
+            if code and not code.startswith("(") and code not in codes:
+                codes.append(code)
+    return codes
+
+
 if __name__ == "__main__":
-    scraper = TDnetDisclosureScraper()
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="JPXの適時開示情報をスクレイプする。1社ずつブラウザを"
+                    "立ち上げ直すため、1社あたり20秒ほどかかる。")
+    parser.add_argument("--years", nargs="+",
+                        help="IPO年で絞る（例: --years 2023 2024 2025）")
+    parser.add_argument("--codes", nargs="+", help="銘柄コードで絞る")
+    parser.add_argument("--portfolio", action="store_true",
+                        help="保有銘柄だけを対象にする")
+    parser.add_argument("--show-browser", action="store_true",
+                        help="ブラウザを表示する（既定は非表示）")
+    args = parser.parse_args()
+
+    codes = args.codes or (_portfolio_codes() if args.portfolio else None)
+    scraper = TDnetDisclosureScraper(years=args.years, codes=codes,
+                                     headless=not args.show_browser)
     scraper.scrape_and_save()
