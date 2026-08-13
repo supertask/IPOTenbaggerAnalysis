@@ -20,35 +20,52 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
                'jpcrp_qcor:NetSalesQuarterlySummaryOfBusinessResults',
                'jpcrp_qcor:RevenueIFRSQuarterlySummaryOfBusinessResults',
                'jpcrp_qcor:RevenuesUSGAAPQuarterlySummaryOfBusinessResults']),
+    # IFRSは最後に置く。同じ年に両方あるとき後勝ちで上書きされるため。
+    # IFRSの会社は jppfs_cor:OperatingIncome が提出会社の単体しか持たず、
+    # 売上だけIFRSの連結を拾うので、**営業利益率が基準の違う数字どうしの
+    # 割り算になっていた**（6574は売上155億に対し営業利益11百万で0.07%。
+    # 正しくは連結1,601百万で10.3%）。日本基準の会社にはこのタグが無いので影響しない
     ('営業利益', ['jppfs_cor:OperatingIncome',
-                 'jppfs_qcor:OperatingIncomeQuarterly']),
+                 'jppfs_qcor:OperatingIncomeQuarterly',
+                 'jpigp_cor:OperatingProfitLossIFRS']),
     ('経常利益', ['jppfs_cor:OrdinaryIncome', 
                  'jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults',
                  'jppfs_qcor:OrdinaryIncomeQuarterly',
                  'jpcrp_qcor:OrdinaryIncomeLossQuarterlySummaryOfBusinessResults']),
     ('ROE（自己資本利益率）', ['jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults',
-                          'jpcrp_qcor:RateOfReturnOnEquityQuarterlySummaryOfBusinessResults']),
+                          'jpcrp_qcor:RateOfReturnOnEquityQuarterlySummaryOfBusinessResults',
+                          'jpcrp_cor:RateOfReturnOnEquityIFRSSummaryOfBusinessResults']),
     ('純資産', ['jpcrp_cor:NetAssetsSummaryOfBusinessResults',
-               'jpcrp_qcor:NetAssetsQuarterlySummaryOfBusinessResults']),
+               'jpcrp_qcor:NetAssetsQuarterlySummaryOfBusinessResults',
+               'jpcrp_cor:EquityAttributableToOwnersOfParentIFRSSummaryOfBusinessResults']),
     ('総資産', ['jpcrp_cor:TotalAssetsSummaryOfBusinessResults',
-               'jpcrp_qcor:TotalAssetsQuarterlySummaryOfBusinessResults']),
+               'jpcrp_qcor:TotalAssetsQuarterlySummaryOfBusinessResults',
+               'jpcrp_cor:TotalAssetsIFRSSummaryOfBusinessResults']),
     # 当期純利益。ROAの計算に要る。これが無いとROAのグラフが一度も描かれない
     ('当期純利益', ['jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults',
                  'jpcrp_cor:NetIncomeLossSummaryOfBusinessResults',
                  'jppfs_cor:ProfitLossAttributableToOwnersOfParent',
-                 'jpcrp_qcor:ProfitLossAttributableToOwnersOfParentQuarterlySummaryOfBusinessResults']),
+                 'jpcrp_qcor:ProfitLossAttributableToOwnersOfParentQuarterlySummaryOfBusinessResults',
+                 'jpcrp_cor:ProfitLossAttributableToOwnersOfParentIFRSSummaryOfBusinessResults']),
     # 末尾のsが抜けていた。next側は要素IDを完全一致で引くので、
-    # 4,021社ぶんデータがあるのにグラフが一度も出ていなかった
+    # 4,021社ぶんデータがあるのにグラフが一度も出ていなかった。
+    # IFRSは RatioOfOwnersEquityToGrossAssets（親会社所有者帰属持分比率）を使う。
+    # **EquityToAssetRatioIFRS は比率ではなく1株当たり持分**で、9158では
+    # 1,139.32という値が入っている。名前が似ているので取り違えないこと
     ('自己資本比率', ['jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResults',
-                   'jpcrp_qcor:EquityToAssetRatioQuarterlySummaryOfBusinessResults']),
+                   'jpcrp_qcor:EquityToAssetRatioQuarterlySummaryOfBusinessResults',
+                   'jpcrp_cor:RatioOfOwnersEquityToGrossAssetsIFRSSummaryOfBusinessResults']),
     ('PER（株価収益率）', ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults',
-                        'jpcrp_qcor:PriceEarningsRatioQuarterlySummaryOfBusinessResults']),
+                        'jpcrp_qcor:PriceEarningsRatioQuarterlySummaryOfBusinessResults',
+                        'jpcrp_cor:PriceEarningsRatioIFRSSummaryOfBusinessResults']),
     ('従業員数', ['jpcrp_cor:NumberOfEmployees', 'jpcrp_qcor:NumberOfEmployeesQuarterly']),
     ('平均臨時雇用人員', ['jpcrp_cor:AverageNumberOfTemporaryWorkers']),
-    ('１株当たり当期純利益（EPS）', ['jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults']),
+    ('１株当たり当期純利益（EPS）', ['jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults',
+                                'jpcrp_cor:BasicEarningsLossPerShareIFRSSummaryOfBusinessResults']),
     # 潜在株式を織り込んだEPS。基本EPSとの差が新株予約権などによる希薄化。
-    # 小型株は発行株数が少ないぶん希薄化がリターンを食いやすい（オニールのS）
-    ('希薄化後EPS', ['jpcrp_cor:DilutedEarningsPerShareSummaryOfBusinessResults']),
+    # 小型株は発行株数が少ないぶん希薄化がリターンを食いやすい
+    ('希薄化後EPS', ['jpcrp_cor:DilutedEarningsPerShareSummaryOfBusinessResults',
+                   'jpcrp_cor:DilutedEarningsLossPerShareIFRSSummaryOfBusinessResults']),
     ('平均年齢', ['jpcrp_cor:AverageAgeYearsInformationAboutReportingCompanyInformationAboutEmployees']),
     ('平均勤続年数', ['jpcrp_cor:AverageLengthOfServiceYearsInformationAboutReportingCompanyInformationAboutEmployees']),
     ('平均年間給与', ['jpcrp_cor:AverageAnnualSalaryInformationAboutReportingCompanyInformationAboutEmployees']),
@@ -65,8 +82,10 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
         'jpcrp_cor:CashFlowsFromUsedInInvestingActivitiesIFRSSummaryOfBusinessResults',
         'jpcrp_cor:CashFlowsFromUsedInInvestingActivitiesUSGAAPSummaryOfBusinessResults']),
     ('現金及び現金同等物', [  # 手元資金。リンチはネットキャッシュを見る (119)
-        'jpcrp_cor:CashAndCashEquivalentsSummaryOfBusinessResults']),
-    ('売上総利益', ['jppfs_cor:GrossProfit']),        # フィッシャーの価格決定力 (109)
+        'jpcrp_cor:CashAndCashEquivalentsSummaryOfBusinessResults',
+        'jpcrp_cor:CashAndCashEquivalentsIFRSSummaryOfBusinessResults']),
+    ('売上総利益', ['jppfs_cor:GrossProfit',
+                 'jpigp_cor:GrossProfitIFRS']),
     ('発行済株式数', [  # オニールのS。増資で1株あたりが薄まっていないか (120)
         'jpcrp_cor:TotalNumberOfIssuedSharesSummaryOfBusinessResults']),
     ('1株当たり配当', [  # 株主還元の姿勢 (120)
@@ -80,7 +99,12 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
     ('商品及び製品', ['jppfs_cor:MerchandiseAndFinishedGoods']),             # (70)
     # 清原達郎のネットキャッシュ比率に要る3つ。貸借対照表の合計行なので
     # ほぼ全社にある（有報120件を走査した出現数を括弧内に）
-    ('流動資産', ['jppfs_cor:CurrentAssets']),                              # (117)
+    ('流動資産', ['jppfs_cor:CurrentAssets',
+                'jpigp_cor:CurrentAssetsIFRS']),                          # (117)
+    # 投資有価証券と有利子負債（短期借入金など）はIFRSに対応するタグを入れていない。
+    # IFRSでは OtherFinancialAssets / BondsAndBorrowings に分かれて名前が揃わず、
+    # 取り違えると清原のネットキャッシュ比率が壊れるため。IFRSの会社では
+    # この2つは提出会社の単体のままになる
     ('投資有価証券', ['jppfs_cor:InvestmentSecurities']),                    # (105)
     ('負債合計', ['jppfs_cor:Liabilities']),                                # (120)
 ])

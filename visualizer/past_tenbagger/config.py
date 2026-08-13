@@ -16,18 +16,31 @@ ALL_COMPANIES_PATH = BASE_DIR / 'data/output/combiner/all_companies.tsv'
 # 辞書のキーの順序が指標の処理順序を決定します
 METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
     ('売上高', ['jpcrp_cor:NetSalesSummaryOfBusinessResults', 'jpcrp_cor:RevenueIFRSSummaryOfBusinessResults', 'jpcrp_cor:RevenuesUSGAAPSummaryOfBusinessResults']),
-    ('営業利益', ['jppfs_cor:OperatingIncome']),
+    # IFRSは各行の最後に置く。同じ年に両方あるとき後勝ちで上書きされるため。
+    # 売上だけIFRSの連結を拾って、営業利益は日本基準の単体、という食い違いが
+    # 起きていた（next側の config.py に経緯を書いてある）。
+    # **EquityToAssetRatioIFRS は比率ではなく1株当たり持分なので使わない。**
+    # 自己資本比率のIFRSは RatioOfOwnersEquityToGrossAssets
+    ('営業利益', ['jppfs_cor:OperatingIncome',
+                 'jpigp_cor:OperatingProfitLossIFRS']),
     ('経常利益', ['jppfs_cor:OrdinaryIncome', 'jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults']),
     ('当期純利益', ['jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults',
         'jppfs_cor:ProfitLossAttributableToOwnersOfParent',
-        'jpcrp_cor:NetIncomeLossSummaryOfBusinessResults']),
-    ('ROE（自己資本利益率）', ['jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults']),
-    ('純資産', ['jpcrp_cor:NetAssetsSummaryOfBusinessResults']),
-    ('総資産', ['jpcrp_cor:TotalAssetsSummaryOfBusinessResults']),
-    ('自己資本比率', ['jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResult']),
-    ('PER（株価収益率）', ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults']),
+        'jpcrp_cor:NetIncomeLossSummaryOfBusinessResults',
+        'jpcrp_cor:ProfitLossAttributableToOwnersOfParentIFRSSummaryOfBusinessResults']),
+    ('ROE（自己資本利益率）', ['jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults',
+        'jpcrp_cor:RateOfReturnOnEquityIFRSSummaryOfBusinessResults']),
+    ('純資産', ['jpcrp_cor:NetAssetsSummaryOfBusinessResults',
+        'jpcrp_cor:EquityAttributableToOwnersOfParentIFRSSummaryOfBusinessResults']),
+    ('総資産', ['jpcrp_cor:TotalAssetsSummaryOfBusinessResults',
+        'jpcrp_cor:TotalAssetsIFRSSummaryOfBusinessResults']),
+    ('自己資本比率', ['jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResult',
+        'jpcrp_cor:RatioOfOwnersEquityToGrossAssetsIFRSSummaryOfBusinessResults']),
+    ('PER（株価収益率）', ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults',
+        'jpcrp_cor:PriceEarningsRatioIFRSSummaryOfBusinessResults']),
     ('従業員数', ['jpcrp_cor:NumberOfEmployees']),
-    ('１株当たり当期純利益（EPS）', ['jpcrp_cor:DilutedEarningsPerShareSummaryOfBusinessResults', 'jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults']),
+    ('１株当たり当期純利益（EPS）', ['jpcrp_cor:DilutedEarningsPerShareSummaryOfBusinessResults', 'jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults',
+        'jpcrp_cor:BasicEarningsLossPerShareIFRSSummaryOfBusinessResults']),
     # 以下はコメントアウトされていますが、順序を保持するために含めています
     #('営業活動によるキャッシュ・フロー', ['jpcrp_cor:CashFlowsFromOperatingActivities', 'jpcrp_cor:NetCashProvidedByUsedInOperatingActivities']),
     #('投資活動によるキャッシュ・フロー', ['jpcrp_cor:CashFlowsFromInvestingActivities', 'jpcrp_cor:NetCashProvidedByUsedInInvestingActivities']),

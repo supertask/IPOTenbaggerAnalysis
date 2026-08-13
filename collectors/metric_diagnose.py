@@ -40,16 +40,34 @@ from visualizer import db as _index_db
 
 # 業種・10倍株との比較に使う指標。要素IDから直に引ける単純なものだけにする。
 # 比率は下で組み立てる
+# **IFRSは各行の最後に置く。** 同じ会社・同じ提出日に日本基準とIFRSの
+# 両方があるとき、後ろにあるほうを採る。以前は売上だけIFRSを見て営業利益は
+# 日本基準（IFRS会社では提出会社の単体）だったため、営業利益率が基準の違う
+# 数字どうしの割り算になっていた。294社が該当し、業種中央値と10倍株の
+# 中央値そのものも、その値で作られていた
 _BENCH_IDS = {
     "売上高": ("jpcrp_cor:NetSalesSummaryOfBusinessResults",
                "jpcrp_cor:RevenueIFRSSummaryOfBusinessResults"),
-    "営業利益": ("jppfs_cor:OperatingIncome",),
-    "総資産": ("jpcrp_cor:TotalAssetsSummaryOfBusinessResults",),
-    "純資産": ("jpcrp_cor:NetAssetsSummaryOfBusinessResults",),
-    "ROE": ("jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults",),
-    "自己資本比率": ("jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResults",),
-    "営業CF": ("jpcrp_cor:NetCashProvidedByUsedInOperatingActivitiesSummaryOfBusinessResults",),
+    "営業利益": ("jppfs_cor:OperatingIncome",
+                "jpigp_cor:OperatingProfitLossIFRS"),
+    "総資産": ("jpcrp_cor:TotalAssetsSummaryOfBusinessResults",
+              "jpcrp_cor:TotalAssetsIFRSSummaryOfBusinessResults"),
+    "純資産": ("jpcrp_cor:NetAssetsSummaryOfBusinessResults",
+              "jpcrp_cor:EquityAttributableToOwnersOfParentIFRSSummaryOfBusinessResults"),
+    "ROE": ("jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults",
+            "jpcrp_cor:RateOfReturnOnEquityIFRSSummaryOfBusinessResults"),
+    # EquityToAssetRatioIFRS は比率ではなく1株当たり持分なので使わない
+    "自己資本比率": ("jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResults",
+                 "jpcrp_cor:RatioOfOwnersEquityToGrossAssetsIFRSSummaryOfBusinessResults"),
+    "営業CF": ("jpcrp_cor:NetCashProvidedByUsedInOperatingActivitiesSummaryOfBusinessResults",
+              "jpcrp_cor:CashFlowsFromUsedInOperatingActivitiesIFRSSummaryOfBusinessResults"),
 }
+
+# 要素IDごとの優先度。同じ提出日に複数の基準の行があるとき、
+# 数字が大きいほうを採る（＝_BENCH_IDS の後ろにあるIFRSが勝つ）
+_BENCH_PRIORITY = {element: index
+                   for group in _BENCH_IDS.values()
+                   for index, element in enumerate(group)}
 
 TENBAGGER_MIN = 10.0
 
@@ -104,9 +122,10 @@ def _latest_values(codes: List[str]) -> Dict[str, Dict[str, float]]:
         if name is None or v is None:
             continue
         key = (code, name)
-        if key in seen and seen[key] >= date:
+        rank = (date, _BENCH_PRIORITY.get(element, 0))
+        if key in seen and seen[key] >= rank:
             continue
-        seen[key] = date
+        seen[key] = rank
         out.setdefault(code, {})[name] = v
     for values in out.values():
         if values.get("売上高"):
@@ -124,6 +143,7 @@ def _values_at_year(codes: List[str], years_after_ipo: int,
         return {}
     ids = [i for group in _BENCH_IDS.values() for i in group]
     out: Dict[str, Dict[str, float]] = {}
+    seen: Dict[tuple, tuple] = {}
     q = (f"SELECT company_code, element_id, report_date, value "
          f"FROM financial_metrics "
          f"WHERE relative_period = '当期' "
@@ -139,7 +159,14 @@ def _values_at_year(codes: List[str], years_after_ipo: int,
         v = _num(value)
         if name is None or v is None:
             continue
-        out.setdefault(code, {}).setdefault(name, v)
+        # setdefault だと先に来た行が残り、基準がそろわない。
+        # 日付が新しいもの、同じ日付ならIFRSを採る
+        key = (code, name)
+        rank = (date, _BENCH_PRIORITY.get(element, 0))
+        if key in seen and seen[key] >= rank:
+            continue
+        seen[key] = rank
+        out.setdefault(code, {})[name] = v
     for values in out.values():
         if values.get("売上高"):
             values["営業利益率"] = (values.get("営業利益") or 0) / values["売上高"] * 100

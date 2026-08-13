@@ -33,8 +33,14 @@ COST_TSV = os.path.join(
 
 SALES_IDS = ("jpcrp_cor:NetSalesSummaryOfBusinessResults",
              "jpcrp_cor:RevenueIFRSSummaryOfBusinessResults")
-PROFIT_IDS = ("jppfs_cor:OperatingIncome",
-              "jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults")
+# 後ろにあるものほど優先する。IFRSの会社は jppfs（日本基準）が提出会社の単体に
+# なるので、連結の営業利益を先に採る。経常利益は営業利益が取れないときの
+# 最後の手当てで、営業利益と混ざると1拠点あたりが別物になる
+PROFIT_IDS = ("jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults",
+              "jppfs_cor:OperatingIncome",
+              "jpigp_cor:OperatingProfitLossIFRS")
+_PROFIT_RANK = {element: index for index, element in enumerate(PROFIT_IDS)}
+_SALES_RANK = {element: index for index, element in enumerate(SALES_IDS)}
 
 _cache: Optional[Dict[str, Dict[str, dict]]] = None
 _cache_mtime: Optional[float] = None
@@ -278,11 +284,21 @@ def _financials(codes) -> Dict[str, Dict[str, Dict[str, float]]]:
         value = _num(row["value"])
         if value is None:
             continue
-        key = "sales" if row["element_id"] in SALES_IDS else "profit"
+        sales = row["element_id"] in SALES_IDS
+        key = "sales" if sales else "profit"
+        rank = (_SALES_RANK if sales else _PROFIT_RANK).get(row["element_id"], 0)
         bucket = out.setdefault(row["company_code"], {}).setdefault(row["report_date"], {})
-        # 同じ期に複数あるときは大きいほう（連結を優先したい）
-        if key not in bucket or value > bucket[key]:
-            bucket[key] = value
+        # まず優先度（IFRSの連結 > 日本基準の営業利益 > 経常利益）、
+        # 同じ優先度なら大きいほう（連結と単体が並ぶので連結が残る）
+        current = bucket.get(f"_{key}_rank")
+        if current is not None and (rank, value) <= current:
+            continue
+        bucket[f"_{key}_rank"] = (rank, value)
+        bucket[key] = value
+    for dates in out.values():
+        for bucket in dates.values():
+            bucket.pop("_sales_rank", None)
+            bucket.pop("_profit_rank", None)
     return out
 
 
