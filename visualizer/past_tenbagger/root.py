@@ -326,6 +326,7 @@ def company_view(company_code):
         'business_profile': _profile.get_business_profile(company_code),
         'officer_profile': _profile.get_officer_profile(company_code),
         'judgment': _profile.get_judgment(company_code),
+        'metric_reading': _profile.get_metric_reading(company_code),
         'lockup_markers': _price_service.get_lockup_markers(company_code),
     }
     

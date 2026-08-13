@@ -22,6 +22,8 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROFILE_TSV = os.path.join(BASE_DIR, "data", "meta", "business_profile.tsv")
+# 「財務指標の比較」の頭に出す読み方（.claude/skills/metric-reading）
+METRIC_TSV = os.path.join(BASE_DIR, "data", "meta", "metric_reading.tsv")
 
 # 事業の内容カードに出す
 BUSINESS_SECTIONS = [
@@ -58,8 +60,17 @@ VERDICT_STYLES = {
     "判断保留": "bg-secondary",
 }
 
+# 財務指標の比較カードに出す
+METRIC_SECTIONS = [
+    ("見どころ", "20枚のグラフのうち、まずどれを見るか"),
+    ("競合との差", "同じ土俵の会社と並べて何が違うか"),
+    ("気をつける点", "そのまま読むと誤るところ"),
+]
+
 _cache: Optional[Dict[str, dict]] = None
 _cache_mtime: Optional[float] = None
+_metric_cache: Optional[Dict[str, dict]] = None
+_metric_mtime: Optional[float] = None
 
 
 def _load() -> Dict[str, dict]:
@@ -116,6 +127,41 @@ def get_officer_profile(company_code) -> Optional[dict]:
     if not row:
         return None
     sections = _sections(row, OFFICER_SECTIONS)
+    return {"sections": sections, **_meta(row)} if sections else None
+
+
+def _load_metric() -> Dict[str, dict]:
+    global _metric_cache, _metric_mtime
+    if not os.path.exists(METRIC_TSV):
+        return {}
+    mtime = os.path.getmtime(METRIC_TSV)
+    if _metric_cache is not None and _metric_mtime == mtime:
+        return _metric_cache
+    data: Dict[str, dict] = {}
+    try:
+        with open(METRIC_TSV, encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f, delimiter="\t"):
+                code = (row.get("コード") or "").strip()
+                if code:
+                    data[code] = row
+    except OSError as e:
+        logger.warning("財務指標の読み方を読めませんでした: %s", e)
+        return {}
+    _metric_cache, _metric_mtime = data, mtime
+    return data
+
+
+def get_metric_reading(company_code) -> Optional[dict]:
+    """財務指標の比較の頭に載せる読み方。
+
+    比較チャートは20枚近くあり、どれから見ればいいかが分からない。
+    数字そのものはグラフが持っているので、ここに書くのは見る順番と、
+    そのまま読むと誤るところだけ。
+    """
+    row = _load_metric().get(str(company_code).strip())
+    if not row:
+        return None
+    sections = _sections(row, METRIC_SECTIONS)
     return {"sections": sections, **_meta(row)} if sections else None
 
 

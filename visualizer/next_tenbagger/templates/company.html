@@ -10,8 +10,10 @@
     <div class="row justify-content-center">
         <div class="col-12">
             <!-- チャートセクション -->
-            <h2 class="mb-4">財務指標の比較</h2>
-            
+            <h2 class="mb-3">財務指標の比較</h2>
+
+            {% include 'components/company/metric_reading.html' %}
+
             {% if charts %}
                 <div class="row">
                 {% for chart in charts %}

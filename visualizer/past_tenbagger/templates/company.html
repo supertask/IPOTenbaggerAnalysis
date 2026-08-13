@@ -39,6 +39,7 @@
 {% endblock %}
 
 {% block financial_section %}
+{% include 'components/company/metric_reading.html' %}
 {% if charts %}
     <div class="row">
     {% for chart in charts %}

@@ -1,0 +1,39 @@
+{# 財務指標の比較の頭に置く読み方。グラフが20枚近くあり、
+   どれから見ればいいかが分からないので、見る順番だけ先に示す #}
+{% if metric_reading %}
+<div class="ai-reading mb-4">
+    <div class="ai-reading-head">
+        <span class="badge bg-warning text-dark">AIによる解釈</span>
+        <button type="button" class="section-help" data-help="help-metric-reading"
+                title="どうやって作っているか">?</button>
+        <span class="text-muted small">
+            下のグラフのうち、どれをどう見るかです。数字はグラフのほうが正確です。
+        </span>
+    </div>
+
+    <div id="help-metric-reading" class="section-help-panel mt-2" hidden>
+        <table class="help-table">
+            <tr><th>元にしたもの</th><td>下のグラフと同じデータ（有価証券報告書のXBRL）を
+                <code>collectors/metric_compare_dump.py</code> で自社と競合ぶん並べたもの。
+                <strong>ここに書かれた数字はグラフと一致します。</strong></td></tr>
+            <tr><th>ここに書くこと</th><td>見る順番と、そのまま読むと誤るところだけです。
+                数字そのものはグラフが持っているので繰り返しません。</td></tr>
+            <tr><th>ほかと違う点</th><td>他の項目は決まった手順で数字を取り出したものですが、
+                ここだけは<strong>読んだうえでの解釈</strong>です。間違っている可能性があります。</td></tr>
+            <tr><th>対象</th><td>テンバガーX・自分・お気に入りの銘柄のみ。それ以外では出ません。</td></tr>
+        </table>
+    </div>
+
+    <dl class="profile-list mb-0 mt-2">
+        {% for item in metric_reading.sections %}
+        <dt>{{ item.label }}<span class="profile-hint">{{ item.hint }}</span></dt>
+        <dd>{{ item.text }}</dd>
+        {% endfor %}
+    </dl>
+
+    <div class="text-muted small mt-2">
+        {% if metric_reading.source_date %}{{ metric_reading.source_date }}の有価証券報告書より。{% endif %}
+        {% if metric_reading.written_on %}{{ metric_reading.written_on }}時点の読み方です。{% endif %}
+    </div>
+</div>
+{% endif %}
