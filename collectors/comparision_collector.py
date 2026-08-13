@@ -43,8 +43,13 @@ class ComparisonCollector(IPOAnalyzerCore):
         with open(self.cache_file, 'w', encoding='utf-8') as f:
             json.dump(self.comparison_cache, f, ensure_ascii=False, indent=4)
 
-    def playwright_comparisons(self, company_code):
-        if company_code in self.comparison_cache and self.comparison_cache[company_code]:
+    def playwright_comparisons(self, company_code, refresh=False):
+        # 四季報側は比較企業を入れ替える。一度取れたら二度と見に行かないので
+        # 古いまま残る。デジタルグリッド(350A)は上場直後に取った
+        # レジル・GMOペイ・ラクスルのままだったが、いまはグリムス・GMOペイ・
+        # Eチェンジに変わっていた（ラクスルは印刷のECで土俵が違う）
+        if (not refresh and company_code in self.comparison_cache
+                and self.comparison_cache[company_code]):
             if self.is_debug:
                 print(f"✅ キャッシュヒット: {company_code}")
             return self.comparison_cache[company_code]
@@ -113,6 +118,27 @@ class ComparisonCollector(IPOAnalyzerCore):
         self.save_companies_info_to_tsv(self.comparison_settings.output_dir, self.on_each_company,
             skip_years=[2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024])
         #self.combine_all_files(self.comparison_settings.output_dir)
+
+    def refresh(self, codes):
+        """指定した銘柄だけ、キャッシュを無視して取り直す。
+
+        比較企業は四季報側が入れ替えるので、保有銘柄は定期的に取り直す。
+        全1,150社を回すと1銘柄あたり10秒待ち＋3〜15秒のランダム待機で
+        6時間を超えるため、対象を絞って使う。
+        """
+        changed = []
+        for i, code in enumerate(sorted(codes), 1):
+            before = self.comparison_cache.get(code)
+            after = self.playwright_comparisons(code, refresh=True)
+            names = lambda x: [c.get("name") for c in (x or [])]
+            if names(before) != names(after):
+                changed.append((code, names(before), names(after)))
+                print(f"  変わった {code}: {names(before)} → {names(after)}")
+            if i % 5 == 0:
+                print(f"  {i}/{len(codes)}銘柄")
+        self.save_cache()
+        print(f"\n{len(codes)}銘柄を取り直し、{len(changed)}銘柄で比較企業が変わりました")
+        return changed
 
     def save_to_json(self, filename="companies.json"):
         with open(filename, "w", encoding="utf-8") as f:

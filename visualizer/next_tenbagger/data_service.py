@@ -18,7 +18,17 @@ from .config import (
 from visualizer import db as _index_db
 
 # IPO_REPORTS_DIRを追加
-IPO_REPORTS_DIR = Path(__file__).parent.parent.parent / 'data/output/edinet_db/ipo_reports'
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+IPO_REPORTS_DIR = PROJECT_ROOT / 'data/output/edinet_db/ipo_reports'
+
+# 「主要な経営指標等の推移」のコンテキストIDは、単体だけの会社が
+# `CurrentYearDuration_NonConsolidatedMember`、連結のある会社が素の
+# `CurrentYearDuration`。**連結に移った年から素のIDに変わる。**
+# 以前は _NonConsolidatedMember が付くものしか見ておらず、連結に移った
+# 銘柄はそこでグラフが止まっていた（6099は2017年、3496は2019年）。
+# 末尾を固定するのは、セグメントや役員の内訳（_ReportableSegmentsMember など）を
+# 拾わないため。
+_CONSOLIDATION_SUFFIX = r'(?:_NonConsolidatedMember)?$'
 
 # カラーフォーマッターの設定
 class ColoredFormatter(logging.Formatter):
@@ -158,9 +168,61 @@ class DataService:
         
         return companies
 
+    _override_cache = None
+    _override_mtime = None
+
+    @staticmethod
+    def _competitor_override() -> Dict[str, List[Dict[str, str]]]:
+        """人が確かめた競合。{銘柄コード: [{code, name}, ...]}
+
+        競合を空にしたい銘柄は、競合の欄を空にして1行書く。
+        """
+        import csv as _csv
+        path = str(PROJECT_ROOT / "data" / "meta" / "competitor_override.tsv")
+        if not os.path.exists(path):
+            return {}
+        mtime = os.path.getmtime(path)
+        if DataService._override_cache is not None and DataService._override_mtime == mtime:
+            return DataService._override_cache
+
+        out: Dict[str, List[Dict[str, str]]] = {}
+        try:
+            with open(path, encoding="utf-8", newline="") as f:
+                for row in _csv.DictReader(f, delimiter="\t"):
+                    code = (row.get("コード") or "").strip()
+                    if not code or code.startswith("#"):  # 使い方を書いた行
+                        continue
+                    peers = []
+                    for pair in (row.get("競合") or "").split(","):
+                        pair = pair.strip()
+                        if not pair:
+                            continue
+                        parts = pair.split(":", 1)
+                        peers.append({"code": parts[0].strip(),
+                                      "name": (parts[1] if len(parts) > 1
+                                               else parts[0]).strip()})
+                    out[code] = peers
+        except Exception as e:
+            logger.warning(f"競合の上書きを読めませんでした: {e}")
+            return {}
+        DataService._override_cache, DataService._override_mtime = out, mtime
+        return out
+
     @staticmethod
     def get_competitors(company_code: str) -> List[Dict[str, str]]:
-        """競合他社のリストを取得"""
+        """競合他社のリストを取得。
+
+        出所は四季報オンラインの「比較企業」欄（comparision_collector.py）だが、
+        向こうの自動選定なので業態がずれることがある。
+        デジタルグリッド(350A)にラクスル（印刷のEC）が入っていたり、
+        フィットイージーの競合にカーブスH（FCのロイヤリティ中心の持株会社）が
+        入っていたりする。人が確かめたものは
+        data/meta/competitor_override.tsv で差し替える。
+        """
+        override = DataService._competitor_override().get(str(company_code).strip())
+        if override is not None:
+            return override
+
         conn = _index_db.get_conn()
         if conn is not None:
             rows = conn.execute(
@@ -714,7 +776,10 @@ class DataService:
         from datetime import datetime, timedelta
         
         metric_data = {}
-        
+        # 同じ年に連結と単体の両方が載ることがある。連結を優先し、
+        # 単体は連結が無い年だけ使う（下の _CONSOLIDATION_SUFFIX の説明を参照）
+        consolidated_dates = set()
+
         try:
             # 有価証券届出書と有価証券報告書の日付を取得
             securities_registration_date = None
@@ -753,13 +818,13 @@ class DataService:
                         
                         # 有価証券届出書の特殊パターンを確認
                         if context_ref and securities_registration_date:
-                            # Prior[1-5]Year(Instant|Duration)_NonConsolidatedMemberパターンを確認
-                            prior_year_match = re.search(r'Prior([1-5])Year(Instant|Duration)_NonConsolidatedMember', context_ref)
-                            
+                            # Prior[1-5]Year(Instant|Duration)パターンを確認
+                            prior_year_match = re.search(r'Prior([1-5])Year(Instant|Duration)' + _CONSOLIDATION_SUFFIX, context_ref)
+
                             if prior_year_match:
                                 # 何年前かを取得
                                 years_ago = int(prior_year_match.group(1))
-                                
+
                                 # 最も古い有価証券報告書の日付があれば、そこからX年前の日付を使用
                                 if oldest_annual_report_date:
                                     ar_date = datetime.strptime(oldest_annual_report_date, '%Y-%m-%d')
@@ -773,16 +838,16 @@ class DataService:
                         
                         # 有価証券報告書の特殊パターンを確認
                         if context_ref and row_annual_report_date and not date_str:
-                            # CurrentYear(Instant|Duration)_NonConsolidatedMemberパターンを確認
-                            current_year_match = re.search(r'CurrentYear(Instant|Duration)_NonConsolidatedMember', context_ref)
-                            
+                            # CurrentYear(Instant|Duration)パターンを確認
+                            current_year_match = re.search(r'CurrentYear(Instant|Duration)' + _CONSOLIDATION_SUFFIX, context_ref)
+
                             if current_year_match:
                                 # この行の有価証券報告書の日付をそのまま使用
                                 date_str = row_annual_report_date
                             else:
-                                # Prior[1-5]Year(Instant|Duration)_NonConsolidatedMemberパターンを確認
-                                prior_year_match = re.search(r'Prior([1-5])Year(Instant|Duration)_NonConsolidatedMember', context_ref)
-                                
+                                # Prior[1-5]Year(Instant|Duration)パターンを確認
+                                prior_year_match = re.search(r'Prior([1-5])Year(Instant|Duration)' + _CONSOLIDATION_SUFFIX, context_ref)
+
                                 if prior_year_match:
                                     # 有価証券届出書がなく、かつこの行が最も古い有価証券報告書の場合のみ処理
                                     if not securities_registration_date and row_annual_report_date == oldest_annual_report_date:
@@ -815,10 +880,18 @@ class DataService:
                             value_str = row.get("値", "")
                             
                             if value_str and value_str.strip() and value_str != "－":
+                                # 連結に移る年の有報には、連結と単体の両方が載る。
+                                # 単体で上書きすると、その年だけ規模が小さく見えて
+                                # 段差になるので、連結があればそちらを残す
+                                is_single = context_ref.endswith("_NonConsolidatedMember")
+                                if is_single and date_str in consolidated_dates:
+                                    continue
                                 try:
                                     # カンマを除去して数値に変換
                                     value = float(value_str.replace(",", ""))
                                     metric_data[date_str] = value
+                                    if not is_single:
+                                        consolidated_dates.add(date_str)
                                 except ValueError:
                                     logger.warning(f"数値への変換に失敗しました: {value_str}")
             
