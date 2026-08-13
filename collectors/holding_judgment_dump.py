@@ -218,9 +218,103 @@ def portfolio_weight(code: str) -> None:
                             print(f"  {key}: {row[key]}")
 
 
+def show_brief(code: str, name: str) -> None:
+    """何社もまとめて書くとき用。判断が変わる数字だけ1画面に収める"""
+    print(f"\n### {code} {name}")
+
+    # どのポートフォリオが、どれだけ持っているか
+    weights = []
+    for stem, label in (("myself", "自分"), ("tenbagger_x", "テンバガーX"),
+                        ("favorites", "お気に入り")):
+        path = os.path.join(PORTFOLIO_DIR, f"{stem}.tsv")
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f, delimiter="\t"):
+                if (row.get("銘柄コード") or "").strip() == code:
+                    weights.append(f"{label} {row.get('保有割合%')}%"
+                                   f"（損益 {row.get('評価損益')}）")
+    print("  保有: " + (" / ".join(weights) or "なし"))
+
+    conn = _db.get_conn()
+    ids = facility_service.SALES_IDS + facility_service.PROFIT_IDS
+    marks = ",".join("?" * len(ids))
+    rows = conn.execute(
+        f"""SELECT report_date, element_id, value FROM financial_metrics
+            WHERE company_code = ? AND relative_period = '当期'
+              AND report_type = 'annual' AND element_id IN ({marks})
+            ORDER BY report_date""", (code, *ids)).fetchall() if conn else []
+    by_date: dict = {}
+    for row in rows:
+        try:
+            value = float(row["value"])
+        except (TypeError, ValueError):
+            continue
+        key = "売上" if row["element_id"] in facility_service.SALES_IDS else "利益"
+        bucket = by_date.setdefault(row["report_date"], {})
+        if key not in bucket or value > bucket[key]:
+            bucket[key] = value
+    parts = []
+    for date in sorted(by_date)[-4:]:
+        sales = by_date[date].get("売上")
+        profit = by_date[date].get("利益")
+        margin = f"({profit / sales * 100:.1f}%)" if sales and profit else ""
+        parts.append(f"{date[:7]} 売上{(sales or 0) / 1e6:,.0f} 利益{(profit or 0) / 1e6:,.0f}{margin}")
+    print("  業績: " + (" / ".join(parts) or "取れず"))
+
+    prices = price_service.get_price_series(code)
+    if prices["dates"]:
+        per = price_service.get_per_series(code, prices)
+        closes = [c for c in prices["close"] if c is not None]
+        pers = [v for v in per["per"] if v is not None]
+        print(f"  株価: {closes[-1]:,.0f}円 高値の{closes[-1] / max(closes) * 100:.0f}% "
+              f"PER {_fmt(pers[-1], 1) if pers else '–'}倍")
+    else:
+        print("  株価: 取れず")
+
+    result = criteria.evaluate_by_code(code, price_service.get_latest_per(code))
+    if result:
+        items = result.get("items") or []
+        ng = [i.get("title") for i in items if i.get("status") == "fail"]
+        print(f"  条件: {sum(1 for i in items if i.get('status') == 'pass')}/{len(items)}"
+              f"  満たさない: {', '.join(ng) or 'なし'}")
+
+    peers = [dict(code=r["competitor_code"], name=r["competitor_name"])
+             for r in conn.execute(
+                 "SELECT competitor_code, competitor_name FROM competitors "
+                 "WHERE company_code = ? ORDER BY rank", (code,))] if conn else []
+    view = facility_service.get_facility_view(code, peers)
+    if view:
+        own = view["own"]["latest"]
+        print(f"  拠点: {own['count']:,.0f}{own['unit']} 利益/拠点 "
+              f"{_fmt(own['profit_per'])}百万 競合比 "
+              f"{_fmt(view.get('ratio_to_peers'), 1)}倍")
+    cost = (view or {}).get("cost_structure") or \
+        facility_service._load_cost_structure().get(code) or {}
+    if cost:
+        print(f"  原価率 {_fmt(cost.get('cost_ratio'), 1)}%"
+              f" 競合{len(peers)}社")
+
+    # 経営陣が売っていないか。長期で持つかの判断に直結する
+    view = holdings_service.get_holdings_history(code)
+    if view and view.get("officer"):
+        table = view["officer"]
+        moves = []
+        for person in table["people"][:4]:
+            known = [v for v in person["values"] if v is not None]
+            if len(known) >= 2 and known[0]:
+                rate = known[-1] / known[0] * 100 - 100
+                moves.append(f"{person['name'][:10]} {rate:+.0f}%")
+        print("  役員の持株: " + (" / ".join(moves) or "動きなし"))
+    else:
+        print("  役員の持株: 取れず")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("codes", nargs="+")
+    parser.add_argument("--brief", action="store_true",
+                        help="判断が変わる数字だけを短く出す（まとめて書くとき用）")
     args = parser.parse_args()
 
     conn = _db.get_conn()
@@ -230,6 +324,9 @@ def main() -> int:
             row = conn.execute("SELECT name FROM companies WHERE code = ?",
                                (code,)).fetchone()
             name = row["name"] if row else "?"
+        if args.brief:
+            show_brief(code, name)
+            continue
         print(f"\n{'=' * 70}\n{code} {name}\n{'=' * 70}")
         portfolio_weight(code)
         show_ipo(code)
