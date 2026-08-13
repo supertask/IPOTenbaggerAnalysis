@@ -30,6 +30,9 @@ IPO_REPORTS_DIR = PROJECT_ROOT / 'data/output/edinet_db/ipo_reports'
 # 拾わないため。
 _CONSOLIDATION_SUFFIX = r'(?:_NonConsolidatedMember)?$'
 
+# 日付として認めるもの。NaN や空文字を弾く
+_VALID_DATE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
+
 # カラーフォーマッターの設定
 class ColoredFormatter(logging.Formatter):
     """ログメッセージに色を付けるフォーマッター"""
@@ -835,7 +838,18 @@ class DataService:
                                     sr_date = datetime.strptime(securities_registration_date, '%Y-%m-%d')
                                     date = sr_date - timedelta(days=365 * years_ago)
                                     date_str = date.strftime('%Y-%m-%d')
-                        
+                            elif not annual_report_dates:
+                                # 上場したばかりで有報がまだ無い会社は、当期の行に
+                                # 日付を付ける手がかりが届出書の日付しかない。
+                                # 以前はここが抜けていて、**当期がグラフから丸ごと
+                                # 落ちていた**（558Aは表が5,368百万、グラフは前期の
+                                # 3,068百万を最新として出していた）。
+                                # 有報がある会社は下の分岐でその日付を使うので触らない
+                                if re.search(r'CurrentYear(Instant|Duration)'
+                                             + _CONSOLIDATION_SUFFIX, context_ref):
+                                    date_str = securities_registration_date
+
+
                         # 有価証券報告書の特殊パターンを確認
                         if context_ref and row_annual_report_date and not date_str:
                             # CurrentYear(Instant|Duration)パターンを確認
@@ -874,7 +888,12 @@ class DataService:
                                 if len(date_str) == 8:  # YYYYMMDD形式
                                     date_str = f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:8]}"
                         
-                        # 日付が取得できた場合のみ処理
+                        # 日付が取得できた場合のみ処理。
+                        # ファイル名に日付が無い有報があると annual_report_date が
+                        # NaN になり、NaN は真と判定されるのでそのまま通ってしまう。
+                        # 558Aの全指標に nan のキーが混じり、並べ替えで落ちていた
+                        if not _VALID_DATE.match(str(date_str or "")):
+                            continue
                         if date_str:
                             # 値を取得
                             value_str = row.get("値", "")
