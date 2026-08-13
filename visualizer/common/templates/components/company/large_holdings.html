@@ -44,10 +44,20 @@
                        保有目的（定型文）とは別もの。
                        会社ごとの事情は開示のPDFにしかないので、まずそこへのリンクを出し、
                        型の説明と原文は補足として下に添える #}
+                    {# タグ自体をPDFへのリンクにする。開示のタイトルはどれも
+                       「〜に関するお知らせ」で似通っていて、並べても情報にならない。
+                       代わりに本文から抜いた一文を出す #}
+                    {% set main = e.disclosures[0] if e.disclosures else none %}
                     <td class="lvh-why">
                         <div class="lvh-why-head">
                             {% if e.why %}
+                            {% if main %}
+                            <a class="lvh-why-tag is-link" target="_blank" rel="noopener"
+                               href="https://www2.jpx.co.jp{{ main.url }}"
+                               title="{{ main.full }}（{{ main.date }}）">{{ e.why }}<span class="lvh-ext">↗</span></a>
+                            {% else %}
                             <span class="lvh-why-tag">{{ e.why }}</span>
+                            {% endif %}
                             {% elif e.action == '新たに5%超' %}
                             <span class="text-muted">–</span>
                             {% else %}
@@ -62,19 +72,21 @@
                                   title="{{ e.contract }}">{{ tag.text }}</span>
                             {% endfor %}
                         </div>
-                        {% for d in e.disclosures %}
-                        <div class="lvh-disclosure">
-                            <a href="https://www2.jpx.co.jp{{ d.url }}" target="_blank"
-                               rel="noopener" title="{{ d.full }}">{{ d.title }}</a>
-                            <span class="text-muted">{{ d.date }}</span>
-                        </div>
-                        {% endfor %}
-                        {% if e.why_note %}
+                        {# 開示PDFの本文そのもの。リンクを開かなくても理由が読める。
+                           同じ開示が続けて並ぶときは2度目から出さない #}
+                        {% if main and main.summary and not e.summary_repeat %}
+                        <div class="lvh-summary" title="{{ main.summary_full }}">{{ main.summary }}</div>
+                        {% elif e.why_note %}
                         <div class="lvh-why-note">{{ e.why_note }}</div>
                         {% endif %}
-                        {% if e.why_text %}
-                        <div class="lvh-why-text">{{ e.why_text }}</div>
-                        {% endif %}
+                        <div class="lvh-source">
+                            {% if e.why_text %}<span>{{ e.why_text }}</span>{% endif %}
+                            {% for d in e.disclosures %}
+                            <a href="https://www2.jpx.co.jp{{ d.url }}" target="_blank"
+                               rel="noopener" title="{{ d.full }}">{{ d.title }}</a><span
+                               class="lvh-source-date">{{ d.date }}</span>
+                            {% endfor %}
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -114,13 +126,17 @@
             <tr><th>単価</th><td>「最近60日間の取得又は処分の状況」から。
                 <strong>いくらで売ったか</strong>と、市場内の売買か市場外（相対・売出し）かが分かります。
                 60日ぶんしか載らないので、それより前の売買には付きません。</td></tr>
-            <tr><th>PDFのリンク</th><td>同じ時期に出た適時開示です。
-                <strong>その会社がなぜそうしたかは、ここにしか書かれていません。</strong>
-                型（売出し・立会外分売…）までは書類から機械的に決まりますが、
-                「東証プライムの流通株式比率35%を満たすため」のような事情は本文を読むしかありません。
-                開示を集めているのは保有銘柄だけなので、それ以外の銘柄では出ません。</td></tr>
-            <tr><th>灰色の補足</th><td>上の1行はその型が投資家にとって何を意味するかで、
-                会社ごとの事情ではありません。下の薄い1行は書類の原文です。</td></tr>
+            <tr><th>本文の一文</th><td>タグの下に出ている黒い文は、
+                <strong>適時開示PDFの本文そのもの</strong>です。要約ではありません。
+                会社ごとの事情はここにしか書かれていないので
+                （「東証プライムの上場基準である『流通株式比率35%』の充足に加えて…」）、
+                リンクを開かなくても読めるようにしています。
+                本文から判断に効く語を含む文を選んでいるだけで、AIは通していません。
+                <span class="text-muted">対象は保有銘柄だけです。取れなかったときは、
+                代わりにその型が一般に何を意味するかを灰色で出します。</span></td></tr>
+            <tr><th>タグのリンク</th><td>タグを押すと開示のPDFが開きます。
+                開示のタイトルはどれも「〜に関するお知らせ」で似通っていて並べても
+                情報にならないので、いちばん下に薄く置いています。</td></tr>
             <tr><th>黄色いタグ</th><td>担保契約等重要な契約から拾ったロックアップの期限、
                 担保に入れている株数、貸株の数です。触れると契約の全文が出ます。
                 <strong>期限が過ぎたロックアップは灰色</strong>にしています。

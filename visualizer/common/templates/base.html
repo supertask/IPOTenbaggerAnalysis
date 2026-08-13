@@ -517,14 +517,21 @@
         }
         /* 期限が過ぎたロックアップ。もう売れる状態なので目立たせない */
         .lvh-contract-tag.is-expired { color: #adb5bd; background-color: #f8f9fa; }
-        /* 型ごとの意味。会社ごとの事情ではないので、控えめに置く */
-        .lvh-why-note { font-size: 0.73rem; color: #6c757d; line-height: 1.35; }
-        .lvh-why-text { font-size: 0.7rem; color: #adb5bd; line-height: 1.35; }
+        /* タグ自体が開示PDFへのリンク。タイトルはどれも似ていて情報にならない */
+        a.lvh-why-tag.is-link { text-decoration: none; }
+        a.lvh-why-tag.is-link:hover { background-color: #d3ead9; }
+        .lvh-ext { font-size: 0.6rem; margin-left: 0.15rem; opacity: 0.6; }
 
-        /* 同じ時期の適時開示。会社側の説明はここに出る */
-        .lvh-disclosure { line-height: 1.35; margin-bottom: 0.15rem; }
-        .lvh-disclosure a { font-size: 0.8rem; }
-        .lvh-disclosure .text-muted { font-size: 0.7rem; margin-left: 0.25rem; }
+        /* 開示PDFの本文から抜いた一文。リンクを開かなくても理由が読める */
+        .lvh-summary { font-size: 0.78rem; color: #212529; line-height: 1.45; }
+        /* 型ごとの一般的な意味。要点が取れているときは出さない */
+        .lvh-why-note { font-size: 0.73rem; color: #6c757d; line-height: 1.35; }
+        /* 出所。原文と、開示へのリンク */
+        .lvh-source { font-size: 0.68rem; color: #adb5bd; line-height: 1.4; margin-top: 0.1rem; }
+        .lvh-source a { color: #8fa8c8; margin-right: 0.15rem; }
+        .lvh-source a:not(:first-child) { margin-left: 0.4rem; }
+        .lvh-source span { margin-right: 0.4rem; }
+        .lvh-source-date { margin-left: 0.1rem; }
         .lvh-count {
             font-size: 0.7rem;
             color: #6c757d;

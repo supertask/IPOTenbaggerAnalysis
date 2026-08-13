@@ -27,6 +27,9 @@ logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data", "output", "large_holdings")
 TDNET_GLOB = os.path.join(BASE_DIR, "data", "output", "tdnet", "*.tsv")
+# 開示PDFの本文から抜いた「なぜそうするのか」の一文
+# （collectors/disclosure_summary.py）
+SUMMARY_TSV = os.path.join(BASE_DIR, "data", "output", "tdnet", "summaries.tsv")
 
 # 割合がこれ以上動いた回だけを「動き」とみなす。提出事由には
 # 「重要な契約の締結」のように株数が変わらないものも混ざる
@@ -129,6 +132,7 @@ _BREAKDOWN_SIDE = re.compile(r"(取得|売却|処分|譲受|譲渡)")
 
 _cache: Dict[str, tuple] = {}
 _tdnet_cache: Optional[Dict[str, list]] = None
+_summary_cache: Optional[Dict[str, str]] = None
 
 
 def _path(company_code: str) -> str:
@@ -151,6 +155,44 @@ def purpose_tag(text: str) -> str:
     return ""
 
 
+# 要点は2文まで入っているが、表に2文とも出すと1行が5行ぶんの高さになる。
+# 文の切れ目で、この長さに収まるところまで出す
+_SUMMARY_CHARS = 130
+# 抜き出した文の頭に残る接続詞。受ける前の文が無いので落とす
+_LEAD_CONJ = re.compile(r"^(?:また|なお|加えて|さらに|そして|一方)[、，]\s*")
+
+
+def _clip_summary(text: str) -> str:
+    """文の切れ目で、表に収まる長さまで詰める。全文はツールチップに回す"""
+    text = _LEAD_CONJ.sub("", (text or "").strip())
+    if len(text) <= _SUMMARY_CHARS:
+        return text
+    out = ""
+    for sentence in re.split(r"(?<=。)", text):
+        if out and len(out) + len(sentence) > _SUMMARY_CHARS:
+            break
+        out += sentence
+    return out or text[:_SUMMARY_CHARS] + "…"
+
+
+def _load_summaries() -> Dict[str, str]:
+    """{開示のURL: 本文から抜いた要点}"""
+    global _summary_cache
+    if _summary_cache is not None:
+        return _summary_cache
+    out: Dict[str, str] = {}
+    if os.path.exists(SUMMARY_TSV):
+        try:
+            with open(SUMMARY_TSV, encoding="utf-8", newline="") as f:
+                for row in csv.DictReader(f, delimiter="\t"):
+                    if row.get("要点"):
+                        out[row["URL"]] = row["要点"]
+        except Exception as e:
+            logger.warning("開示の要点の読み込みに失敗: %s", e)
+    _summary_cache = out
+    return out
+
+
 def _load_tdnet() -> Dict[str, list]:
     """{銘柄コード: [(開示日, タイトル, URL), ...]}
 
@@ -164,6 +206,8 @@ def _load_tdnet() -> Dict[str, list]:
         return _tdnet_cache
     rows: Dict[str, list] = defaultdict(list)
     for path in glob.glob(TDNET_GLOB):
+        if os.path.basename(path) == os.path.basename(SUMMARY_TSV):
+            continue
         try:
             with open(path, encoding="utf-8", newline="") as f:
                 for row in csv.reader(f, delimiter="\t"):
@@ -320,6 +364,18 @@ def _mark_transfers(events: List[dict]) -> None:
                     b["transfer"] = a["name"]
 
 
+def _mark_repeats(events: List[dict]) -> None:
+    """1つの売出しが2回の届出にまたがると、同じ本文が続けて並ぶ。
+    2度目以降は本文を出さない（タグとリンクは残す）"""
+    seen = set()
+    for e in events:
+        key = e["disclosures"][0]["url"] if e["disclosures"] else ""
+        if key and key in seen:
+            e["summary_repeat"] = True
+        elif key:
+            seen.add(key)
+
+
 def _nearby_disclosures(code: str, on: str, limit: int = 2) -> List[dict]:
     """その売買の前後に出た、株主の増減に効く開示"""
     items = _load_tdnet().get(str(code).strip())
@@ -331,8 +387,15 @@ def _nearby_disclosures(code: str, on: str, limit: int = 2) -> List[dict]:
         return []
     lo = (day - timedelta(days=_DISCLOSURE_BEFORE)).strftime("%Y-%m-%d")
     hi = (day + timedelta(days=_DISCLOSURE_AFTER)).strftime("%Y-%m-%d")
-    return [{"date": d, "title": short_title(t), "full": t, "url": u}
-            for d, t, u in items if lo <= d <= hi][:limit]
+    summaries = _load_summaries()
+    found = [{"date": d, "title": short_title(t), "full": t, "url": u,
+              "summary": _clip_summary(summaries.get(u, "")),
+              "summary_full": summaries.get(u, "")}
+             for d, t, u in items if lo <= d <= hi]
+    # 本文の要点が取れているものを先に。開かなくても中身が分かる
+    found.sort(key=lambda d: (0 if d["summary"] else 1,
+                              -int(d["date"].replace("-", "") or 0)))
+    return found[:limit]
 
 
 def _action(share_diff: Optional[float], ratio_diff: Optional[float]) -> str:
@@ -464,6 +527,7 @@ def get_large_holdings(company_code) -> Optional[dict]:
             "contract": (row.get("重要な契約") or "").strip(),
             "contract_tags": _contract_tags(row.get("重要な契約")),
             "transfer": "",
+            "summary_repeat": False,
             # 株数が動いた回と、その人が初めて5%超で現れた回だけを残す。
             # 株数が変わらない届出（契約の締結、他人の売却に伴う割合の変動）は
             # 「売買」の一覧に並べても判断の材料にならない
@@ -489,6 +553,8 @@ def get_large_holdings(company_code) -> Optional[dict]:
     noise = [e for e in moves if e["noise"]]
     if not main:
         main, noise = noise, []
+    _mark_repeats(main)
+    _mark_repeats(noise)
 
     return {
         "events": main,
