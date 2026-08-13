@@ -76,11 +76,11 @@ _REASON_LABELS = (
     ("株式併合", ("株式併合", "併合により"),
      "持株が機械的に減ったぶん。売買ではない"),
     ("IPOの売出し", ("新規株式上場", "新規上場", "上場に伴う売出"),
-     "上場のときに既存株主が放出したぶん。残りにはロックアップが掛かるのが普通"),
+     "上場時に既存株主が放出したぶん。残りにはロックアップが掛かる"),
     ("追加売出し", ("グリーンシュー", "オーバーアロットメント", "ＯＡ"),
-     "上場後に需要が強かったときの追加の売出し。本人の判断というより上場の手続き"),
+     "上場時の追加の売出し。本人の判断というより上場の手続き"),
     ("立会外分売", ("立会外分売",),
-     "取引所の外でまとめて個人に売る。流動性を増やす目的が多いが、株主は降りている"),
+     "取引所の外で個人にまとめて売る。株主は降りている"),
     ("公開買付", ("公開買付", "ＴＯＢ"),
      "TOBに応じて手放した、または買い集めた"),
     ("第三者割当", ("第三者割当",),
@@ -90,22 +90,28 @@ _REASON_LABELS = (
     ("組織再編", ("株式交換", "合併", "会社分割", "株式移転"),
      "合併や株式交換で持株が入れ替わった"),
     ("新株予約権", ("新株予約権", "ストックオプション"),
-     "ストックオプションなどの権利。行使されると株数が増える"),
+     "ストックオプションなど。行使されると株数が増える"),
     ("売出し", ("売出",),
-     "取引所の外でまとめて放出。上場基準や流動性のためのこともあるので、"
-     "開示の本文を見ないと降りたかどうかは判らない"),
+     "取引所の外でまとめて放出。上場基準や流動性のためのこともある"),
     ("募集", ("募集により", "公募"), "新株の公募"),
     ("相続・贈与", ("相続", "贈与"), "売買ではなく承継"),
     ("担保処分", ("担保権", "担保の実行"),
-     "担保に入れていた株が処分された。借入の返済が滞った可能性がある"),
+     "担保の株が処分された。返済が滞った可能性がある"),
     ("相対で譲渡", ("譲渡", "譲受", "相対"), "市場を通さず特定の相手に渡した"),
     ("市場で売買", ("市場内", "市場買付", "市場売却", "取引所"),
-     "取引所で売買した。値の付く場所で出しているので需給に効く"),
+     "取引所で売買した。需給に直接効く"),
 )
 _REASON_NOTES = {label: note for label, _, note in _REASON_LABELS}
 _REASON_NOTES["市場外で相対"] = "取引所を通さない売買。相手が決まっている"
 _REASON_NOTES["関係者間で移動"] = (
-    "同じ日に同数が反対に動いている。資産管理会社への持ち替えなどで、外には出ていない")
+    "同じ日に同数が反対に動いている。持ち替えなどで、外には出ていない")
+
+# 開示のタイトルは「新株式発行及び株式売出し並びに主要株主及び親会社以外の
+# 支配株主の異動に関するお知らせ」のように長く、スマホだと3行使ってしまう。
+# 趣旨は「並びに」の前に出ているので、そこで切って末尾の定型を落とす
+_TITLE_TAIL = re.compile(r"(?:に関する)?(?:お知らせ|ご報告|のご案内)\s*$")
+_TITLE_HEAD = re.compile(r"並びに|、及び|及び当社")
+_TITLE_MAX = 30
 
 # 担保契約等重要な契約から、効くところだけ拾う。全文を折りたたみで出すと
 # 開くたびに下の行がずれて読みにくい
@@ -179,25 +185,41 @@ def reason_label(text: str) -> str:
     return ""
 
 
-def _contract_tags(text: str) -> List[str]:
+def short_title(title: str) -> str:
+    """開示のタイトルを1行に収まる長さにする。全文はツールチップに回す"""
+    text = _TITLE_HEAD.split(title)[0]
+    text = _TITLE_TAIL.sub("", text).strip("　 、")
+    if len(text) > _TITLE_MAX:
+        text = text[:_TITLE_MAX - 1] + "…"
+    return text or title
+
+
+def _contract_tags(text: str) -> List[dict]:
     """担保契約等重要な契約から、効くところだけを短く出す。
 
     ロックアップの期限と、担保に入れている株数。全文は長いので
     ツールチップに回す。折りたたみにすると開くたびに下の行がずれる。
+
+    ロックアップは**期限が過ぎているかどうか**で意味がまるで違う。
+    まだ効いていれば売れない、過ぎていればいつでも売れる。区別して出す。
     """
     if not text or text == "該当事項なし":
         return []
+    today = datetime.now().strftime("%Y-%m-%d")
     tags = []
     ends = [f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
             for y, m, d in _LOCKUP_END.findall(text)]
     if ends:
-        tags.append(f"ロックアップ {max(ends)}まで")
+        end = max(ends)
+        over = end < today
+        tags.append({"text": f"ロックアップ {end}{'まで（終了）' if over else 'まで'}",
+                     "expired": over})
     pledge = _PLEDGE.search(text)
     if pledge:
-        tags.append(f"担保 {pledge.group(1)}株")
+        tags.append({"text": f"担保 {pledge.group(1)}株", "expired": False})
     lent = _LENT.search(text)
     if lent:
-        tags.append(f"貸株 {lent.group(1)}株")
+        tags.append({"text": f"貸株 {lent.group(1)}株", "expired": False})
     return tags
 
 
@@ -309,7 +331,7 @@ def _nearby_disclosures(code: str, on: str, limit: int = 2) -> List[dict]:
         return []
     lo = (day - timedelta(days=_DISCLOSURE_BEFORE)).strftime("%Y-%m-%d")
     hi = (day + timedelta(days=_DISCLOSURE_AFTER)).strftime("%Y-%m-%d")
-    return [{"date": d, "title": t, "url": u}
+    return [{"date": d, "title": short_title(t), "full": t, "url": u}
             for d, t, u in items if lo <= d <= hi][:limit]
 
 
@@ -413,8 +435,9 @@ def get_large_holdings(company_code) -> Optional[dict]:
         # 立会外分売のように、開示のタイトルだけで型が決まるものが多い
         label = why["label"] if why else ""
         if not label:
-            label = next((reason_label(d["title"]) for d in near
-                          if reason_label(d["title"])), "")
+            # 短縮前のタイトルで当てる。短縮で語が落ちることがある
+            label = next((reason_label(d["full"]) for d in near
+                          if reason_label(d["full"])), "")
         if not label and trade and trade["place"]:
             label = "市場で売買" if trade["place"] == "市場内" else "市場外で相対"
 
