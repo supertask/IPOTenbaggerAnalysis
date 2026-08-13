@@ -32,18 +32,20 @@ ORDER = [
 
 
 # 割合の指標。0.24 のように小数で入っているので%に直す
-RATIO = ("率", "ROE", "ROA", "利益率", "自己資本比率", "比率")
+RATIO = ("率", "ROE", "ROA", "利益率", "自己資本比率", "比率", "配当性向")
+# 倍率で読むもの。%にすると意味が変わる
+MULTIPLE = ("PER（", "PEGレシオ", "利益の質", "有利子負債÷純資産")
 # 小さいほうが良い指標。順位を逆にしないと「割高な会社が1位」になる。
 # 「時価総額（PER×当期純利益）」のように名前にPERを含むだけのものを
-# 拾わないよう、頭からの一致で見る
-LOWER_IS_BETTER = ("PER（", "PEGレシオ")
+# 拾わないよう、頭からの一致で見る。利益の質は大きいほうが良いので入れない
+LOWER_IS_BETTER = ("PER（", "PEGレシオ", "有利子負債÷純資産", "在庫の伸び")
 # 大小に良し悪しが無い指標。順位を出すと「小さいから4位」と読めてしまう
 NO_RANK = ("時価総額", "純資産", "総資産", "従業員数", "総人員（",
            "臨時雇用の比率", "平均年齢", "平均勤続年数", "平均年間給与")
 
 
 def _kind(name: str) -> str:
-    if any(name.startswith(w) for w in LOWER_IS_BETTER):
+    if any(name.startswith(w) for w in MULTIPLE):
         return "倍"
     if any(w in name for w in RATIO):
         return "率"
@@ -141,11 +143,12 @@ def dump(code: str, brief: bool) -> None:
 
         rank = ""
         compared = [latest] + [v for _, v, _ in peers if v is not None]
+        lower_better = any(name.startswith(w) for w in LOWER_IS_BETTER)
         if (peers and not any(name.startswith(w) for w in NO_RANK)
                 and not (kind == "倍" and min(compared) <= 0)):
-            # PER・PEGは小さいほうが良いので向きを変える。ただし赤字の会社が
+            # PER・PEG・D/Eは小さいほうが良いので向きを変える。ただし赤字の会社が
             # 混ざると負の倍率になり、順位に意味がなくなるので出さない
-            better = (lambda v: v < latest) if kind == "倍" else (lambda v: v > latest)
+            better = (lambda v: v < latest) if lower_better else (lambda v: v > latest)
             above = sum(1 for _, v, _ in peers if v is not None and better(v))
             rank = f"  自社は{above + 1}位/{len(peers) + 1}社"
 

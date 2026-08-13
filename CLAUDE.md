@@ -92,6 +92,10 @@ AIの解釈が入るのは `data/meta/` の `business_profile.tsv` `business_mod
 `visualizer/db.py` の `SCHEMA_VERSION` を上げる（上げないと古いDBを読み続ける）。
 ビルド中はvisualizerを止めておく（Windowsでは開いたままだと差し替えに失敗する）。
 
+**インデックスに入る指標は `METRIC_ALIASES`（両アプリのconfig）から決まる。**
+そこに無いタグは1行も入らないので、グラフを足すときは
+「エイリアスを足す → ビルドし直す」の順になる。エイリアスだけ足しても出ない。
+
 ## 動作確認
 
 ```bash

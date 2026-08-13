@@ -660,10 +660,15 @@ class DataService:
         if '営業利益' in metrics_data and '従業員数' in metrics_data:
             DataService._calculate_operating_profit_per_employee(metrics_data)
 
-        # 小型成長株を探すときに効く3つ。既にある指標から作れる
+        # 小型成長株を探すときに効くもの。既にある指標から作れる
         DataService._calculate_market_cap(metrics_data)
         DataService._calculate_total_workforce(metrics_data)
         DataService._calculate_dilution(metrics_data)
+        DataService._calculate_cash_quality(metrics_data)
+        DataService._calculate_gross_margin(metrics_data)
+        DataService._calculate_debt(metrics_data)
+        DataService._calculate_payout_ratio(metrics_data)
+        DataService._calculate_inventory_signal(metrics_data)
         
         # 四半期純利益がない場合は親会社株主に帰属する当期純利益を使用
         if '四半期純利益' not in metrics_data and '親会社株主に帰属する当期純利益' in metrics_data:
@@ -946,6 +951,120 @@ class DataService:
                 metrics_data['潜在株式による希薄化率'] = rate
         except Exception as e:
             logger.error(f"希薄化率の計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _ratio(numer: Dict[str, float], denom: Dict[str, float],
+               positive_denom: bool = True) -> Dict[str, float]:
+        out = {}
+        for date in set(numer) & set(denom):
+            d = denom[date]
+            if d and (d > 0 or not positive_denom):
+                out[date] = numer[date] / d
+        return out
+
+    @staticmethod
+    def _calculate_cash_quality(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """フリーCFと、利益の質（営業CF ÷ 営業利益）。
+
+        バフェットのowner earningsの考え方で、**利益が現金になっているか**を見る。
+        伸びている会社ほど運転資金と設備で現金が出ていくので、
+        営業CFが営業利益に追いついていない状態が続くのは危ない。
+        1.0を下回り続けるなら、利益の出方を疑う。
+        """
+        try:
+            operating = metrics_data.get('営業キャッシュフロー') or {}
+            investing = metrics_data.get('投資キャッシュフロー') or {}
+            if operating and investing:
+                free = {d: operating[d] + investing[d]
+                        for d in set(operating) & set(investing)}
+                if free:
+                    metrics_data['フリーキャッシュフロー'] = free
+
+            profit = metrics_data.get('営業利益') or {}
+            quality = DataService._ratio(operating, profit)
+            if quality:
+                metrics_data['利益の質（営業CF÷営業利益）'] = quality
+        except Exception as e:
+            logger.error(f"キャッシュフローの計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_gross_margin(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """売上総利益率。フィッシャーの言う価格決定力の代理。
+
+        営業利益率だけだと、粗利が落ちたのか販管費が増えたのかが分からない。
+        粗利率が保ててさえいれば、販管費の増加は投資かもしれない。
+        """
+        try:
+            margin = DataService._ratio(metrics_data.get('売上総利益') or {},
+                                        metrics_data.get('売上高') or {})
+            if margin:
+                metrics_data['売上総利益率'] = margin
+        except Exception as e:
+            logger.error(f"売上総利益率の計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_debt(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """有利子負債と、純資産に対する比率（D/Eレシオ）。
+
+        リンチの「借金のない会社は倒産しない」。小型株は資金繰りが細いので、
+        成長が止まったときに借入が残っていると一気に詰む。
+        有利子負債は1つのタグに無いので、借入金と社債を足す。
+        """
+        try:
+            parts = ('短期借入金', '長期借入金', '1年内返済予定の長期借入金', '社債')
+            dates = set()
+            for name in parts:
+                dates |= set(metrics_data.get(name) or {})
+            if not dates:
+                return
+            debt = {}
+            for date in dates:
+                total = sum((metrics_data.get(name) or {}).get(date) or 0
+                            for name in parts)
+                debt[date] = total
+            metrics_data['有利子負債'] = debt
+
+            ratio = DataService._ratio(debt, metrics_data.get('純資産') or {})
+            if ratio:
+                metrics_data['有利子負債÷純資産'] = ratio
+        except Exception as e:
+            logger.error(f"有利子負債の計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_payout_ratio(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """配当性向（1株配当 ÷ EPS）。
+
+        成長株は配当を出さずに再投資するのが筋なので、**低いほうが良いとは限らない**。
+        伸びが鈍った会社が配当を増やし始めたら、成長の終わりのサインでもある。
+        """
+        try:
+            ratio = DataService._ratio(metrics_data.get('1株当たり配当') or {},
+                                       metrics_data.get('１株当たり当期純利益（EPS）') or {})
+            if ratio:
+                metrics_data['配当性向'] = ratio
+        except Exception as e:
+            logger.error(f"配当性向の計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_inventory_signal(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """在庫の伸び − 売上の伸び。リンチの在庫シグナル。
+
+        在庫が売上より速く増えているのは、売れ残りが積み上がっている可能性がある。
+        プラスが続いたら赤信号。小売・製造でしか意味を持たない。
+        """
+        try:
+            inventory = metrics_data.get('商品及び製品') or {}
+            sales = metrics_data.get('売上高') or {}
+            if not inventory or not sales:
+                return
+            inv_growth = DataService.calculate_growth_rate(inventory)
+            sales_growth = DataService.calculate_growth_rate(sales)
+            gap = {d: inv_growth[d] - sales_growth[d]
+                   for d in set(inv_growth) & set(sales_growth)}
+            if gap:
+                metrics_data['在庫の伸び − 売上の伸び'] = gap
+        except Exception as e:
+            logger.error(f"在庫シグナルの計算中にエラー: {e}", exc_info=True)
 
     @staticmethod
     def _eps_growth_percent(eps: Dict[str, float], years: int = 3) -> Dict[str, float]:

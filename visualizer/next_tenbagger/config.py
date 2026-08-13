@@ -52,7 +52,40 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
     ('平均年齢', ['jpcrp_cor:AverageAgeYearsInformationAboutReportingCompanyInformationAboutEmployees']),
     ('平均勤続年数', ['jpcrp_cor:AverageLengthOfServiceYearsInformationAboutReportingCompanyInformationAboutEmployees']),
     ('平均年間給与', ['jpcrp_cor:AverageAnnualSalaryInformationAboutReportingCompanyInformationAboutEmployees']),
+
+    # --- ここから下は 2026-08 に追加。伝説的な投資家が共通して見るもののうち、
+    # インデックスに入っていなかったもの。有報120件を実際に走査してタグ名と
+    # 出現率を確かめてある（括弧内が120件中の出現数）
+    ('営業キャッシュフロー', [  # バフェットのowner earnings。利益が現金になっているか (119)
+        'jpcrp_cor:NetCashProvidedByUsedInOperatingActivitiesSummaryOfBusinessResults',
+        'jpcrp_cor:CashFlowsFromUsedInOperatingActivitiesIFRSSummaryOfBusinessResults',
+        'jpcrp_cor:CashFlowsFromUsedInOperatingActivitiesUSGAAPSummaryOfBusinessResults']),
+    ('投資キャッシュフロー', [  # フリーCFの計算に使う (119)
+        'jpcrp_cor:NetCashProvidedByUsedInInvestingActivitiesSummaryOfBusinessResults',
+        'jpcrp_cor:CashFlowsFromUsedInInvestingActivitiesIFRSSummaryOfBusinessResults',
+        'jpcrp_cor:CashFlowsFromUsedInInvestingActivitiesUSGAAPSummaryOfBusinessResults']),
+    ('現金及び現金同等物', [  # 手元資金。リンチはネットキャッシュを見る (119)
+        'jpcrp_cor:CashAndCashEquivalentsSummaryOfBusinessResults']),
+    ('売上総利益', ['jppfs_cor:GrossProfit']),        # フィッシャーの価格決定力 (109)
+    ('発行済株式数', [  # オニールのS。増資で1株あたりが薄まっていないか (120)
+        'jpcrp_cor:TotalNumberOfIssuedSharesSummaryOfBusinessResults']),
+    ('1株当たり配当', [  # 株主還元の姿勢 (120)
+        'jpcrp_cor:DividendPaidPerShareSummaryOfBusinessResults']),
+    # 有利子負債は1つのタグに無く、足し合わせる。リンチ「無借金なら潰れない」
+    ('短期借入金', ['jppfs_cor:ShortTermLoansPayable']),                    # (77)
+    ('長期借入金', ['jppfs_cor:LongTermLoansPayable']),                     # (86)
+    ('1年内返済予定の長期借入金', ['jppfs_cor:CurrentPortionOfLongTermLoansPayable']),  # (77)
+    ('社債', ['jppfs_cor:BondsPayable']),                                  # (19)
+    # リンチの在庫シグナル。在庫の伸びが売上の伸びを超えたら赤信号
+    ('商品及び製品', ['jppfs_cor:MerchandiseAndFinishedGoods']),             # (70)
 ])
+
+# 計算に使うだけでグラフにはしないもの。出しても単独では読めない
+HIDDEN_METRICS = frozenset({
+    '投資キャッシュフロー', '売上総利益', '短期借入金', '長期借入金',
+    '1年内返済予定の長期借入金', '社債', '商品及び製品', '希薄化後EPS',
+    '１株当たり四半期純利益（EPS）',
+})
 
 # グラフの表示順序設定
 # リスト内の位置が表示順序を決定します（先頭が最初に表示）
@@ -65,24 +98,43 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
 # 小型の成長株を探す前提で「規模 → 成長 → 価格 → 資本効率 → 財務の質 → 人」の順。
 # 括弧内はその指標を重く見る投資家
 CHART_DISPLAY_ORDER = [
-    '時価総額（PER×当期純利益）',      # 小さいほど倍率が伸びる（リンチ、オニールのS）
-    '売上高',                        # 成長の本体（リンチのfast grower、オニールのA）
+    # 規模 — 小さいほど倍率が伸びる（リンチ、オニールのS）
+    '時価総額（PER×当期純利益）',
+    # 成長 — リンチのfast grower、オニールのA（年25%以上）
+    '売上高',
     '営業利益',
     '１株当たり当期純利益（EPS）',
-    'PEGレシオ（PER / EPS成長率）',   # 成長に対して割高でないか（リンチ。1.0が適正）
+    # 価格 — 成長に対して割高でないか（リンチ。PEG 1.0が適正、0.5未満で割安）
+    'PEGレシオ（PER / EPS成長率）',
     'PER（株価収益率）',
-    'ROE（自己資本利益率）',          # 資本効率（バフェット、オニールは17%以上）
-    'ROA（総資産利益率）',            # ROEが借入で嵩上げされていないか（バフェット）
-    '自己資本比率',                  # 借金の少なさ（リンチ「無借金なら潰れない」）
-    '営業利益率',                    # 採算（フィッシャー）
-    '潜在株式による希薄化率',          # 株数が増えて1株あたりが薄まっていないか
-    '希薄化後EPS',
-    '総人員あたり営業利益',            # 正社員だけで割った下の指標の分母を直したもの
+    # 利益の質 — 伸びが本物か（バフェットのowner earnings）
+    '利益の質（営業CF÷営業利益）',
+    '営業キャッシュフロー',
+    'フリーキャッシュフロー',
+    # 採算 — 価格決定力と資本効率（フィッシャー、バフェット、オニール）
+    '売上総利益率',
+    '営業利益率',
+    'ROE（自己資本利益率）',
+    'ROA（総資産利益率）',
+    # 財務の安全 — リンチ「借金のない会社は倒産しない」
+    '自己資本比率',
+    '有利子負債÷純資産',
+    '有利子負債',
+    '現金及び現金同等物',
+    # 1株あたりが薄まっていないか（オニールのS）
+    '潜在株式による希薄化率',
+    '発行済株式数',
+    '配当性向',
+    # 変調のサイン — リンチの在庫シグナル
+    '在庫の伸び − 売上の伸び',
+    # 人の効率
+    '総人員あたり営業利益',
     '従業員一人当たり営業利益',
     '総人員（正社員＋臨時）',
     '臨時雇用の比率',
     '従業員数',
     '平均臨時雇用人員',
+    # 以下は判断に効きにくい。残してあるが下に置く
     '当期純利益',
     '経常利益',
     '純資産',

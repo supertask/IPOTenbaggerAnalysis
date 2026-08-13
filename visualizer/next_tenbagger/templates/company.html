@@ -20,8 +20,24 @@
                     <div class="col-12 col-md-6 mb-4">
                         <div class="card h-100">
                             <div class="card-header">
-                                <h5 class="mb-0">{{ chart.title }}</h5>
+                                <h5 class="mb-0 d-flex align-items-center">
+                                    <span>{{ chart.title }}</span>
+                                    {% if chart.help %}
+                                    <button type="button" class="section-help ms-2"
+                                            data-help="chart-help-{{ loop.index }}"
+                                            title="この指標が何を表しているか">?</button>
+                                    {% endif %}
+                                </h5>
                             </div>
+                            {% if chart.help %}
+                            <div id="chart-help-{{ loop.index }}" class="section-help-panel mx-3 mt-2" hidden>
+                                <table class="help-table">
+                                    {% for row in chart.help %}
+                                    <tr><th>{{ row.label }}</th><td>{{ row.text }}</td></tr>
+                                    {% endfor %}
+                                </table>
+                            </div>
+                            {% endif %}
                             <div class="card-body pb-5">
                                 <div class="chart-container" id="chart-{{ loop.index }}" data-chart="{{ loop.index }}" style="min-height: 350px;"></div>
                             </div>

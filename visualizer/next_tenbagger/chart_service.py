@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 import json
 
-from .config import CHART_COLORS, CHART_DISPLAY_ORDER
+from .config import CHART_COLORS, CHART_DISPLAY_ORDER, HIDDEN_METRICS
 from .data_service import DataService
 from .utils import (
     format_currency_unit,
@@ -101,8 +101,10 @@ class ChartService:
                 charts.append(temp_workers_chart)
             
             # その他の指標のチャートを生成
+            # HIDDEN_METRICS は有利子負債やフリーCFを組み立てるための材料で、
+            # 単独で並べても読めないのでグラフにしない
             for metric_name, metric_data in main_metrics.items():
-                if not metric_data or metric_name in ['売上高', '営業利益', '１株当たり四半期純利益（EPS）', '１株当たり当期純利益（EPS）', '純資産', '総資産', '平均臨時雇用人員']:
+                if not metric_data or metric_name in HIDDEN_METRICS or metric_name in ['売上高', '営業利益', '１株当たり四半期純利益（EPS）', '１株当たり当期純利益（EPS）', '純資産', '総資産', '平均臨時雇用人員']:
                     continue
                 
                 chart = self._generate_metric_chart(metric_name, metric_data, competitors_data, competitors)
@@ -119,7 +121,12 @@ class ChartService:
                     return len(CHART_DISPLAY_ORDER)
             
             sorted_charts = sorted(charts, key=get_chart_order)
-            
+
+            # 指標名だけでは何を見ればいいか分からないので、1枚ずつ説明を添える
+            from visualizer import metric_help
+            for chart in sorted_charts:
+                chart['help'] = metric_help.rows(chart['title'])
+
             return sorted_charts, None
         except Exception as e:
             logger.error(f"チャート生成中にエラー: {e}", exc_info=True)

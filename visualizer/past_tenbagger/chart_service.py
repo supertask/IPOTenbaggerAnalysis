@@ -89,6 +89,11 @@ class ChartService:
                     return len(CHART_DISPLAY_ORDER)
             
             sorted_charts = sorted(charts, key=get_chart_order)
+
+            # 指標名だけでは何を見ればいいか分からないので、1枚ずつ説明を添える
+            from visualizer import metric_help
+            for chart in sorted_charts:
+                chart['help'] = metric_help.rows(chart.get('title'))
             
             return sorted_charts, None
         except Exception as e:
