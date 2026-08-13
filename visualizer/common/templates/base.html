@@ -440,6 +440,10 @@
         .holdings-table { font-size: 0.85rem; white-space: nowrap; }
         .holdings-table td, .holdings-table th { padding: 0.25rem 0.5rem; }
         .holdings-table .num { text-align: right; }
+        /* 大きく動いた期のセル。通算だけだと「いつ動いたか」が分からない */
+        .holder-moved-down { background-color: #fdecea; color: #b02a37; font-weight: bold; }
+        .holder-moved-up   { background-color: #eaf6ec; color: #146c43; font-weight: bold; }
+
         /* 期中の報告書から取った列。有報の列と見分けが付くようにする */
         .holdings-table .holdings-interim { background-color: #f1f6fb; }
         .holdings-interim-mark {

@@ -17,8 +17,11 @@
                 したがって<strong>最大でも年2回</strong>です。四半期報告書は2024年4月に廃止され、
                 以降は半期報告書から取っています。<span class="text-muted">中は書類の負荷が大きいため、
                 期中の報告書はテンバガーX・自分の保有銘柄だけ取得しています。</span></td></tr>
-            <tr><th>増減</th><td>直近と、その1つ前に記録がある期との差です。「中」の列があるときは
-                半年ぶんの差になります。</td></tr>
+            <tr><th>通算</th><td>いちばん古い記録から直近までの差です。直近の2期だけを比べると、
+                その前に起きた大きな売却が「±0」に見えてしまうため、通算にしています。</td></tr>
+            <tr><th>色の付いたセル</th><td>前の記録から5%以上動いた期です。<span class="holder-moved-down px-1">赤</span>が減、
+                <span class="holder-moved-up px-1">緑</span>が増。<strong>いつ動いたか</strong>はここで見ます。
+                触れると増減の株数と割合が出ます。</td></tr>
             <tr><th>氏名の表記ゆれ</th><td>「（信託口）」の全角・半角や空白の入り方が書類ごとに違うため、
                 そのままだと同じ株主が2行に分かれて片方が「–」になり、売ったように見えます。
                 表記を揃えて同じ行にまとめています。</td></tr>
@@ -59,22 +62,27 @@
                                 {{ c.date[:7] }}{% if c.interim %}<span class="holdings-interim-mark">中</span>{% endif %}
                             </th>
                             {% endfor %}
-                            <th class="num">増減</th>
+                            <th class="num">通算</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for p in table.people %}
                         <tr>
                             <td class="holder-name">{{ p.name }}</td>
-                            {% for v in p['values'] %}
-                            <td class="num">{% if v is not none %}{{ '{:,.0f}'.format(v) }}{% else %}–{% endif %}</td>
+                            {# 動いた期のセルに色を付ける。通算だけだと、いつ動いたかが分からない #}
+                            {% for c in p.cells %}
+                            <td class="num{% if c.moved %} holder-moved-{{ 'down' if c.diff < 0 else 'up' }}{% endif %}"
+                                {% if c.moved %}title="前の期から {{ '{:+,.0f}'.format(c.diff) }}（{{ '{:+.0%}'.format(c.ratio) }}）"{% endif %}>
+                                {% if c.value is not none %}{{ '{:,.0f}'.format(c.value) }}{% else %}–{% endif %}
+                            </td>
                             {% endfor %}
                             <td class="num">
-                                {% if p.change is not none and p.change != 0 %}
-                                <span class="{% if p.change < 0 %}text-danger{% else %}text-success{% endif %}">
-                                    {{ '{:+,.0f}'.format(p.change) }}
+                                {% if p.total is not none and p.total != 0 %}
+                                <span class="{% if p.total < 0 %}text-danger{% else %}text-success{% endif %}"
+                                      title="{{ table.columns[0].date[:7] }}の{{ '{:,.0f}'.format(p.first) }}株から">
+                                    {{ '{:+,.0f}'.format(p.total) }}
                                 </span>
-                                {% elif p.change is not none %}±0{% else %}–{% endif %}
+                                {% elif p.total is not none %}±0{% else %}–{% endif %}
                             </td>
                         </tr>
                         {% endfor %}

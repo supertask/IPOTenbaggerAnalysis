@@ -169,16 +169,35 @@ def _build(rows: List[dict], holder_type: str, factors: Dict[tuple, float]) -> O
         known = [v for v in values if v is not None]
         if not known:
             continue
-        # 直近と、その1つ前に記録がある期を比べる
-        change = None
         seen = [(d, per_date[d]) for d in dates if d in per_date]
-        if len(seen) >= 2:
-            change = seen[-1][1] - seen[-2][1]
+
+        # 直近の2期を比べるだけだと、その前に起きた大きな売却が ±0 に見える。
+        # 記録のある最初の期からの通算と、いちばん大きく動いた期も持たせる
+        change = seen[-1][1] - seen[-2][1] if len(seen) >= 2 else None
+        total = seen[-1][1] - seen[0][1] if len(seen) >= 2 else None
+
+        # 各期が前の記録からどれだけ動いたか。表のセルに色を付けるのに使う
+        cells, previous, biggest = [], None, None
+        for date, value in zip(dates, values):
+            diff = None if value is None or previous is None else value - previous
+            ratio = diff / previous if diff is not None and previous else None
+            cells.append({"value": value, "diff": diff, "ratio": ratio,
+                          # 5%以上動いた期だけ目立たせる。端株の増減は拾わない
+                          "moved": bool(ratio is not None and abs(ratio) >= 0.05)})
+            if diff is not None and (biggest is None or abs(diff) > abs(biggest["diff"])):
+                biggest = {"date": date, "diff": diff, "ratio": ratio}
+            if value is not None:
+                previous = value
+
         people.append({
             "name": name,
             "values": values,
+            "cells": cells,
             "latest": seen[-1][1],
+            "first": seen[0][1],
             "change": change,
+            "total": total,
+            "biggest": biggest if biggest and biggest["diff"] else None,
         })
 
     people.sort(key=lambda p: -(p["latest"] or 0))
