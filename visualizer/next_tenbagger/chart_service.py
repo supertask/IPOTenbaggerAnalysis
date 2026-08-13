@@ -5,7 +5,8 @@ import logging
 from datetime import datetime
 import json
 
-from .config import CHART_COLORS, CHART_DISPLAY_ORDER, HIDDEN_METRICS
+from .config import (CHART_COLORS, CHART_DISPLAY_ORDER, HIDDEN_METRICS,
+                     PERCENT_METRICS, PERCENT_METRICS_FROM_XBRL)
 from .data_service import DataService
 from .utils import (
     format_currency_unit,
@@ -549,18 +550,22 @@ class ChartService:
                     elif metric_name not in competitors_data[comp_code]:
                         logger.warning(f"競合企業 {comp_code} の {metric_name} データが存在しません")
             
-            # 特殊な単位表示の処理
+            # %で見る指標は100倍して単位を付ける。
+            # ROEと自己資本比率は、会社によって 0.34 で入っていることも
+            # 34 で入っていることもあるので、系列の大きさを見て決める。
+            # 決め打ちで100倍すると、後者が3400%になる
             unit_display = unit_text
-            if metric_name == '営業利益率' or metric_name == 'ROE（自己資本利益率）':
-                # パーセント表示の場合は値を100倍
-                for trace in data:
-                    new_y = []
-                    for value in trace['y']:
-                        if value == "null":
-                            new_y.append("null")
-                        else:
-                            new_y.append(value * 100)
-                    trace['y'] = new_y
+            if metric_name in PERCENT_METRICS:
+                scale = 100
+                if metric_name in PERCENT_METRICS_FROM_XBRL:
+                    biggest = max(
+                        (abs(v) for trace in data for v in trace['y']
+                         if v != "null" and v is not None), default=0)
+                    scale = 100 if biggest <= 1.5 else 1
+                if scale != 1:
+                    for trace in data:
+                        trace['y'] = [v if v == "null" or v is None else v * scale
+                                      for v in trace['y']]
                 unit_display = '%'
             
             # 日付を時系列順にソート
