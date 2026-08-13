@@ -32,8 +32,15 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
                'jpcrp_qcor:NetAssetsQuarterlySummaryOfBusinessResults']),
     ('総資産', ['jpcrp_cor:TotalAssetsSummaryOfBusinessResults',
                'jpcrp_qcor:TotalAssetsQuarterlySummaryOfBusinessResults']),
-    ('自己資本比率', ['jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResult',
-                   'jpcrp_qcor:EquityToAssetRatioQuarterlySummaryOfBusinessResult']),
+    # 当期純利益。ROAの計算に要る。これが無いとROAのグラフが一度も描かれない
+    ('当期純利益', ['jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults',
+                 'jpcrp_cor:NetIncomeLossSummaryOfBusinessResults',
+                 'jppfs_cor:ProfitLossAttributableToOwnersOfParent',
+                 'jpcrp_qcor:ProfitLossAttributableToOwnersOfParentQuarterlySummaryOfBusinessResults']),
+    # 末尾のsが抜けていた。next側は要素IDを完全一致で引くので、
+    # 4,021社ぶんデータがあるのにグラフが一度も出ていなかった
+    ('自己資本比率', ['jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResults',
+                   'jpcrp_qcor:EquityToAssetRatioQuarterlySummaryOfBusinessResults']),
     ('PER（株価収益率）', ['jpcrp_cor:PriceEarningsRatioSummaryOfBusinessResults',
                         'jpcrp_qcor:PriceEarningsRatioQuarterlySummaryOfBusinessResults']),
     ('従業員数', ['jpcrp_cor:NumberOfEmployees', 'jpcrp_qcor:NumberOfEmployeesQuarterly']),

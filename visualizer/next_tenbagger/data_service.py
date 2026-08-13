@@ -888,10 +888,17 @@ class DataService:
 
     @staticmethod
     def _calculate_roa(metrics_data: Dict[str, Dict[str, float]]) -> None:
-        """ROA（総資産利益率）を計算"""
+        """ROA（総資産利益率）を計算。
+
+        呼び出し側は「当期純利益があれば」で呼ぶのに、ここは四半期純利益を
+        探していたため、どちらの経路でも計算されていなかった。
+        どちらかがあれば使う。
+        """
         try:
-            if '四半期純利益' in metrics_data and '総資産' in metrics_data:
-                net_income = metrics_data['四半期純利益']
+            source = next((k for k in ('当期純利益', '四半期純利益')
+                           if k in metrics_data), None)
+            if source and '総資産' in metrics_data:
+                net_income = metrics_data[source]
                 total_assets = metrics_data['総資産']
                 
                 # 共通する日付のみを処理
