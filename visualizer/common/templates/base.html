@@ -380,7 +380,8 @@
             padding: 0.2rem 0.7rem 0.2rem 0;
             white-space: nowrap;
         }
-        .help-table td { padding: 0.2rem 0; line-height: 1.6; }
+        /* 説明の中の改行をそのまま出す。指標の目安を段階で並べるのに使う */
+        .help-table td { padding: 0.2rem 0; line-height: 1.6; white-space: pre-line; }
 
         /* スマホでは見出しを上に重ねる。横に並べると本文の幅が無くなる */
         @media (max-width: 576px) {

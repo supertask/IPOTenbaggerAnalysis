@@ -57,7 +57,8 @@
                         <div id="chart-help-{{ loop.index }}" class="section-help-panel mb-2" hidden>
                             <table class="help-table">
                                 {% for row in chart.help %}
-                                <tr><th>{{ row.label }}</th><td>{{ row.text }}</td></tr>
+                                {# metric_help 側でエスケープ済み。**強調** を太字にしてある #}
+                                <tr><th>{{ row.label }}</th><td>{{ row.text|safe }}</td></tr>
                                 {% endfor %}
                             </table>
                         </div>
