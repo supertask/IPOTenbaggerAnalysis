@@ -20,22 +20,30 @@ from collectors.holding_profile_dump import portfolio_codes
 # 見るべきものを決めるときに効く順。config.CHART_DISPLAY_ORDER とほぼ同じだが、
 # 先に伸び・採算・効率を置いている
 ORDER = [
-    "売上高", "営業利益", "営業利益率", "経常利益",
+    "時価総額（PER×当期純利益）",
+    "売上高", "営業利益", "営業利益率", "当期純利益", "経常利益",
+    "PEGレシオ（PER / EPS成長率）", "PER（株価収益率）",
     "ROE（自己資本利益率）", "ROA（総資産利益率）", "自己資本比率",
-    "１株当たり当期純利益（EPS）", "PER（株価収益率）", "PEGレシオ（PER / EPS成長率）",
-    "従業員数", "従業員一人当たり営業利益", "平均年間給与", "平均勤続年数", "平均年齢",
-    "純資産", "総資産",
+    "１株当たり当期純利益（EPS）", "希薄化後EPS", "潜在株式による希薄化率",
+    "総人員あたり営業利益", "従業員一人当たり営業利益",
+    "総人員（正社員＋臨時）", "臨時雇用の比率", "従業員数", "平均臨時雇用人員",
+    "平均年間給与", "平均勤続年数", "平均年齢", "純資産", "総資産",
 ]
 
 
 # 割合の指標。0.24 のように小数で入っているので%に直す
-RATIO = ("率", "ROE", "ROA", "利益率", "自己資本比率")
-# 小さいほうが良い指標。順位を逆にしないと「割高な会社が1位」になる
-LOWER_IS_BETTER = ("PER", "PEG")
+RATIO = ("率", "ROE", "ROA", "利益率", "自己資本比率", "比率")
+# 小さいほうが良い指標。順位を逆にしないと「割高な会社が1位」になる。
+# 「時価総額（PER×当期純利益）」のように名前にPERを含むだけのものを
+# 拾わないよう、頭からの一致で見る
+LOWER_IS_BETTER = ("PER（", "PEGレシオ")
+# 大小に良し悪しが無い指標。順位を出すと「小さいから4位」と読めてしまう
+NO_RANK = ("時価総額", "純資産", "総資産", "従業員数", "総人員（",
+           "臨時雇用の比率", "平均年齢", "平均勤続年数", "平均年間給与")
 
 
 def _kind(name: str) -> str:
-    if any(w in name for w in LOWER_IS_BETTER):
+    if any(name.startswith(w) for w in LOWER_IS_BETTER):
         return "倍"
     if any(w in name for w in RATIO):
         return "率"
@@ -133,7 +141,8 @@ def dump(code: str, brief: bool) -> None:
 
         rank = ""
         compared = [latest] + [v for _, v, _ in peers if v is not None]
-        if peers and not (kind == "倍" and min(compared) <= 0):
+        if (peers and not any(name.startswith(w) for w in NO_RANK)
+                and not (kind == "倍" and min(compared) <= 0)):
             # PER・PEGは小さいほうが良いので向きを変える。ただし赤字の会社が
             # 混ざると負の倍率になり、順位に意味がなくなるので出さない
             better = (lambda v: v < latest) if kind == "倍" else (lambda v: v > latest)

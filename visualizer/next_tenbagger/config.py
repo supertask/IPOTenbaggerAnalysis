@@ -46,6 +46,9 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
     ('従業員数', ['jpcrp_cor:NumberOfEmployees', 'jpcrp_qcor:NumberOfEmployeesQuarterly']),
     ('平均臨時雇用人員', ['jpcrp_cor:AverageNumberOfTemporaryWorkers']),
     ('１株当たり当期純利益（EPS）', ['jpcrp_cor:BasicEarningsLossPerShareSummaryOfBusinessResults']),
+    # 潜在株式を織り込んだEPS。基本EPSとの差が新株予約権などによる希薄化。
+    # 小型株は発行株数が少ないぶん希薄化がリターンを食いやすい（オニールのS）
+    ('希薄化後EPS', ['jpcrp_cor:DilutedEarningsPerShareSummaryOfBusinessResults']),
     ('平均年齢', ['jpcrp_cor:AverageAgeYearsInformationAboutReportingCompanyInformationAboutEmployees']),
     ('平均勤続年数', ['jpcrp_cor:AverageLengthOfServiceYearsInformationAboutReportingCompanyInformationAboutEmployees']),
     ('平均年間給与', ['jpcrp_cor:AverageAnnualSalaryInformationAboutReportingCompanyInformationAboutEmployees']),
@@ -53,27 +56,40 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
 
 # グラフの表示順序設定
 # リスト内の位置が表示順序を決定します（先頭が最初に表示）
+# 小型の成長株を探す前提で、上から順に「規模 → 成長 → 採算 → 価格 → 財務の質」。
+# 括弧内はその指標を重く見る投資家
+# 並べ替えはグラフの「タイトル」と突き合わせる。売上高・営業利益・EPSは
+# 成長率との複合グラフだが、タイトルは素の指標名なので、ここもその名前で書く。
+# 「売上高と売上高成長率」と書いていたときは一致せず、末尾に飛ばされていた。
+#
+# 小型の成長株を探す前提で「規模 → 成長 → 価格 → 資本効率 → 財務の質 → 人」の順。
+# 括弧内はその指標を重く見る投資家
 CHART_DISPLAY_ORDER = [
-    'ROE（自己資本利益率）', #ウォーレン・バフェット
-    'ROA（総資産利益率）',
-    '従業員数',
-    '従業員一人当たり営業利益',
-    '営業利益率',
-    '営業利益と営業利益成長率',
-    '売上高と売上高成長率',
-    '１株当たり四半期純利益（EPS）と１株当たり四半期純利益（EPS）成長率',
-    'PEGレシオ（PER / EPS成長率）', #ピーター・リンチ
-    'PER（株価収益率）',
-    '自己資本比率',
-    '四半期純利益',
-    '経常利益',
+    '時価総額（PER×当期純利益）',      # 小さいほど倍率が伸びる（リンチ、オニールのS）
+    '売上高',                        # 成長の本体（リンチのfast grower、オニールのA）
     '営業利益',
-    '売上高',
+    '１株当たり当期純利益（EPS）',
+    'PEGレシオ（PER / EPS成長率）',   # 成長に対して割高でないか（リンチ。1.0が適正）
+    'PER（株価収益率）',
+    'ROE（自己資本利益率）',          # 資本効率（バフェット、オニールは17%以上）
+    'ROA（総資産利益率）',            # ROEが借入で嵩上げされていないか（バフェット）
+    '自己資本比率',                  # 借金の少なさ（リンチ「無借金なら潰れない」）
+    '営業利益率',                    # 採算（フィッシャー）
+    '潜在株式による希薄化率',          # 株数が増えて1株あたりが薄まっていないか
+    '希薄化後EPS',
+    '総人員あたり営業利益',            # 正社員だけで割った下の指標の分母を直したもの
+    '従業員一人当たり営業利益',
+    '総人員（正社員＋臨時）',
+    '臨時雇用の比率',
+    '従業員数',
+    '平均臨時雇用人員',
+    '当期純利益',
+    '経常利益',
     '純資産',
     '総資産',
-    '平均年齢',
-    '平均勤続年数',
     '平均年間給与',
+    '平均勤続年数',
+    '平均年齢',
 ]
 
 # チャートの色設定

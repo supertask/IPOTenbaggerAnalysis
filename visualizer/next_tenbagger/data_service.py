@@ -659,6 +659,11 @@ class DataService:
         
         if '営業利益' in metrics_data and '従業員数' in metrics_data:
             DataService._calculate_operating_profit_per_employee(metrics_data)
+
+        # 小型成長株を探すときに効く3つ。既にある指標から作れる
+        DataService._calculate_market_cap(metrics_data)
+        DataService._calculate_total_workforce(metrics_data)
+        DataService._calculate_dilution(metrics_data)
         
         # 四半期純利益がない場合は親会社株主に帰属する当期純利益を使用
         if '四半期純利益' not in metrics_data and '親会社株主に帰属する当期純利益' in metrics_data:
@@ -837,26 +842,128 @@ class DataService:
 
     @staticmethod
     def _calculate_peg_ratio(metrics_data: Dict[str, Dict[str, float]]) -> None:
-        """PEGレシオを計算"""
+        """PEGレシオを計算。
+
+        ピーター・リンチの定義は **PER ÷ EPS成長率(%)** で、20%成長なら 20 で割る。
+        1.0が適正、0.5を切れば割安、2.0を超えれば割高というのが目安。
+
+        ここは成長率を小数（0.35）のまま割っていたため、値が**100倍**になっていた。
+        フィットイージーは80.78と出ていたが、正しくは0.81。
+        「意味のない指標」ではなく、小型成長株ではむしろ中心に来る指標だった。
+
+        成長率は単年だと符号がころころ変わるので、取れる範囲で
+        3期ぶんの年平均（CAGR）を使い、足りなければ前期比に落とす。
+
+        EPSが減っている期はPEGを出さない。負の値に意味が無く、
+        競合と並べたときに順位を壊すため。
+        """
         try:
             per = metrics_data['PER（株価収益率）']
             eps = metrics_data['１株当たり当期純利益（EPS）']
-            
-            # EPSの成長率を計算
-            eps_growth = DataService.calculate_growth_rate(eps)
-            
-            # 共通する日付のみを処理
-            common_dates = set(per.keys()) & set(eps_growth.keys())
-            
+
+            growth = DataService._eps_growth_percent(eps)
             peg_ratio = {}
-            for date in common_dates:
-                if eps_growth[date] != 0:  # ゼロ除算を防止
-                    peg_ratio[date] = per[date] / eps_growth[date]
-            
+            for date in set(per.keys()) & set(growth.keys()):
+                if growth[date] > 0:
+                    peg_ratio[date] = per[date] / growth[date]
+
             if peg_ratio:
                 metrics_data['PEGレシオ（PER / EPS成長率）'] = peg_ratio
         except Exception as e:
             logger.error(f"PEGレシオの計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_market_cap(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """時価総額を PER × 当期純利益 で出す。
+
+        発行済株式数はインデックスに入っていないが、
+        PER = 株価 ÷ EPS、EPS = 当期純利益 ÷ 株数 なので
+        PER × 当期純利益 = 株価 × 株数 = 時価総額 になる。
+
+        小さい会社ほど10倍になりやすいという前提で銘柄を探すなら、
+        規模そのものがいちばん見たい数字になる。競合と並べると、
+        同じ事業をやっていて時価総額が1桁小さい会社が見つかる。
+        """
+        try:
+            per = metrics_data.get('PER（株価収益率）') or {}
+            profit = metrics_data.get('当期純利益') or {}
+            cap = {}
+            for date in set(per) & set(profit):
+                if per[date] and profit[date] and profit[date] > 0:
+                    cap[date] = per[date] * profit[date]
+            if cap:
+                metrics_data['時価総額（PER×当期純利益）'] = cap
+        except Exception as e:
+            logger.error(f"時価総額の計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_total_workforce(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """総人員（正社員＋臨時）と、総人員あたり営業利益。
+
+        「従業員一人当たり営業利益」の分母は正社員だけで、平均臨時雇用人員が
+        入っていない。パート比率の高い会社ほど良く見えてしまう。
+        フィットイージーは正社員65人・臨時211人で、正社員だけで割ると35.6百万、
+        総人員276人で割ると8.4百万になる。競合と比べるならこちらでないと合わない。
+        """
+        try:
+            regular = metrics_data.get('従業員数') or {}
+            temp = metrics_data.get('平均臨時雇用人員') or {}
+            if not regular or not temp:
+                return
+            total = {d: regular[d] + temp[d] for d in set(regular) & set(temp)}
+            if not total:
+                return
+            metrics_data['総人員（正社員＋臨時）'] = total
+
+            share = {d: temp[d] / total[d] for d in total if total[d]}
+            if share:
+                metrics_data['臨時雇用の比率'] = share
+
+            profit = metrics_data.get('営業利益') or {}
+            per_head = {d: profit[d] / total[d]
+                        for d in set(profit) & set(total) if total[d]}
+            if per_head:
+                metrics_data['総人員あたり営業利益'] = per_head
+        except Exception as e:
+            logger.error(f"総人員の計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _calculate_dilution(metrics_data: Dict[str, Dict[str, float]]) -> None:
+        """潜在株式による希薄化率。基本EPSと希薄化後EPSの差。
+
+        小型株は発行済株式数が少ないぶん、新株予約権やストックオプションの
+        希薄化がリターンを直接削る。伸びていても株数が増え続ける会社は
+        1株あたりでは増えない。
+        """
+        try:
+            basic = metrics_data.get('１株当たり当期純利益（EPS）') or {}
+            diluted = metrics_data.get('希薄化後EPS') or {}
+            rate = {}
+            for date in set(basic) & set(diluted):
+                if basic[date] and basic[date] > 0 and diluted[date]:
+                    rate[date] = (basic[date] - diluted[date]) / basic[date]
+            if rate:
+                metrics_data['潜在株式による希薄化率'] = rate
+        except Exception as e:
+            logger.error(f"希薄化率の計算中にエラー: {e}", exc_info=True)
+
+    @staticmethod
+    def _eps_growth_percent(eps: Dict[str, float], years: int = 3) -> Dict[str, float]:
+        """各期のEPS成長率を%で返す。取れるなら3期の年平均、無理なら前期比"""
+        dates = sorted(eps)
+        out: Dict[str, float] = {}
+        for i in range(1, len(dates)):
+            current = eps[dates[i]]
+            span = min(years, i)
+            base = eps[dates[i - span]]
+            if base is None or current is None:
+                continue
+            if base > 0 and current > 0:
+                out[dates[i]] = ((current / base) ** (1 / span) - 1) * 100
+            elif base != 0:
+                # 赤字をまたぐ期はCAGRが出せないので前期比で代用する
+                out[dates[i]] = (current - eps[dates[i - 1]]) / abs(eps[dates[i - 1]]) * 100
+        return out
 
     @staticmethod
     def calculate_growth_rate(data: Dict[str, float]) -> Dict[str, float]:
