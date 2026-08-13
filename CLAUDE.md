@@ -9,10 +9,11 @@
 gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 ```
 
-| スキル | 使うとき |
-|---|---|
-| `holding-profile` | 保有銘柄の「事業と経営陣の読み解き」を書く／直すとき |
-| `facility-count` | 拠点数の抽出判定（`facility_count_collector.py`）を触るとき |
+| スキル | 使うとき | 画面のどこ |
+|---|---|---|
+| `holding-profile` | 保有銘柄の事業・経営陣の読み解きと総括を書く／直すとき | 詳細ページの「事業の内容」「役員の状況」の各カード先頭と、「総括」カード |
+| `disclosure-reading` | 大株主が動いた理由を開示から書くとき | 「株主構成」→「持株の推移」→「5%超の売買」タブの理由の下 |
+| `facility-count` | 拠点数の抽出判定（`facility_count_collector.py`）を触るとき | 「拠点あたりの採算」カードの拠点数 |
 
 ## いちばん大事な方針: 重いデータは保有銘柄だけ
 
@@ -58,9 +59,9 @@ AIの分担は、保有銘柄はClaudeで読んでTSVに書く、それ以外は
 画面に出る数字は、原則として決まった手順での抽出（正規表現やXBRLのタグ）であって、
 AIが読んで書いたものではない。両者が混ざると、どこまで信用していいか分からなくなる。
 
-AIの解釈が入るのは `data/meta/business_profile.tsv` と `business_model.tsv` だけで、
-画面では「AIによる解釈」のバッジを出している。新しくAI由来のものを足すときも、
-出所が分かるようにすること。
+AIの解釈が入るのは `data/meta/` の `business_profile.tsv` `business_model.tsv`
+`disclosure_reading.tsv` だけで、画面では「AIによる解釈」「AI」のバッジを出している。
+新しくAI由来のものを足すときも、出所が分かるようにすること。
 
 ## 開示の性質で気をつけること
 

@@ -75,7 +75,9 @@
                         {# 開示PDFの本文そのもの。リンクを開かなくても理由が読める。
                            同じ開示が続けて並ぶときは2度目から出さない #}
                         {% if main and main.summary and not e.summary_repeat %}
-                        <div class="lvh-summary" title="{{ main.summary_full }}">{{ main.summary }}</div>
+                        <div class="lvh-summary" title="{{ main.summary_full }}">
+                            {% if main.by_ai %}<span class="ai-badge">AI</span>{% endif %}{{ main.summary }}
+                        </div>
                         {% elif e.why_note %}
                         <div class="lvh-why-note">{{ e.why_note }}</div>
                         {% endif %}

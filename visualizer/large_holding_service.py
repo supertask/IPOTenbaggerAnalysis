@@ -28,8 +28,13 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data", "output", "large_holdings")
 TDNET_GLOB = os.path.join(BASE_DIR, "data", "output", "tdnet", "*.tsv")
 # 開示PDFの本文から抜いた「なぜそうするのか」の一文
-# （collectors/disclosure_summary.py）
+# （collectors/disclosure_summary.py）。規則で選んだ本文そのもの
 SUMMARY_TSV = os.path.join(BASE_DIR, "data", "output", "tdnet", "summaries.tsv")
+# AIが読んで書いた要約（.claude/skills/disclosure-reading）。こちらを優先する。
+# 規則の抽出は本文の一文をそのまま出すだけなので、前後の文脈が要る開示だと
+# 意味が通らない。ただし全部の開示にAIを通すわけにはいかないので、
+# 書かれていないものは規則の抽出で埋める
+AI_TSV = os.path.join(BASE_DIR, "data", "meta", "disclosure_reading.tsv")
 
 # 割合がこれ以上動いた回だけを「動き」とみなす。提出事由には
 # 「重要な契約の締結」のように株数が変わらないものも混ざる
@@ -175,20 +180,33 @@ def _clip_summary(text: str) -> str:
     return out or text[:_SUMMARY_CHARS] + "…"
 
 
-def _load_summaries() -> Dict[str, str]:
-    """{開示のURL: 本文から抜いた要点}"""
+def _read_tsv(path: str, column: str) -> Dict[str, str]:
+    out: Dict[str, str] = {}
+    if not os.path.exists(path):
+        return out
+    try:
+        with open(path, encoding="utf-8", newline="") as f:
+            for row in csv.DictReader(f, delimiter="\t"):
+                if row.get(column) and row.get("URL"):
+                    out[row["URL"]] = row[column].strip()
+    except Exception as e:
+        logger.warning("開示の要約の読み込みに失敗 %s: %s", path, e)
+    return out
+
+
+def _load_summaries() -> Dict[str, tuple]:
+    """{開示のURL: (要約, AI由来か)}
+
+    AIの要約があればそれを、無ければ規則で抜いた本文の一文を使う。
+    どちらか分かるようにしておく。画面では出所のバッジを出す
+    """
     global _summary_cache
     if _summary_cache is not None:
         return _summary_cache
-    out: Dict[str, str] = {}
-    if os.path.exists(SUMMARY_TSV):
-        try:
-            with open(SUMMARY_TSV, encoding="utf-8", newline="") as f:
-                for row in csv.DictReader(f, delimiter="\t"):
-                    if row.get("要点"):
-                        out[row["URL"]] = row["要点"]
-        except Exception as e:
-            logger.warning("開示の要点の読み込みに失敗: %s", e)
+    out = {url: (text, False)
+           for url, text in _read_tsv(SUMMARY_TSV, "要点").items()}
+    for url, text in _read_tsv(AI_TSV, "要約").items():
+        out[url] = (text, True)
     _summary_cache = out
     return out
 
@@ -366,14 +384,28 @@ def _mark_transfers(events: List[dict]) -> None:
 
 def _mark_repeats(events: List[dict]) -> None:
     """1つの売出しが2回の届出にまたがると、同じ本文が続けて並ぶ。
-    2度目以降は本文を出さない（タグとリンクは残す）"""
-    seen = set()
+
+    本文を残すのは、その開示に**日付がいちばん近い**回。単に上から順に
+    残すと、表は新しい順なので、売出しの本文が後日のオーバーアロットメントの
+    行に付いてしまい、肝心の売出しの行が説明なしになる。
+    """
+    by_url: Dict[str, List[dict]] = defaultdict(list)
     for e in events:
-        key = e["disclosures"][0]["url"] if e["disclosures"] else ""
-        if key and key in seen:
-            e["summary_repeat"] = True
-        elif key:
-            seen.add(key)
+        if e["disclosures"]:
+            by_url[e["disclosures"][0]["url"]].append(e)
+
+    def gap(event: dict) -> int:
+        try:
+            a = datetime.strptime(event["date"], "%Y-%m-%d")
+            b = datetime.strptime(event["disclosures"][0]["date"], "%Y-%m-%d")
+        except ValueError:
+            return 10 ** 6
+        return abs((a - b).days)
+
+    for same in by_url.values():
+        keeper = min(same, key=gap)
+        for e in same:
+            e["summary_repeat"] = e is not keeper
 
 
 def _nearby_disclosures(code: str, on: str, limit: int = 2) -> List[dict]:
@@ -388,13 +420,20 @@ def _nearby_disclosures(code: str, on: str, limit: int = 2) -> List[dict]:
     lo = (day - timedelta(days=_DISCLOSURE_BEFORE)).strftime("%Y-%m-%d")
     hi = (day + timedelta(days=_DISCLOSURE_AFTER)).strftime("%Y-%m-%d")
     summaries = _load_summaries()
-    found = [{"date": d, "title": short_title(t), "full": t, "url": u,
-              "summary": _clip_summary(summaries.get(u, "")),
-              "summary_full": summaries.get(u, "")}
-             for d, t, u in items if lo <= d <= hi]
-    # 本文の要点が取れているものを先に。開かなくても中身が分かる
-    found.sort(key=lambda d: (0 if d["summary"] else 1,
-                              -int(d["date"].replace("-", "") or 0)))
+    found = []
+    for d, t, u in items:
+        if not (lo <= d <= hi):
+            continue
+        text, by_ai = summaries.get(u, ("", False))
+        found.append({"date": d, "title": short_title(t), "full": t, "url": u,
+                      # AIの要約は短く書いてあるので詰めない
+                      "summary": text if by_ai else _clip_summary(text),
+                      "summary_full": text, "by_ai": by_ai})
+    # AIの要約 → 規則の抜き出し → 要点なし の順。同じ格なら**古いほう**を先に。
+    # 「なぜ」は最初の発表に書いてあり、あとから出る価格決定や結果の報告には
+    # 数字しか載らない。日付の新しい順にすると価格決定が主役になってしまう
+    found.sort(key=lambda d: (0 if d["by_ai"] else (1 if d["summary"] else 2),
+                              d["date"]))
     return found[:limit]
 
 

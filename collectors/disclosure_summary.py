@@ -174,6 +174,12 @@ def main() -> int:
                         help="売買と重ならない開示も読む")
     parser.add_argument("--retry-empty", action="store_true",
                         help="要点が取れなかったPDFを読み直す")
+    parser.add_argument("--dump", action="store_true",
+                        help="AIに読ませるための抜粋を出す（TSVは書かない）")
+    parser.add_argument("--todo", action="store_true",
+                        help="--dump のうち、AIの要約がまだ無いものだけ")
+    parser.add_argument("--chars", type=int, default=1200,
+                        help="--dump で1件あたりに出す字数")
     args = parser.parse_args()
 
     codes = set(args.codes) if args.codes else portfolio_codes()
@@ -190,6 +196,9 @@ def main() -> int:
     # 暗号化されたPDFが読めるようになったときは --retry-empty で読み直す
     skip = {u for u, r in done.items() if r.get("要点") or not args.retry_empty}
     targets = [t for t in targets if t[3] not in skip]
+
+    if args.dump:
+        return dump(codes, args)
 
     print(f"対象: {len(codes)}銘柄 / 読むPDF {len(targets)}件"
           f"（{len(done)}件は取得済み）")
@@ -210,6 +219,64 @@ def main() -> int:
     got = sum(1 for r in rows if r["要点"])
     print(f"完了: {len(rows)}件中 {got}件に要点 ({got / max(len(rows),1):.0%}) → {OUT_TSV}")
     return 0
+
+
+AI_TSV = os.path.join("data", "meta", "disclosure_reading.tsv")
+
+# 抜粋の頭に付いてくる記者発表文の枕。読ませても意味がない
+_DUMP_SKIP = re.compile(
+    r"ご注意[：:]?\s*この文書は.*?お願いいたします。|"
+    r"Not for distribution.*?$|"
+    r"本資料は.*?ものではありません。", re.S)
+
+
+def dump(codes: set, args) -> int:
+    """AIに読ませるための抜粋を出す。
+
+    PDFの全文は数千字あり、そのうち大半は定型の注意書きと数表。
+    「なぜ」が書かれている段落の周りだけを出せば、読む量が桁で減る。
+    """
+    from visualizer import large_holding_service as lvh
+
+    ai = set()
+    if os.path.exists(AI_TSV):
+        with open(AI_TSV, encoding="utf-8", newline="") as f:
+            ai = {r["URL"] for r in csv.DictReader(f, delimiter="\t") if r.get("要約")}
+
+    seen, shown = set(), 0
+    for code in sorted(codes):
+        data = lvh.get_large_holdings(code)
+        if not data:
+            continue
+        # 画面に出ている（＝畳んでいない）開示だけ。証券会社の在庫は要らない
+        for event in data["events"]:
+            for d in event["disclosures"]:
+                url = d["url"]
+                if url in seen or (args.todo and url in ai):
+                    continue
+                seen.add(url)
+                text = fetch(url)
+                if not text:
+                    continue
+                body = _DUMP_SKIP.sub(" ", re.sub(r"\s+", " ", text))
+                print(f"\n{'=' * 72}")
+                print(f"{code}\t{d['date']}\t{d['full']}")
+                print(f"URL\t{url}")
+                print(f"{'=' * 72}")
+                print(_focus(body, args.chars))
+                shown += 1
+    print(f"\n---\n{shown}件を出しました（重複を除く）", file=sys.stderr)
+    return 0
+
+
+def _focus(body: str, chars: int) -> str:
+    """目的・理由・経緯が書かれているあたりを中心に切り出す"""
+    marks = ("の目的", "の理由", "が生じた経緯", "経緯", "背景", "修正の理由")
+    at = min((body.find(m) for m in marks if body.find(m) > 0), default=-1)
+    if at < 0:
+        return body[:chars]
+    start = max(0, at - chars // 3)
+    return ("…" if start else "") + body[start:start + chars] + "…"
 
 
 def _save(rows: list) -> None:
