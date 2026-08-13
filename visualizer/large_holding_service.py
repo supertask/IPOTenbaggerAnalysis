@@ -14,30 +14,58 @@ data/output/large_holdings/<銘柄コード>.tsv。
 from __future__ import annotations
 
 import csv
+import glob
 import logging
 import os
 import re
+from collections import defaultdict
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data", "output", "large_holdings")
+TDNET_GLOB = os.path.join(BASE_DIR, "data", "output", "tdnet", "*.tsv")
 
 # 割合がこれ以上動いた回だけを「動き」とみなす。提出事由には
 # 「重要な契約の締結」のように株数が変わらないものも混ざる
 MOVE_THRESHOLD = 0.001
 
 # 保有目的の長い定型文を、一覧で読める短さに畳む。長文はそのまま持たせて
-# ツールチップで出す
+# ツールチップで出す。上から順に当てる
 _PURPOSE_TAGS = (
+    # 証券会社が売買を仲介するために持っている在庫。日々動くうえに
+    # 会社の中身とは関係がなく、これが並ぶと肝心の内部者の動きが埋もれる
+    ("在庫", ("商品在庫", "証券業務", "自己勘定", "トレーディング",
+              "マーケットメイク")),
     ("経営参画", ("経営参画", "経営に参画", "重要提案行為")),
-    ("長期保有", ("長期保有", "安定株主")),
+    ("内部者", ("代表取締役", "取締役", "監査役", "執行役", "資産管理会社",
+                "安定株主", "創業")),
     ("政策保有", ("取引関係", "業務提携", "政策投資", "取引先")),
-    ("純投資", ("純投資", "投資運用", "資産運用", "投資一任", "信託財産")),
+    ("純投資", ("純投資", "投資運用", "資産運用", "投資一任", "信託財産",
+                "運用資産", "投資収益")),
+)
+
+# 経営陣や創業家の動きを読むうえで、並べても邪魔にしかならない区分。
+# 既定では畳んで、開けば見られるようにする
+_NOISE_TAGS = ("在庫", "純投資")
+
+# 売買の前後どれだけの開示を「その売買にまつわるもの」として並べるか。
+# 売出しは発表から受渡まで3週間ほどあるので前を広めに取る
+_DISCLOSURE_BEFORE = 35
+_DISCLOSURE_AFTER = 7
+
+# 株主の増減に効く開示だけを引く。決算短信は毎期出るので入れない
+_DISCLOSURE_WORDS = (
+    "売出", "募集", "新株式", "第三者割当", "自己株式", "立会外分売",
+    "主要株主", "筆頭株主", "大株主", "株式分割", "資本業務提携",
+    "公開買付", "株式の取得", "株式の譲渡", "新株予約権", "ロックアップ",
+    "支配株主", "親会社", "子会社化", "株式交換", "合併",
 )
 
 _cache: Dict[str, tuple] = {}
+_tdnet_cache: Optional[Dict[str, list]] = None
 
 
 def _path(company_code: str) -> str:
@@ -58,6 +86,47 @@ def purpose_tag(text: str) -> str:
         if any(w in text for w in words):
             return label
     return ""
+
+
+def _load_tdnet() -> Dict[str, list]:
+    """{銘柄コード: [(開示日, タイトル, URL), ...]}
+
+    大量保有報告書に載る「保有目的」は届出の定型文で、売った当日の書類でも
+    「安定株主として長期保有を目的としております」のままだったりする。
+    売った本当の理由は適時開示の本文にしかないので、同じ時期の開示を
+    突き合わせて出す。開示を集めているのは保有銘柄だけなので、それ以外は空。
+    """
+    global _tdnet_cache
+    if _tdnet_cache is not None:
+        return _tdnet_cache
+    rows: Dict[str, list] = defaultdict(list)
+    for path in glob.glob(TDNET_GLOB):
+        try:
+            with open(path, encoding="utf-8", newline="") as f:
+                for row in csv.reader(f, delimiter="\t"):
+                    if len(row) >= 6 and any(w in row[4] for w in _DISCLOSURE_WORDS):
+                        rows[row[3]].append((row[0], row[4], row[5]))
+        except Exception as e:
+            logger.warning("適時開示の読み込みに失敗 %s: %s", path, e)
+    for items in rows.values():
+        items.sort(reverse=True)
+    _tdnet_cache = dict(rows)
+    return _tdnet_cache
+
+
+def _nearby_disclosures(code: str, on: str, limit: int = 2) -> List[dict]:
+    """その売買の前後に出た、株主の増減に効く開示"""
+    items = _load_tdnet().get(str(code).strip())
+    if not items or not on:
+        return []
+    try:
+        day = datetime.strptime(on, "%Y-%m-%d")
+    except ValueError:
+        return []
+    lo = (day - timedelta(days=_DISCLOSURE_BEFORE)).strftime("%Y-%m-%d")
+    hi = (day + timedelta(days=_DISCLOSURE_AFTER)).strftime("%Y-%m-%d")
+    return [{"date": d, "title": t, "url": u}
+            for d, t, u in items if lo <= d <= hi][:limit]
 
 
 def _action(share_diff: Optional[float], ratio_diff: Optional[float]) -> str:
@@ -126,8 +195,10 @@ def get_large_holdings(company_code) -> Optional[dict]:
         share_diff = None if before is None else shares - before
         ratio_diff = None if ratio is None or last_ratio is None else ratio - last_ratio
         purpose = (row.get("保有目的") or "").strip()
+        tag = purpose_tag(purpose)
+        date = (row.get("発生日") or row.get("提出日") or "").strip()
         events.append({
-            "date": (row.get("発生日") or row.get("提出日") or "").strip(),
+            "date": date,
             "filed": (row.get("提出日") or "").strip(),
             "name": name,
             "shares": shares,
@@ -137,7 +208,9 @@ def get_large_holdings(company_code) -> Optional[dict]:
             "reason": (row.get("提出事由") or "").strip(),
             "action": _action(share_diff, ratio_diff),
             "purpose": purpose,
-            "purpose_tag": purpose_tag(purpose),
+            "purpose_tag": tag,
+            "noise": tag in _NOISE_TAGS,
+            "disclosures": _nearby_disclosures(company_code, date),
             # 株数が動いた回と、その人が初めて5%超で現れた回だけを残す。
             # 株数が変わらない届出（契約の締結、他人の売却に伴う割合の変動）は
             # 「売買」の一覧に並べても判断の材料にならない
@@ -147,12 +220,20 @@ def get_large_holdings(company_code) -> Optional[dict]:
     moves = [e for e in events if e["moved"]]
     if not moves:
         moves = events[-1:]
-
     moves.sort(key=lambda e: (e["date"], e["name"]), reverse=True)
-    holders = sorted({e["name"] for e in events})
+
+    # 証券会社の在庫や信託の純投資は、日々動くうえに会社の中身と関係がない。
+    # 混ぜて並べると経営陣や創業家の動きが埋もれるので、既定では畳む
+    main = [e for e in moves if not e["noise"]]
+    noise = [e for e in moves if e["noise"]]
+    if not main:
+        main, noise = noise, []
+
     return {
-        "events": moves,
+        "events": main,
+        "noise": noise,
         "total": len(events),
-        "holders": holders,
-        "latest": moves[0]["date"] if moves else "",
+        "holders": sorted({e["name"] for e in events}),
+        "has_disclosures": any(e["disclosures"] for e in moves),
+        "latest": main[0]["date"] if main else "",
     }

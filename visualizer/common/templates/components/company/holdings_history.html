@@ -1,5 +1,6 @@
-{# 大株主・役員の持株推移。報告書に載る各期末時点の株数を期ごとに並べる #}
-{% if holdings_history %}
+{# 大株主・役員の持株推移。報告書に載る各期末時点の株数を期ごとに並べる。
+   3つ目のタブだけは出所が違い、大量保有報告書から日付単位で拾ったもの #}
+{% if holdings_history or (large_holdings and large_holdings.events) %}
 <div class="mt-4">
     <h6 class="mb-2">
         持株の推移
@@ -29,27 +30,46 @@
                 今の基準に揃えています。これをしないと分割が買い増しに見えます。</td></tr>
             <tr><th>限界</th><td>各期末の断面なので、期の途中で売って買い戻した動きは表れません。
                 上位10名から外れた人は「–」になり、売却と区別が付きません。</td></tr>
+            <tr><th>5%超の売買</th><td>この2つの限界を埋めるためのタブで、出所が違います。
+                大量保有報告書は<strong>保有割合が1%動くたびに</strong>出るので、
+                期末を待たずに<strong>日付単位</strong>で追えます。ただし5%を超えて持つ人だけが対象です。
+                詳しくはタブの中の「?」に。</td></tr>
         </table>
     </div>
+    {# 何が最初に開くか。大株主 → 役員 → 5%超の売買 の順で、あるものを開く #}
+    {% set has_major = holdings_history and holdings_history.major %}
+    {% set has_officer = holdings_history and holdings_history.officer %}
+    {% set has_lvh = large_holdings and large_holdings.events %}
     <ul class="nav nav-tabs flex-nowrap overflow-auto" id="holdingsTabs" role="tablist">
-        {% if holdings_history.major %}
+        {% if has_major %}
         <li class="nav-item" role="presentation">
             <button class="nav-link active text-nowrap" data-bs-toggle="tab"
                     data-bs-target="#holdings-major" type="button" role="tab">大株主</button>
         </li>
         {% endif %}
-        {% if holdings_history.officer %}
+        {% if has_officer %}
         <li class="nav-item" role="presentation">
-            <button class="nav-link text-nowrap {% if not holdings_history.major %}active{% endif %}"
+            <button class="nav-link text-nowrap {% if not has_major %}active{% endif %}"
                     data-bs-toggle="tab" data-bs-target="#holdings-officer"
                     type="button" role="tab">役員</button>
         </li>
         {% endif %}
+        {% if has_lvh %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link text-nowrap {% if not has_major and not has_officer %}active{% endif %}"
+                    data-bs-toggle="tab" data-bs-target="#holdings-lvh"
+                    type="button" role="tab">
+                5%超の売買
+                <span class="lvh-count">{{ large_holdings.events|length }}</span>
+            </button>
+        </li>
+        {% endif %}
     </ul>
     <div class="tab-content mt-2">
-        {% for key, table in [('major', holdings_history.major), ('officer', holdings_history.officer)] %}
+        {% for key, table in [('major', holdings_history.major if holdings_history else none),
+                              ('officer', holdings_history.officer if holdings_history else none)] %}
         {% if table %}
-        <div class="tab-pane fade {% if key == 'major' or not holdings_history.major %}show active{% endif %}"
+        <div class="tab-pane fade {% if key == 'major' or not has_major %}show active{% endif %}"
              id="holdings-{{ key }}" role="tabpanel">
             <div class="table-responsive">
                 <table class="table table-sm holdings-table mb-0">
@@ -95,9 +115,17 @@
         </div>
         {% endif %}
         {% endfor %}
+
+        {% if has_lvh %}
+        <div class="tab-pane fade {% if not has_major and not has_officer %}show active{% endif %}"
+             id="holdings-lvh" role="tabpanel">
+            {% include 'components/company/large_holdings.html' %}
+        </div>
+        {% endif %}
     </div>
+    {% if holdings_history %}
     <div class="text-muted small mt-2">
-        各期末時点の所有株式数です。期の途中の売買は表れません。
+        大株主と役員は各期末時点の所有株式数です。期の途中の売買は表れません。
         {% if holdings_history.has_interim %}
         「中」の付いた列は期中の報告書（中間期）から取ったものです。
         {% endif %}
@@ -108,5 +136,6 @@
         役員の合計が減った期があります（株価チャートに印を出しています）。
         {% endif %}
     </div>
+    {% endif %}
 </div>
 {% endif %}

@@ -51,9 +51,8 @@
         </div>
         {% endif %}
 
+        {# large_holdings.html は holdings_history.html の中でタブとして読み込む #}
         {% include 'components/company/holdings_history.html' %}
-
-        {% include 'components/company/large_holdings.html' %}
 
         {% if shareholders.rows and has_lockup %}
         <div class="text-muted small mt-2">
