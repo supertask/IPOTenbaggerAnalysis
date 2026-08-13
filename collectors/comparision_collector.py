@@ -2,6 +2,7 @@ import json
 import time
 import random
 import os
+from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 from playwright_stealth import stealth_sync
 
@@ -30,7 +31,10 @@ class ComparisonCollector(IPOAnalyzerCore):
         self.base_url = "https://shikiho.toyokeizai.net/stocks/%s"
         self.comparison_settings = ComparisonCollectorSettings()
         self.cache_file = os.path.join(self.comparison_settings.cache_dir, 'comparison_cache.json')
+        self.fetched_at_file = os.path.join(self.comparison_settings.cache_dir,
+                                            'comparison_fetched_at.json')
         self.comparison_cache = self.load_cache()
+        self.fetched_at = self.load_fetched_at()
 
     def load_cache(self):
         if os.path.exists(self.cache_file):
@@ -42,6 +46,28 @@ class ComparisonCollector(IPOAnalyzerCore):
         os.makedirs(os.path.dirname(self.cache_file), exist_ok=True)
         with open(self.cache_file, 'w', encoding='utf-8') as f:
             json.dump(self.comparison_cache, f, ensure_ascii=False, indent=4)
+        self.save_fetched_at()
+
+    def load_fetched_at(self):
+        """いつ取ったか。キャッシュ本体とは別ファイルにして、
+        既存の comparison_cache.json の形（{コード: [競合]}）を変えない"""
+        if os.path.exists(self.fetched_at_file):
+            with open(self.fetched_at_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+
+    def save_fetched_at(self):
+        with open(self.fetched_at_file, 'w', encoding='utf-8') as f:
+            json.dump(self.fetched_at, f, ensure_ascii=False, indent=4,
+                      sort_keys=True)
+
+    def stale_codes(self, codes, days):
+        """取得から days 日以上たった銘柄。取得日の記録が無いものも古い扱い。
+
+        記録を始めたのが2026年8月なので、それ以前に取ったぶんは
+        いつ取ったか分からない。分からないものは取り直す側に倒す"""
+        limit = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+        return {c for c in codes if self.fetched_at.get(c, "") < limit}
 
     def playwright_comparisons(self, company_code, refresh=False):
         # 四季報側は比較企業を入れ替える。一度取れたら二度と見に行かないので
@@ -97,6 +123,7 @@ class ComparisonCollector(IPOAnalyzerCore):
         # 空のリストの場合はキャッシュに保存しない
         if comparison_companies:
             self.comparison_cache[company_code] = comparison_companies
+            self.fetched_at[company_code] = datetime.now().strftime("%Y-%m-%d")
             self.save_cache()
 
         time.sleep(random.uniform(3, 15))

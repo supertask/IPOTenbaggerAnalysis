@@ -138,6 +138,10 @@ def main() -> int:
     parser.add_argument("codes", nargs="*")
     parser.add_argument("--from-cache", action="store_true",
                         help="四季報を見に行かず、手元のキャッシュから書き戻すだけ")
+    parser.add_argument("--days", type=int, default=80,
+                        help="取得からこの日数がたったものだけ取り直す（既定80日）")
+    parser.add_argument("--force", action="store_true",
+                        help="日数を見ずに全部取り直す")
     args = parser.parse_args()
 
     codes = set(args.codes) if args.codes else portfolio_codes()
@@ -148,8 +152,15 @@ def main() -> int:
     if args.from_cache:
         print(f"キャッシュから書き戻す銘柄: {len(codes)}\n")
     else:
-        print(f"取り直す銘柄: {len(codes)}\n")
-        collector.refresh(codes)
+        # 四半期に1回まわす想定なので、既定は80日。前回から日が浅いものを
+        # 飛ばすと、2回目からは数分で終わる
+        target = codes if args.force else collector.stale_codes(codes, args.days)
+        skipped = len(codes) - len(target)
+        print(f"取り直す銘柄: {len(target)}"
+              + (f"（{skipped}銘柄は{args.days}日以内に取得済みなので飛ばす）"
+                 if skipped else "") + "\n")
+        if target:
+            collector.refresh(target)
 
     touched = update_tsv(collector.comparison_cache, codes)
     added = write_refreshed(collector.comparison_cache, codes, touched)
