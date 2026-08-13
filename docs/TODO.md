@@ -47,9 +47,14 @@ python -m collectors tdnet                                       # 全件（5.5�
    `collectors/disclosure_check.py` でコマンドから見られるだけで、
    visualizerからは参照していない。業績予想の修正・配当・大株主の異動を
    時系列で出すと、総括の「降りる条件」を画面で確かめられるようになる
-3. **本文のPDFは取っていない。** タイトルとURLだけなので、
-   「業績予想の修正及び配当予想の修正」が上方か下方か分からない。
-   総括にもそこまでしか書けていない。PDFを落として読むかは要検討
+3. **本文のPDFは `collectors/disclosure_pdf.py` で読めるようになった**が、
+   呼ぶのは手動のみ。上方か下方か、社長がなぜ売ったのかは本文にしか無いので、
+   総括を書き直すときは必ず通す。一括で流して要点をTSVに落とすかは要検討
+
+   ```bash
+   python collectors/disclosure_pdf.py 5843 --match 業績予想 --grep 修正の理由
+   python collectors/disclosure_pdf.py 212A --match 売出 --grep 流通株式
+   ```
 
 ### 分かっている取りこぼし
 
