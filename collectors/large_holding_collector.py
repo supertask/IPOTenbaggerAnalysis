@@ -267,46 +267,54 @@ def _flatten(html: str) -> str:
     return " ".join(text.split())
 
 
-# 表のセルは、EDINETのCSVでは空白でつながった平文になっている。
-# 日付のトークンを見つけて、そこから7つぶんを1件と見る
-_DATE_TOKEN = re.compile(
-    r"^(?:(?:令和|平成|昭和)[0-9０-９元]{1,2}年[0-9０-９]{1,2}月[0-9０-９]{1,2}日"
-    r"|\d{4}年\d{1,2}月\d{1,2}日)$")
-_INT = re.compile(r"^[\d,]+$")
-_NUM = re.compile(r"^[\d,]+(?:\.\d+)?$")
+# 「最近60日間の取得又は処分の状況」の1行ぶん。
+#
+# EDINETのCSVでは表のセルが平文になるが、**区切りが入らない書類が多い。**
+#
+#   令和４年４月15日株券（普通）8000.01市場内取得       ← 区切りなし
+#   令和７年10月15日 普通株式 1,500,000 9.08 市場外 処分 2684.5  ← 空白あり
+#
+# 前者は数量800と割合0.01がくっついて「8000.01」になっている。
+# 割合は必ず小数なので、数量を貪欲に取ってから小数へ後戻りさせると割れる。
+# 空白で区切られている書類も同じ式で通る。
+_TRADE_RE = re.compile(
+    r"(?P<date>(?:令和|平成|昭和)\s*[0-9０-９元]{1,2}\s*年\s*[0-9０-９]{1,2}\s*月"
+    r"\s*[0-9０-９]{1,2}\s*日|\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日)"
+    r"[^\d]{0,40}?"                                   # 株券等の種類
+    r"(?P<qty>[\d,]+)\s*株?\s*"                        # 数量（「株」が付く書類がある）
+    # 割合。%が付く書類と、小数点をカンマで打ち間違えた書類がある
+    # （フィットイージーの2024-08-20は「1,94」）。後ろに数字が続かないことで
+    # 数量のカンマ区切り（307,900）と区別する
+    r"(?P<ratio>\d+[.,]\d{1,2})(?!\d)\s*[%％]?"
+    r"\s*(?P<place>市場内|市場外)"
+    # 取得／処分を書かない書類がある。次の行に食い込まないよう手前で切る
+    r"(?:[^取処\d]{0,8}(?P<side>取得|処分))?"
+    r"(?:[^\d]{0,8}(?P<price>[\d,]+\.?\d*))?")
 
 
 def parse_trades(text: str) -> str:
     """「最近60日間の取得又は処分の状況」を1行の文字列にする。
 
     列は 年月日 / 株券等の種類 / 数量 / 割合 / 市場内外取引の別 /
-    取得又は処分の別 / 単価。日付は和暦で書かれている。
+    取得又は処分の別 / 単価。日付は和暦のこともある。
 
       2025-10-15|1500000|市場外|処分|2684.5
 
     のように詰め、複数回あればセミコロンで並べる。該当が無い書類には
     見出しだけが入っているので空になる。
-
-    数量と単価はどちらも数字だが、数量は整数、割合と単価は小数になるので
-    区別できる。単価が整数の書類では、後ろから拾って数量と重ならないほうを採る。
     """
-    tokens = _flatten(text).split()
-    trades, i = [], 0
-    while i < len(tokens):
-        if not _DATE_TOKEN.match(tokens[i]):
-            i += 1
+    body = _flatten(text)
+    trades = []
+    for m in _TRADE_RE.finditer(body):
+        date = to_iso(m.group("date"))
+        if not date:
             continue
-        date = to_iso(tokens[i])
-        window = tokens[i + 1:i + 7]
-        qty = next((t for t in window if _INT.match(t)), "")
-        place = next((t for t in window if t in ("市場内", "市場外")), "")
-        side = next((t for t in window if t in ("取得", "処分")), "")
-        price = next((t for t in reversed(window)
-                      if _NUM.match(t) and t != qty), "")
-        if date and qty:
-            trades.append("|".join((date, qty.replace(",", ""), place, side,
-                                    price.replace(",", ""))))
-        i += 7
+        trades.append("|".join((
+            date,
+            m.group("qty").replace(",", ""),
+            m.group("place") or "",
+            m.group("side") or "",
+            (m.group("price") or "").replace(",", "").strip("."))))
     return ";".join(trades)
 
 
