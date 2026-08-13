@@ -9,7 +9,8 @@
                     <th class="num">株数</th>
                     <th class="num">増減</th>
                     <th class="num">割合</th>
-                    <th>何があったか</th>
+                    <th>なぜ</th>
+                    <th>裏づけ</th>
                 </tr>
             </thead>
             <tbody>
@@ -40,16 +41,36 @@
                     <td class="num lvh-fig" data-label="割合">
                         {% if e.ratio is not none %}{{ '{:.2%}'.format(e.ratio) }}{% else %}–{% endif %}
                     </td>
-                    <td class="lvh-reason">
-                        {# 同じ時期の適時開示。保有目的は定型文なので、売った理由はこちらに出る #}
+                    {# 「なぜ」は書類の『増減の内訳』に1件ずつ書いてある。
+                       保有目的（定型文）とは別もの #}
+                    <td class="lvh-why" data-label="なぜ">
+                        {% if e.why %}
+                        <span class="lvh-why-tag" title="{{ e.why_text }}">{{ e.why }}</span>
+                        {% elif e.action == '新たに5%超' %}
+                        <span class="text-muted">–</span>
+                        {% else %}
+                        <span class="text-muted" title="書類に書かれていません">不明</span>
+                        {% endif %}
+                        {% if e.price %}
+                        <div class="lvh-price">{{ '{:,.1f}'.format(e.price) }}円{% if e.place %} / {{ e.place }}{% endif %}</div>
+                        {% endif %}
+                    </td>
+                    <td class="lvh-reason" data-label="裏づけ">
+                        {% if e.why_text %}
+                        <div class="lvh-why-text">{{ e.why_text }}</div>
+                        {% endif %}
+                        {# 同じ時期の適時開示。ここに会社側の説明が載る #}
                         {% for d in e.disclosures %}
                         <div class="lvh-disclosure">
                             <a href="https://www2.jpx.co.jp{{ d.url }}" target="_blank" rel="noopener">{{ d.title }}</a>
                             <span class="text-muted">{{ d.date }}</span>
                         </div>
                         {% endfor %}
-                        {% if e.reason %}
-                        <div class="text-muted small">{{ e.reason }}</div>
+                        {% if e.contract and e.contract != '該当事項なし' %}
+                        <details class="lvh-contract">
+                            <summary>担保・ロックアップの契約</summary>
+                            <div>{{ e.contract }}</div>
+                        </details>
                         {% endif %}
                     </td>
                 </tr>
@@ -73,11 +94,26 @@
             <tr><th>出所</th><td>大量保有報告書（EDINET）。5%を超えて持つ人は、
                 <strong>保有割合が1%動くたびに5営業日以内</strong>に提出する義務があります。
                 上の2つのタブが各期末の断面なのに対し、こちらは<strong>日付単位</strong>で追えます。</td></tr>
-            <tr><th>何があったか</th><td>同じ時期に出た適時開示を並べています。
-                書類に載る「保有目的」は届出の定型文で、<strong>売った当日の書類でも
-                「安定株主として長期保有」のまま</strong>だったりするため、
-                理由はこちらの本文で確かめます。開示を集めているのは保有銘柄だけなので、
-                それ以外の銘柄では提出事由しか出ません。</td></tr>
+            <tr><th>なぜ</th><td>書類の「増減の内訳」から取っています。ここには
+                <strong>1件ずつ実際の理由が日本語で書かれています</strong>
+                （「2024年7月23日付の新規株式上場に伴う売出しにより2,900,000株売却」など）。
+                これを型に落としたものが「なぜ」の欄で、原文は右の「裏づけ」に出しています。
+                <span class="text-muted">なお「保有目的」（保有者名の横のタグ）は別もので、
+                こちらは届出の定型文です。売った当日の書類でも「安定株主として長期保有」の
+                ままだったりするので、売買の理由には使えません。</span></td></tr>
+            <tr><th>「不明」のとき</th><td><strong>書類の該当欄が空だった</strong>ということです。
+                内訳を書かない提出者がいます。その場合は同じ時期の適時開示のタイトルと、
+                市場内外の別から当てにいきますが、それでも決まらなければ「不明」と出します。
+                保有32銘柄で試したところ、理由が付いたのは<strong>約半分</strong>でした。
+                <span class="text-muted">同じ人が同じ日に同数を反対に動かしているときは
+                「関係者間で移動」と出します。創業者が資産管理会社へ持ち替えたときに起き、
+                これを売却と読むと判断を誤ります。</span></td></tr>
+            <tr><th>単価</th><td>「最近60日間の取得又は処分の状況」から。
+                <strong>いくらで売ったか</strong>と、市場内の売買か市場外（相対・売出し）かが分かります。
+                60日ぶんしか載らないので、それより前の売買には付きません。</td></tr>
+            <tr><th>裏づけ</th><td>増減の内訳の原文と、同じ時期に出た適時開示です。
+                開示には会社側の説明（なぜ売出しをするのか）が載ります。
+                開示を集めているのは保有銘柄だけなので、それ以外の銘柄では出ません。</td></tr>
             <tr><th>増減</th><td>同じ人の前回の株数との差です。<strong>売った・買ったの判定は
                 株数で行っています。</strong>事由は共同保有者の合計に対して書かれるため、
                 本人が1株も売っていなくても「1％以上の減少」と載ります。

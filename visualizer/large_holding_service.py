@@ -64,6 +64,35 @@ _DISCLOSURE_WORDS = (
     "支配株主", "親会社", "子会社化", "株式交換", "合併",
 )
 
+# 売買の理由。「増減の内訳」に1件ずつ日本語で書かれているものを型に落とす。
+# 上から順に当てるので、細かいものを先に置く
+_REASON_LABELS = (
+    ("株式分割", ("株式分割", "分割により", "無償割当")),
+    ("株式併合", ("株式併合", "併合により")),
+    ("IPOの売出し", ("新規株式上場", "新規上場", "上場に伴う売出")),
+    ("追加売出し", ("グリーンシュー", "オーバーアロットメント", "ＯＡ")),
+    ("立会外分売", ("立会外分売",)),
+    ("公開買付", ("公開買付", "ＴＯＢ")),
+    ("第三者割当", ("第三者割当",)),
+    ("自己株買い", ("自己株式",)),
+    ("組織再編", ("株式交換", "合併", "会社分割", "株式移転")),
+    ("新株予約権", ("新株予約権", "ストックオプション")),
+    ("売出し", ("売出",)),
+    ("募集", ("募集により", "公募")),
+    ("相続・贈与", ("相続", "贈与")),
+    ("担保処分", ("担保権", "担保の実行")),
+    ("相対で譲渡", ("譲渡", "譲受", "相対")),
+    ("市場で売買", ("市場内", "市場買付", "市場売却", "取引所")),
+)
+
+# 「2024年7月23日付の新規株式上場に伴う売出しにより2,900,000株売却」が
+# 区切り文字なしで連なっている。次の日付の手前までを1件と見る
+_BREAKDOWN_ITEM = re.compile(
+    r"(?P<y>\d{4})年(?P<m>\d{1,2})月(?P<d>\d{1,2})日付?(?:けで|付け|で|の)?"
+    r"(?P<body>.*?)(?=\d{4}年\d{1,2}月\d{1,2}日付|$)")
+_BREAKDOWN_SHARES = re.compile(r"([\d,]+)\s*株")
+_BREAKDOWN_SIDE = re.compile(r"(取得|売却|処分|譲受|譲渡)")
+
 _cache: Dict[str, tuple] = {}
 _tdnet_cache: Optional[Dict[str, list]] = None
 
@@ -112,6 +141,111 @@ def _load_tdnet() -> Dict[str, list]:
         items.sort(reverse=True)
     _tdnet_cache = dict(rows)
     return _tdnet_cache
+
+
+def reason_label(text: str) -> str:
+    """売買の理由を一言にする。当てはまらなければ空"""
+    for label, words in _REASON_LABELS:
+        if any(w in text for w in words):
+            return label
+    return ""
+
+
+def _parse_breakdown(text: str) -> Dict[str, dict]:
+    """「増減の内訳」を日付ごとの {理由, 株数, 向き} にばらす。
+
+    ここが「なぜ売買したか」の本体。保有目的と違って定型文ではなく、
+    1件ずつ実際の理由が書かれている。
+
+      2024年7月23日付の新規株式上場に伴う売出しにより2,900,000株売却
+      2024年8月20日付のグリーンシューオプション行使により307,900株を売却
+      2022年10月31日付の株式分割（1:1,000）により648,351株取得
+    """
+    out: Dict[str, dict] = {}
+    for m in _BREAKDOWN_ITEM.finditer(text or ""):
+        # 「2024年7月23日付の新規株式上場に伴う…」の助詞が残ることがある
+        body = m.group("body").strip(" 　、。").lstrip("のでけ付")
+        if not body:
+            continue
+        date = f"{int(m.group('y')):04d}-{int(m.group('m')):02d}-{int(m.group('d')):02d}"
+        shares = _BREAKDOWN_SHARES.search(body)
+        side = _BREAKDOWN_SIDE.search(body)
+        # 同じ日に複数件あるときは、株数の大きいほうを代表にする
+        value = {
+            "text": body,
+            "label": reason_label(body),
+            "shares": float(shares.group(1).replace(",", "")) if shares else None,
+            "side": side.group(1) if side else "",
+        }
+        previous = out.get(date)
+        if previous and (previous["shares"] or 0) >= (value["shares"] or 0):
+            continue
+        out[date] = value
+    return out
+
+
+def _parse_trades(text: str) -> Dict[str, dict]:
+    """「売買明細」（最近60日間の取得又は処分）を日付ごとにばらす。
+
+    collector が 日付|数量|市場内外|取得処分|単価 の形にしてある。
+    ここには**いくらで売ったか**が入る。
+    """
+    out: Dict[str, dict] = {}
+    for chunk in (text or "").split(";"):
+        parts = chunk.split("|")
+        if len(parts) != 5 or not parts[0]:
+            continue
+        out[parts[0]] = {
+            "shares": _num(parts[1]),
+            "place": parts[2],
+            "side": parts[3],
+            "price": _num(parts[4]),
+        }
+    return out
+
+
+def _pick_trade(trades: Dict[str, dict], on: str,
+                share_diff: Optional[float]) -> Optional[dict]:
+    """その回の売買にあたる明細を選ぶ。
+
+    明細は60日ぶん載るので、前回の報告のぶんが残っていることがある。
+    また1回の報告のあいだに何日かに分けて売ることがあり、その場合は
+    個々の行ではなく合計が今回の増減と一致する。合計で拾えたときは
+    株数のいちばん大きい日を代表にする（単価と市場内外はそこから取る）。
+    """
+    if not trades:
+        return None
+    exact = trades.get(on) or _closest(trades, on)
+    if share_diff is None:
+        return exact
+    want = abs(share_diff)
+    if exact and abs((exact["shares"] or 0) - want) <= 1:
+        return exact
+    total = sum(t["shares"] or 0 for t in trades.values())
+    if abs(total - want) <= 1:
+        biggest = max(trades.values(), key=lambda t: t["shares"] or 0)
+        return {**biggest, "shares": total}
+    return None
+
+
+def _mark_transfers(events: List[dict]) -> None:
+    """同じ日に、同じ株数の減と増があれば関係者間の移動とみなす。
+
+    創業者が自分の資産管理会社に持ち替えるとよく起きる。放っておくと
+    「創業者が180万株売った」と読めてしまうが、実際には外に出ていない。
+    """
+    by_date: Dict[str, List[dict]] = defaultdict(list)
+    for e in events:
+        if e["share_diff"]:
+            by_date[e["date"]].append(e)
+    for same_day in by_date.values():
+        for a in same_day:
+            if a["share_diff"] >= 0:
+                continue
+            for b in same_day:
+                if b["share_diff"] > 0 and abs(a["share_diff"] + b["share_diff"]) <= 1:
+                    a["transfer"] = b["name"]
+                    b["transfer"] = a["name"]
 
 
 def _nearby_disclosures(code: str, on: str, limit: int = 2) -> List[dict]:
@@ -172,6 +306,25 @@ def _name_key(name: str) -> str:
     return "".join(re.sub(r"[（(].*?[）)]", "", name).split())
 
 
+def _closest(items: Dict[str, dict], on: str, days: int = 5) -> Optional[dict]:
+    """日付がぴったり合わないときに、近いものを採る"""
+    if not items or not on:
+        return None
+    try:
+        target = datetime.strptime(on, "%Y-%m-%d")
+    except ValueError:
+        return None
+    best, gap = None, None
+    for date, value in items.items():
+        try:
+            diff = abs((datetime.strptime(date, "%Y-%m-%d") - target).days)
+        except ValueError:
+            continue
+        if diff <= days and (gap is None or diff < gap):
+            best, gap = value, diff
+    return best
+
+
 def get_large_holdings(company_code) -> Optional[dict]:
     """5%超の株主の売買。データが無ければ None"""
     rows = _load(company_code)
@@ -197,6 +350,24 @@ def get_large_holdings(company_code) -> Optional[dict]:
         purpose = (row.get("保有目的") or "").strip()
         tag = purpose_tag(purpose)
         date = (row.get("発生日") or row.get("提出日") or "").strip()
+
+        # なぜ売買したか。報告義務が生じた日と、実際に売買した日は同じはず
+        # だが、書類によって数日ずれるので近いものを採る
+        breakdown = _parse_breakdown(row.get("増減の内訳"))
+        trades = _parse_trades(row.get("売買明細"))
+        why = breakdown.get(date) or _closest(breakdown, date)
+        trade = _pick_trade(trades, date, share_diff)
+
+        near = _nearby_disclosures(company_code, date)
+        # 内訳を書かない提出者もいる。そのときは会社側の開示から理由を当てる。
+        # 立会外分売のように、開示のタイトルだけで型が決まるものが多い
+        label = why["label"] if why else ""
+        if not label:
+            label = next((reason_label(d["title"]) for d in near
+                          if reason_label(d["title"])), "")
+        if not label and trade and trade["place"]:
+            label = "市場で売買" if trade["place"] == "市場内" else "市場外で相対"
+
         events.append({
             "date": date,
             "filed": (row.get("提出日") or "").strip(),
@@ -210,12 +381,26 @@ def get_large_holdings(company_code) -> Optional[dict]:
             "purpose": purpose,
             "purpose_tag": tag,
             "noise": tag in _NOISE_TAGS,
-            "disclosures": _nearby_disclosures(company_code, date),
+            "disclosures": near,
+            # 「なぜ」の3点。理由の型・原文・いくらで・市場の内外
+            "why": label,
+            "why_text": why["text"] if why else "",
+            "price": trade["price"] if trade else None,
+            "place": trade["place"] if trade else "",
+            "contract": (row.get("重要な契約") or "").strip(),
+            "transfer": "",
             # 株数が動いた回と、その人が初めて5%超で現れた回だけを残す。
             # 株数が変わらない届出（契約の締結、他人の売却に伴う割合の変動）は
             # 「売買」の一覧に並べても判断の材料にならない
             "moved": share_diff is None or share_diff != 0,
         })
+
+    _mark_transfers(events)
+    for e in events:
+        # 持ち替えは書類に理由が書かれないことが多いが、機械的に分かる
+        if e["transfer"] and not e["why"]:
+            e["why"] = "関係者間で移動"
+            e["why_text"] = f"同じ日に {e['transfer']} が同数を反対に動かしています"
 
     moves = [e for e in events if e["moved"]]
     if not moves:

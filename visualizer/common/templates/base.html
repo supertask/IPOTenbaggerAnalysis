@@ -486,7 +486,21 @@
             margin-left: 0.25rem;
             white-space: nowrap;
         }
-        /* 同じ時期の適時開示。保有目的は定型文なので、理由はここに出る */
+        /* 売買の理由。書類の「増減の内訳」から型に落としたもの */
+        .large-holdings-table .lvh-why { white-space: nowrap; }
+        .lvh-why-tag {
+            font-size: 0.78rem;
+            color: #0a3622;
+            background-color: #e7f3ec;
+            border-radius: 0.25rem;
+            padding: 0.05rem 0.35rem;
+        }
+        .lvh-price { font-size: 0.7rem; color: #6c757d; margin-top: 0.15rem; }
+        .lvh-why-text { font-size: 0.75rem; color: #495057; line-height: 1.35; }
+        .lvh-contract > summary { font-size: 0.72rem; color: #6c757d; cursor: pointer; }
+        .lvh-contract > div { font-size: 0.72rem; color: #495057; line-height: 1.4; }
+
+        /* 同じ時期の適時開示。会社側の説明はここに出る */
         .lvh-disclosure { line-height: 1.35; margin-bottom: 0.15rem; }
         .lvh-disclosure a { font-size: 0.8rem; }
         .lvh-disclosure .text-muted { font-size: 0.7rem; margin-left: 0.25rem; }
@@ -535,6 +549,8 @@
             }
             .large-holdings-table .holder-name { font-weight: 600; }
             .large-holdings-table .lvh-reason { margin-top: 0.2rem; }
+            .large-holdings-table .lvh-why { white-space: normal; margin-top: 0.2rem; }
+            .large-holdings-table .lvh-why .lvh-price { display: inline; margin-left: 0.4rem; }
         }
     </style>
 </head>

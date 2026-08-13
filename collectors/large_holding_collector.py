@@ -15,6 +15,17 @@
   ...EtcPerLastReport                             前回報告書の保有割合
   jplvh_cor:DateWhenFilingRequirementAroseCoverPage  提出義務発生日（実際に動いた日）
 
+**なぜ売買したかは、次の3つに書いてある。** 保有目的は定型文なので使えないが、
+こちらは1回ごとに理由が入っている。
+
+  DetailsOfAcquisitionsAndDisposals...   最近60日間の取得又は処分の状況。
+                                         日付・数量・市場内外・取得処分・単価の表
+  BreakdownOfTotalAmountFromOtherSources 増減の内訳。「2024年7月23日付の新規株式
+                                         上場に伴う売出しにより2,900,000株売却」
+                                         のように、1件ずつ日付と理由が日本語で入る
+  SignificantContractsRelatedToSaidStocks... 担保契約等重要な契約。ロックアップの
+                                         期限や、銀行への担保差入れが分かる
+
 共同保有者はコンテキストID（...FilerLargeVolumeHolder<N>Member）で1人ずつに
 分かれる。共同保有者が居ない書類ではその軸が無く、素の FilingDateInstant が
 その1人ぶんになる。
@@ -36,13 +47,16 @@ data/output/large_holdings/doc_index.tsv に貯まる。重いのは本文の取
 """
 import argparse
 import csv
+import gzip
 import io
 import os
+import re
 import sys
 import time
 import zipfile
 from collections import defaultdict
 from datetime import date, datetime, timedelta
+from typing import List
 
 import requests
 import urllib3
@@ -55,6 +69,8 @@ urllib3.disable_warnings()
 
 API = "https://api.edinet-fsa.go.jp/api/v2/documents"
 OUT_DIR = os.path.join("data", "output", "large_holdings")
+# 落とした素のCSV。項目を増やすたびに落とし直さなくて済むように残す
+CACHE_DIR = os.path.join("data", "cache", "large_holdings")
 DOC_INDEX = os.path.join(OUT_DIR, "doc_index.tsv")
 # 走査済みの日。書類が1件も無い日は一覧に行が残らないので、
 # これが無いと毎回その日を取り直すことになる（10年ぶんだと無視できない）
@@ -78,15 +94,23 @@ DOC_INDEX_COLUMNS = ["提出日", "書類種別", "銘柄コード", "発行会�
                      "提出者", "書類ID"]
 
 HOLDING_COLUMNS = ["提出日", "発生日", "書類種別", "提出者", "保有者", "株数",
-                   "保有割合", "前回割合", "提出事由", "保有目的", "書類ID"]
+                   "保有割合", "前回割合", "提出事由", "保有目的",
+                   "売買明細", "増減の内訳", "重要な契約", "書類ID"]
 
-# 1人ぶんの値を束ねるタグ。素の FilingDateInstant は共同保有者の合計
+# 1人ぶんの値を束ねるタグ。素の FilingDateInstant は共同保有者の合計。
+# 要素IDの前方一致で見る（末尾に NA / TextBlock が付く版があるため）
 _PER_HOLDER = {
     "jplvh_cor:FilerNameInJapaneseDEI": "保有者",
     "jplvh_cor:TotalNumberOfStocksEtcHeld": "株数",
     "jplvh_cor:HoldingRatioOfShareCertificatesEtc": "保有割合",
     "jplvh_cor:HoldingRatioOfShareCertificatesEtcPerLastReport": "前回割合",
     "jplvh_cor:PurposeOfHolding": "保有目的",
+}
+# 中身がHTMLの表や文章になっているもの。前方一致で拾う
+_PER_HOLDER_TEXT = {
+    "jplvh_cor:DetailsOfAcquisitionsAndDisposals": "売買明細",
+    "jplvh_cor:BreakdownOfTotalAmountFromOtherSources": "増減の内訳",
+    "jplvh_cor:SignificantContractsRelatedToSaidStocks": "重要な契約",
 }
 # 書類に1つしかないタグ
 _COVER = {
@@ -212,6 +236,80 @@ def _decode(raw: bytes) -> str:
     return ""
 
 
+# 元号。60日間の表だけ「令和７年10月15日」と和暦で書かれている
+_ERA_START = {"令和": 2018, "平成": 1988, "昭和": 1925}
+_ZEN = str.maketrans("０１２３４５６７８９", "0123456789")
+_ERA_DATE = re.compile(r"(令和|平成|昭和)\s*([0-9０-９元]{1,2})\s*年\s*"
+                       r"([0-9０-９]{1,2})\s*月\s*([0-9０-９]{1,2})\s*日")
+_WEST_DATE = re.compile(r"(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日")
+
+
+def to_iso(text: str) -> str:
+    """和暦・西暦のどちらでも YYYY-MM-DD にする。読めなければ空"""
+    m = _ERA_DATE.search(text)
+    if m:
+        year = m.group(2).translate(_ZEN)
+        year = 1 if year == "元" else int(year)
+        return (f"{_ERA_START[m.group(1)] + year:04d}-"
+                f"{int(m.group(3).translate(_ZEN)):02d}-"
+                f"{int(m.group(4).translate(_ZEN)):02d}")
+    m = _WEST_DATE.search(text)
+    if m:
+        return f"{int(m.group(1)):04d}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+    return ""
+
+
+def _flatten(html: str) -> str:
+    """文章のテキストブロックを1行にする"""
+    text = re.sub(r"<[^>]+>", " ", html)
+    text = (text.replace("&#160;", " ").replace("&nbsp;", " ")
+            .replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">"))
+    return " ".join(text.split())
+
+
+# 表のセルは、EDINETのCSVでは空白でつながった平文になっている。
+# 日付のトークンを見つけて、そこから7つぶんを1件と見る
+_DATE_TOKEN = re.compile(
+    r"^(?:(?:令和|平成|昭和)[0-9０-９元]{1,2}年[0-9０-９]{1,2}月[0-9０-９]{1,2}日"
+    r"|\d{4}年\d{1,2}月\d{1,2}日)$")
+_INT = re.compile(r"^[\d,]+$")
+_NUM = re.compile(r"^[\d,]+(?:\.\d+)?$")
+
+
+def parse_trades(text: str) -> str:
+    """「最近60日間の取得又は処分の状況」を1行の文字列にする。
+
+    列は 年月日 / 株券等の種類 / 数量 / 割合 / 市場内外取引の別 /
+    取得又は処分の別 / 単価。日付は和暦で書かれている。
+
+      2025-10-15|1500000|市場外|処分|2684.5
+
+    のように詰め、複数回あればセミコロンで並べる。該当が無い書類には
+    見出しだけが入っているので空になる。
+
+    数量と単価はどちらも数字だが、数量は整数、割合と単価は小数になるので
+    区別できる。単価が整数の書類では、後ろから拾って数量と重ならないほうを採る。
+    """
+    tokens = _flatten(text).split()
+    trades, i = [], 0
+    while i < len(tokens):
+        if not _DATE_TOKEN.match(tokens[i]):
+            i += 1
+            continue
+        date = to_iso(tokens[i])
+        window = tokens[i + 1:i + 7]
+        qty = next((t for t in window if _INT.match(t)), "")
+        place = next((t for t in window if t in ("市場内", "市場外")), "")
+        side = next((t for t in window if t in ("取得", "処分")), "")
+        price = next((t for t in reversed(window)
+                      if _NUM.match(t) and t != qty), "")
+        if date and qty:
+            trades.append("|".join((date, qty.replace(",", ""), place, side,
+                                    price.replace(",", ""))))
+        i += 7
+    return ";".join(trades)
+
+
 def parse_csv(text: str) -> list:
     """1書類ぶんのCSVから、保有者ごとの行を作る"""
     cover, per_holder = {}, defaultdict(dict)
@@ -225,7 +323,20 @@ def parse_csv(text: str) -> list:
         if element in _COVER:
             cover.setdefault(_COVER[element], value)
         field = _PER_HOLDER.get(element)
+        if field is None:
+            # テキストブロックは末尾に NA / TextBlock が付く版があるので前方一致
+            for prefix, name in _PER_HOLDER_TEXT.items():
+                if element.startswith(prefix):
+                    field = name
+                    break
         if not field:
+            continue
+        if field == "売買明細":
+            value = parse_trades(value)
+        elif field in ("増減の内訳", "重要な契約"):
+            value = _flatten(value)
+        if not value:
+            # 該当が無い書類には見出しだけの空の表が入っている
             continue
         # 共同保有者が居ない書類には保有者の軸が無い。素の文脈を1人ぶんとみなす
         # 同じタグが表と総括表で2度出るので、先に出たほうを採る
@@ -250,11 +361,31 @@ def parse_csv(text: str) -> list:
             "保有割合": values.get("保有割合", ""),
             "前回割合": values.get("前回割合", ""),
             "保有目的": " ".join((values.get("保有目的") or "").split()),
+            "売買明細": values.get("売買明細", ""),
+            "増減の内訳": values.get("増減の内訳", ""),
+            "重要な契約": values.get("重要な契約", ""),
         })
     return rows
 
 
-def fetch_doc(doc_id: str, key: str) -> str:
+def fetch_doc(doc_id: str, key: str, network: bool = True) -> str:
+    """書類のCSVを返す。一度落としたものはキャッシュから読む。
+
+    取り出す項目を増やすたびに6万件を落とし直すのは現実的でないので、
+    素のCSVを圧縮して置いておく。全銘柄ぶんで300MBほど。
+    `--reparse` はこれだけを読み、通信をしない。
+    """
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    path = os.path.join(CACHE_DIR, f"{doc_id}.csv.gz")
+    if os.path.exists(path):
+        try:
+            with gzip.open(path, "rt", encoding="utf-8") as f:
+                return f.read()
+        except Exception:
+            os.remove(path)
+    if not network:
+        return ""
+
     res = requests.get(f"{API}/{doc_id}",
                        params={"type": 5, "Subscription-Key": key},
                        timeout=60, verify=False)
@@ -264,37 +395,51 @@ def fetch_doc(doc_id: str, key: str) -> str:
         names = [n for n in z.namelist() if n.lower().endswith(".csv")]
         if not names:
             return ""
-        return _decode(z.read(names[0]))
+        text = _decode(z.read(names[0]))
+    if text:
+        with gzip.open(path, "wt", encoding="utf-8") as f:
+            f.write(text)
+    return text
 
 
 def out_path(code: str) -> str:
     return os.path.join(OUT_DIR, f"{code}.tsv")
 
 
-def collect_bodies(docs: list, codes: set) -> None:
-    """対象銘柄の書類だけ本文を落とし、銘柄ごとのTSVに書く"""
-    key = _key()
+def collect_bodies(docs: list, codes: set, reparse: bool = False) -> None:
+    """対象銘柄の書類だけ本文を落とし、銘柄ごとのTSVに書く。
+
+    reparse なら通信をせず、キャッシュにある書類だけを読み直してTSVを作る。
+    取り出す項目を増やしたときに使う。
+    """
+    key = "" if reparse else _key()
     targets = [d for d in docs if d["銘柄コード"] in codes]
     by_code = defaultdict(list)
     for d in targets:
         by_code[d["銘柄コード"]].append(d)
 
-    print(f"本文の取得: {len(by_code)}銘柄 / {len(targets)}件")
+    print(f"本文の{'読み直し' if reparse else '取得'}: "
+          f"{len(by_code)}銘柄 / {len(targets)}件")
     started, fetched, failed = time.time(), 0, 0
     for i, code in enumerate(sorted(by_code), 1):
         path = out_path(code)
         existing, done = [], set()
-        if os.path.exists(path):
+        if os.path.exists(path) and not reparse:
             with open(path, encoding="utf-8", newline="") as f:
                 existing = list(csv.DictReader(f, delimiter="\t"))
+            # 列を増やしたあとの古いTSVは作り直す。書類はキャッシュにあるので
+            # 落とし直しにはならない
+            if existing and any(c not in existing[0] for c in HOLDING_COLUMNS):
+                existing = []
             done = {r["書類ID"] for r in existing}
 
         rows = list(existing)
         for doc in by_code[code]:
             if doc["書類ID"] in done:
                 continue
-            text = fetch_doc(doc["書類ID"], key)
-            time.sleep(0.15)
+            text = fetch_doc(doc["書類ID"], key, network=not reparse)
+            if not reparse:
+                time.sleep(0.15)
             if not text:
                 failed += 1
                 continue
@@ -307,7 +452,7 @@ def collect_bodies(docs: list, codes: set) -> None:
                 rows.append(row)
             fetched += 1
 
-        if len(rows) == len(existing):
+        if not rows or (existing and len(rows) == len(existing)):
             continue
         os.makedirs(OUT_DIR, exist_ok=True)
         rows.sort(key=lambda r: (r.get("提出日") or "", r.get("保有者") or ""))
@@ -333,12 +478,14 @@ def main() -> int:
                         help="書類の一覧だけ作り、本文は落とさない")
     parser.add_argument("--skip-scan", action="store_true",
                         help="一覧の更新をせず、手元の一覧から本文だけ落とす")
+    parser.add_argument("--reparse", action="store_true",
+                        help="通信をせず、落とし済みの書類からTSVを作り直す")
     args = parser.parse_args()
 
     issuer_to_code = code_map()
     print(f"証券コードを持つEDINET提出者: {len(issuer_to_code):,}社")
 
-    if args.skip_scan:
+    if args.skip_scan or args.reparse:
         docs = load_doc_index()
         print(f"手元の一覧: {len(docs):,}件")
     else:
@@ -355,8 +502,8 @@ def main() -> int:
         codes = {d["銘柄コード"] for d in docs}
     else:
         codes = portfolio_codes()
-    print(f"本文を落とす対象: {len(codes)}銘柄")
-    collect_bodies(docs, codes)
+    print(f"対象: {len(codes)}銘柄")
+    collect_bodies(docs, codes, reparse=args.reparse)
     return 0
 
 
