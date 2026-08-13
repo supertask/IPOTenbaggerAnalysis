@@ -9,9 +9,24 @@
      ROE↑ なのに ROA→   → 借入で嵩上げしている
      営業CF ÷ 営業利益 < 1 が続く → 利益が現金になっていない
 2. 業種の中央値 … 営業利益率23.8%が高いのかは業種で変わる
-3. **10倍株の同じ上場年次** … このリポジトリの最大の資産。
-     実際に10倍になった106社が、上場N年目にどういう数字だったか
+3. **上場N年目に、10倍になった会社／ならなかった会社が何をしていたか**
 4. データの欠け・異常 … 比較できていないことを知らずに比べない
+
+3について、確かめずに使わないこと。実際に測ってみると次のようになった
+（2011〜2016年上場に限り、経過年数を揃えて比較。揃えないと「10倍組」対
+「まだ10倍になる時間が経っていない組」を比べることになり何も言えない）。
+
+  上場3年目   10倍以上   3〜10倍   2倍未満
+  ROE          18.2%    13.7%    9.7%   ← 見分けられる
+  営業利益率      12.1%     6.3%    5.0%   ← 見分けられる
+  売上高       7,084百万 6,083百万 11,251百万 ← 小さいほうが10倍になっている
+  利益の質       0.71倍   0.89倍   1.34倍   ← **逆**。10倍組のほうが低い
+
+**利益の質（営業CF÷営業利益）は、10倍になった会社のほうが低い。**
+伸びている会社ほど運転資金と設備で現金が出るので当然で、
+「1.0を割っているから危ない」と読むと逆になる。
+だから10倍組の中央値だけを出さず、ならなかった組も並べて、
+その指標に見分ける力があるかどうかが分かる形で出す。
 
   python collectors/metric_diagnose.py 212A
 """
@@ -37,6 +52,18 @@ _BENCH_IDS = {
 }
 
 TENBAGGER_MIN = 10.0
+
+# 比べる相手。10倍組だけ出すと「10倍株はこうだった」しか言えず、
+# その数字に見分ける力があるのかが分からない
+_GROUPS = (
+    ("10倍以上", "max_multiple >= 10"),
+    ("3〜10倍", "max_multiple >= 3 AND max_multiple < 10"),
+    ("2倍未満", "max_multiple < 2"),
+)
+
+# max_multiple は上場から今までの最大倍率なので、最近上場した会社は
+# そもそも10倍になる時間が無い。これだけ経った会社に限って比べる
+_MIN_ELAPSED_YEARS = 9
 
 
 def _num(value) -> Optional[float]:
@@ -260,25 +287,38 @@ def diagnose(code: str, metrics: dict) -> dict:
                 "n": n, "rank": _rank(mine.get(name), values, name)})
         result["sector_name"] = f"{sector} {len(values)}社"
 
-    # 10倍になった会社の、同じ上場年次
+    # 上場N年目に、10倍になった会社／ならなかった会社が何をしていたか
     ipo_year = info.get("ipo_year")
     if ipo_year:
         years_after = min(max(datetime.now().year - int(ipo_year), 1), 10)
-        rows = list(conn.execute(
-            "SELECT code, ipo_year FROM companies "
-            "WHERE max_multiple >= ? AND ipo_year IS NOT NULL", (TENBAGGER_MIN,)))
-        base = {r[0]: int(r[1]) for r in rows if r[1]}
-        values = _values_at_year(list(base), years_after, base)
+        cutoff = datetime.now().year - _MIN_ELAPSED_YEARS
+        by_group, values = {}, {}
+        for label, cond in _GROUPS:
+            rows = list(conn.execute(
+                f"SELECT code, ipo_year FROM companies "
+                f"WHERE ipo_year IS NOT NULL AND ipo_year <= ? AND {cond}", (cutoff,)))
+            base = {r[0]: int(r[1]) for r in rows if r[1]}
+            by_group[label] = base
+            values[label] = _values_at_year(list(base), years_after, base)
+
         for name in ("売上高", "営業利益率", "ROE", "自己資本比率", "利益の質"):
-            got = _median(values, name)
-            if not got:
-                continue
-            median, n = got
-            result["tenbagger"].append({
-                "name": name, "mine": mine.get(name), "median": median, "n": n})
+            row = {"name": name, "mine": mine.get(name), "groups": {}}
+            for label, _ in _GROUPS:
+                got = _median(values[label], name)
+                row["groups"][label] = got[0] if got else None
+                row[f"n_{label}"] = got[1] if got else 0
+            top, bottom = row["groups"]["10倍以上"], row["groups"]["2倍未満"]
+            # 10倍組とそうでない組がほぼ同じなら、その指標では見分けられない
+            row["separates"] = bool(
+                top is not None and bottom
+                and not (0.85 <= top / bottom <= 1.18))
+            if any(v is not None for v in row["groups"].values()):
+                result["tenbagger"].append(row)
         result["tenbagger_label"] = (
-            f"最大10倍以上になった{len(base)}社の、上場{years_after}年目"
-            f"（データが揃ったのは{len(values)}社）")
+            f"上場{years_after}年目の中央値。{cutoff}年までに上場した会社に限る"
+            f"（それより後だと10倍になる時間が経っていない）")
+        result["tenbagger_counts"] = {
+            label: len(values[label]) for label, _ in _GROUPS}
         result["years_after"] = years_after
 
     # 欠け・異常

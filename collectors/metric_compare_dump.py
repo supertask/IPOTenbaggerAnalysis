@@ -185,16 +185,18 @@ def main() -> int:
     return 0
 
 
+def _one(name: str, v) -> str:
+    if v is None:
+        return "–"
+    if name in ("営業利益率", "ROE", "自己資本比率"):
+        return f"{v * 100:.1f}%" if abs(v) <= 1.5 else f"{v:.1f}%"
+    if name == "利益の質":
+        return f"{v:.2f}倍"
+    return f"{v / 1e6:,.0f}百万"
+
+
 def _fmt_bench(name: str, value, median) -> str:
-    def one(v):
-        if v is None:
-            return "–"
-        if name in ("営業利益率", "ROE", "自己資本比率"):
-            return f"{v * 100:.1f}%" if abs(v) <= 1.5 else f"{v:.1f}%"
-        if name == "利益の質":
-            return f"{v:.2f}倍"
-        return f"{v / 1e6:,.0f}百万"
-    return f"自社 {one(value):>12}   中央値 {one(median):>12}"
+    return f"自社 {_one(name, value):>12}   中央値 {_one(name, median):>12}"
 
 
 def show_diagnosis(code: str, metrics: dict) -> None:
@@ -219,10 +221,17 @@ def show_diagnosis(code: str, metrics: dict) -> None:
                   f"  {row['rank']}  （{row['n']}社）")
 
     if d["tenbagger"]:
-        print(f"\n【10倍になった会社との比較】{d.get('tenbagger_label', '')}")
+        print(f"\n【上場後に何倍になったかで分けた比較】{d.get('tenbagger_label', '')}")
+        counts = d.get("tenbagger_counts", {})
+        labels = ["10倍以上", "3〜10倍", "2倍未満"]
+        print(f"  {'':12}{'自社':>12}" + "".join(f"{l:>12}" for l in labels))
         for row in d["tenbagger"]:
-            print(f"  {row['name']:10} {_fmt_bench(row['name'], row['mine'], row['median'])}"
-                  f"  （{row['n']}社）")
+            cells = "".join(f"{_one(row['name'], row['groups'].get(l)):>12}"
+                            for l in labels)
+            mark = "" if row["separates"] else "   ← この指標では見分けられない"
+            print(f"  {row['name']:10}{_one(row['name'], row['mine']):>12}{cells}{mark}")
+        print(f"  {'（社数）':10}{'':>12}"
+              + "".join(f"{counts.get(l, 0):>12}" for l in labels))
 
     if d["gaps"]:
         print(f"\n【データの欠け・異常】比較できていないことを知らずに比べない")
