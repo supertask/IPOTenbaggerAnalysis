@@ -116,9 +116,15 @@
                     </div>
                 </div>
             </div>
+            {# Plotly は defer で読み込むので、パース中に呼ぶとまだ居ない。
+               DOMContentLoaded まで待つ（defer はその前に実行される） #}
             <script>
                 var chartData_{{ loop.index }} = JSON.parse('{{ chart.plotly_data | safe }}');
-                Plotly.newPlot('chart-{{ loop.index }}', chartData_{{ loop.index }}.data, chartData_{{ loop.index }}.layout);
+                document.addEventListener('DOMContentLoaded', function () {
+                    Plotly.newPlot('chart-{{ loop.index }}',
+                                   chartData_{{ loop.index }}.data,
+                                   chartData_{{ loop.index }}.layout);
+                });
             </script>
         </div>
     {% endfor %}

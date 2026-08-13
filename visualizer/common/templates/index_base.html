@@ -45,9 +45,17 @@
 
 <style>
     body { padding-top: 20px; }
-    .company-card { 
-        margin-bottom: 20px; 
-        transition: transform 0.3s, box-shadow 0.3s; 
+    /* 過去テンバガーの一覧は1,168社を一度に並べるのでDOMが25,000ノードになり、
+       開くまでに2秒かかっていた。画面外のカードはレイアウトも描画もしないよう
+       ブラウザに任せる。DOM自体は残るので、絞り込みや並べ替えは今までどおり動く。
+       高さの目安を渡しておかないとスクロールバーが跳ねる */
+    .company-card-wrapper {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 320px;
+    }
+    .company-card {
+        margin-bottom: 20px;
+        transition: transform 0.3s, box-shadow 0.3s;
         border: 1px solid rgba(0,0,0,0.125);
     }
     .company-card:hover { 
