@@ -94,7 +94,7 @@ def _cagr(series: dict):
     return ((last / first) ** (1 / span) - 1) * 100
 
 
-def dump(code: str, brief: bool) -> None:
+def dump(code: str, brief: bool, diagnose: bool = False) -> None:
     from visualizer.next_tenbagger.data_service import DataService
 
     service = DataService()
@@ -164,20 +164,70 @@ def dump(code: str, brief: bool) -> None:
             print(f"   {peer_name[:16]:18} "
                   f"{_fmt(peer_latest, scale, unit)}{growth}")
 
+    if diagnose:
+        show_diagnosis(code, metrics)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("codes", nargs="*")
     parser.add_argument("--portfolio", action="store_true", help="保有銘柄すべて")
     parser.add_argument("--brief", action="store_true", help="年ごとの値を出さない")
+    parser.add_argument("--diagnose", action="store_true",
+                        help="所見・業種の中央値・10倍株との比較・データの欠けを足す")
     args = parser.parse_args()
 
     codes = sorted(portfolio_codes()) if args.portfolio else args.codes
     if not codes:
         parser.error("銘柄コードか --portfolio が要ります")
     for code in codes:
-        dump(code, args.brief)
+        dump(code, args.brief, args.diagnose)
     return 0
+
+
+def _fmt_bench(name: str, value, median) -> str:
+    def one(v):
+        if v is None:
+            return "–"
+        if name in ("営業利益率", "ROE", "自己資本比率"):
+            return f"{v * 100:.1f}%" if abs(v) <= 1.5 else f"{v:.1f}%"
+        if name == "利益の質":
+            return f"{v:.2f}倍"
+        return f"{v / 1e6:,.0f}百万"
+    return f"自社 {one(value):>12}   中央値 {one(median):>12}"
+
+
+def show_diagnosis(code: str, metrics: dict) -> None:
+    from collectors import metric_diagnose
+
+    d = metric_diagnose.diagnose(code, metrics)
+    info = d["info"]
+    if info:
+        print(f"\n  上場 {info.get('ipo_date') or '不明'}"
+              f"（{info.get('market') or ''}）  業種 {info.get('sector') or '不明'}"
+              f" / {info.get('industry') or '不明'}"
+              f"  最大{info.get('max_multiple') or '?'}倍")
+
+    print(f"\n【所見】組み合わせで読めるもの。人が確かめること")
+    for line in d["findings"] or ["  当てはまるものなし"]:
+        print(f"  {line}")
+
+    if d["sector"]:
+        print(f"\n【同じ業種の中央値】{d.get('sector_name', '')}")
+        for row in d["sector"]:
+            print(f"  {row['name']:10} {_fmt_bench(row['name'], row['mine'], row['median'])}"
+                  f"  {row['rank']}  （{row['n']}社）")
+
+    if d["tenbagger"]:
+        print(f"\n【10倍になった会社との比較】{d.get('tenbagger_label', '')}")
+        for row in d["tenbagger"]:
+            print(f"  {row['name']:10} {_fmt_bench(row['name'], row['mine'], row['median'])}"
+                  f"  （{row['n']}社）")
+
+    if d["gaps"]:
+        print(f"\n【データの欠け・異常】比較できていないことを知らずに比べない")
+        for line in d["gaps"][:8]:
+            print(f"  ・{line}")
 
 
 if __name__ == "__main__":
