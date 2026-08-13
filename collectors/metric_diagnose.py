@@ -249,12 +249,22 @@ def findings(metrics: dict) -> List[str]:
                    f"「従業員一人当たり営業利益」は正社員だけで割っているので"
                    f"実態より良く出る。総人員あたりで見る")
 
-    inventory = _series(metrics, "在庫の伸び − 売上の伸び")
-    if inventory:
-        bad = [d for d, v in inventory[-3:] if v > 0]
-        if len(bad) >= 2:
-            out.append(f"⚠ 在庫の伸びが売上の伸びを上回る期が直近3期で{len(bad)}回。"
-                       f"売れ残りが積み上がっていないか")
+    # リンチの売りサインは「在庫の増加率が売上げの伸び率の2倍にも達した」。
+    # 差がプラスなら警告していたが、それでは出店期に在庫が先に増えるだけで
+    # 引っかかる。本の閾値に合わせる（references/investor-books.md）
+    inventory = _series(metrics, "商品及び製品")
+    sales_series = _series(metrics, "売上高")
+    if len(inventory) >= 2 and len(sales_series) >= 2:
+        inv_growth = dict(_growth(inventory))
+        sales_growth = dict(_growth(sales_series))
+        hits = [d for d in sorted(set(inv_growth) & set(sales_growth))[-3:]
+                if sales_growth[d] > 0 and inv_growth[d] >= sales_growth[d] * 2]
+        if hits:
+            last = hits[-1]
+            out.append(f"⚠ 在庫の伸びが売上の伸びの2倍を超えた期が直近3期で{len(hits)}回"
+                       f"（{last[:7]} 在庫{inv_growth[last]:+.0f}% / "
+                       f"売上{sales_growth[last]:+.0f}%）。"
+                       f"リンチが売りサインに挙げている形。売れ残りを疑う")
 
     return out
 

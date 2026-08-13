@@ -15,8 +15,10 @@ gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 | `disclosure-reading` | 大株主が動いた理由を開示から書くとき | 「株主構成」→「持株の推移」→「5%超の売買」タブの理由の下 |
 | `facility-count` | 拠点数の抽出判定（`facility_count_collector.py`）を触るとき | 「拠点あたりの採算」カードの拠点数 |
 
-投資本の抜き書きは `.claude/skills/holding-review/references/investor-books.md`。
-出所は別リポジトリ `../BookScraper`（https://github.com/supertask/BookScraper ）。
+投資本（リンチ『株で勝つ』・清原『我が投資術』・テンバガー投資家X）の抜き書きは
+`.claude/skills/holding-review/references/investor-books.md`。
+**本文は非公開の別リポジトリ `../BookScraper` にあり、ここには置かない**
+（このリポジトリは公開なので、持ってくると本文がそのまま公開される）。
 
 ## いちばん大事な方針: 重いデータは保有銘柄だけ
 
