@@ -10,7 +10,6 @@
                     <th class="num">増減</th>
                     <th class="num">割合</th>
                     <th>なぜ</th>
-                    <th>裏づけ</th>
                 </tr>
             </thead>
             <tbody>
@@ -42,35 +41,36 @@
                         {% if e.ratio is not none %}{{ '{:.2%}'.format(e.ratio) }}{% else %}–{% endif %}
                     </td>
                     {# 「なぜ」は書類の『増減の内訳』に1件ずつ書いてある。
-                       保有目的（定型文）とは別もの #}
+                       保有目的（定型文）とは別もの。
+                       会社ごとの事情は開示のPDFにしかないので、まずそこへのリンクを出し、
+                       型の説明と原文は補足として下に添える #}
                     <td class="lvh-why" data-label="なぜ">
-                        {% if e.why %}
-                        <span class="lvh-why-tag" title="{{ e.why_text }}">{{ e.why }}</span>
-                        {% elif e.action == '新たに5%超' %}
-                        <span class="text-muted">–</span>
-                        {% else %}
-                        <span class="text-muted" title="書類に書かれていません">不明</span>
-                        {% endif %}
-                        {% if e.price %}
-                        <div class="lvh-price">{{ '{:,.1f}'.format(e.price) }}円{% if e.place %} / {{ e.place }}{% endif %}</div>
-                        {% endif %}
-                    </td>
-                    <td class="lvh-reason" data-label="裏づけ">
-                        {% if e.why_text %}
-                        <div class="lvh-why-text">{{ e.why_text }}</div>
-                        {% endif %}
-                        {# 同じ時期の適時開示。ここに会社側の説明が載る #}
+                        <div class="lvh-why-head">
+                            {% if e.why %}
+                            <span class="lvh-why-tag">{{ e.why }}</span>
+                            {% elif e.action == '新たに5%超' %}
+                            <span class="text-muted">–</span>
+                            {% else %}
+                            <span class="lvh-unknown" title="書類の該当欄が空でした">不明</span>
+                            {% endif %}
+                            {% if e.price %}
+                            <span class="lvh-price">{{ '{:,.1f}'.format(e.price) }}円{% if e.place %} · {{ e.place }}{% endif %}</span>
+                            {% endif %}
+                            {% for tag in e.contract_tags %}
+                            <span class="lvh-contract-tag" title="{{ e.contract }}">{{ tag }}</span>
+                            {% endfor %}
+                        </div>
                         {% for d in e.disclosures %}
                         <div class="lvh-disclosure">
                             <a href="https://www2.jpx.co.jp{{ d.url }}" target="_blank" rel="noopener">{{ d.title }}</a>
                             <span class="text-muted">{{ d.date }}</span>
                         </div>
                         {% endfor %}
-                        {% if e.contract and e.contract != '該当事項なし' %}
-                        <details class="lvh-contract">
-                            <summary>担保・ロックアップの契約</summary>
-                            <div>{{ e.contract }}</div>
-                        </details>
+                        {% if e.why_note %}
+                        <div class="lvh-why-note">{{ e.why_note }}</div>
+                        {% endif %}
+                        {% if e.why_text %}
+                        <div class="lvh-why-text">{{ e.why_text }}</div>
                         {% endif %}
                     </td>
                 </tr>
@@ -111,9 +111,15 @@
             <tr><th>単価</th><td>「最近60日間の取得又は処分の状況」から。
                 <strong>いくらで売ったか</strong>と、市場内の売買か市場外（相対・売出し）かが分かります。
                 60日ぶんしか載らないので、それより前の売買には付きません。</td></tr>
-            <tr><th>裏づけ</th><td>増減の内訳の原文と、同じ時期に出た適時開示です。
-                開示には会社側の説明（なぜ売出しをするのか）が載ります。
+            <tr><th>PDFのリンク</th><td>同じ時期に出た適時開示です。
+                <strong>その会社がなぜそうしたかは、ここにしか書かれていません。</strong>
+                型（売出し・立会外分売…）までは書類から機械的に決まりますが、
+                「東証プライムの流通株式比率35%を満たすため」のような事情は本文を読むしかありません。
                 開示を集めているのは保有銘柄だけなので、それ以外の銘柄では出ません。</td></tr>
+            <tr><th>灰色の補足</th><td>上の1行はその型が投資家にとって何を意味するかで、
+                会社ごとの事情ではありません。下の薄い1行は書類の原文です。</td></tr>
+            <tr><th>黄色いタグ</th><td>担保契約等重要な契約から拾ったロックアップの期限、
+                担保に入れている株数、貸株の数です。触れると契約の全文が出ます。</td></tr>
             <tr><th>増減</th><td>同じ人の前回の株数との差です。<strong>売った・買ったの判定は
                 株数で行っています。</strong>事由は共同保有者の合計に対して書かれるため、
                 本人が1株も売っていなくても「1％以上の減少」と載ります。

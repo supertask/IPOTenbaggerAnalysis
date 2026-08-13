@@ -486,19 +486,38 @@
             margin-left: 0.25rem;
             white-space: nowrap;
         }
-        /* 売買の理由。書類の「増減の内訳」から型に落としたもの */
-        .large-holdings-table .lvh-why { white-space: nowrap; }
+        /* 売買の理由。書類の「増減の内訳」から型に落としたもの。
+           折りたたみをやめ、開閉で下の行がずれないようにした */
+        .large-holdings-table .lvh-why { min-width: 22rem; }
+        .lvh-why-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 0.4rem;
+            margin-bottom: 0.15rem;
+        }
         .lvh-why-tag {
-            font-size: 0.78rem;
+            font-size: 0.8rem;
             color: #0a3622;
             background-color: #e7f3ec;
             border-radius: 0.25rem;
-            padding: 0.05rem 0.35rem;
+            padding: 0.05rem 0.4rem;
+            white-space: nowrap;
         }
-        .lvh-price { font-size: 0.7rem; color: #6c757d; margin-top: 0.15rem; }
-        .lvh-why-text { font-size: 0.75rem; color: #495057; line-height: 1.35; }
-        .lvh-contract > summary { font-size: 0.72rem; color: #6c757d; cursor: pointer; }
-        .lvh-contract > div { font-size: 0.72rem; color: #495057; line-height: 1.4; }
+        .lvh-unknown { font-size: 0.8rem; color: #adb5bd; }
+        .lvh-price { font-size: 0.72rem; color: #6c757d; white-space: nowrap; }
+        .lvh-contract-tag {
+            font-size: 0.65rem;
+            color: #664d03;
+            background-color: #fff8e1;
+            border-radius: 0.2rem;
+            padding: 0 0.25rem;
+            white-space: nowrap;
+            cursor: help;
+        }
+        /* 型ごとの意味。会社ごとの事情ではないので、控えめに置く */
+        .lvh-why-note { font-size: 0.73rem; color: #6c757d; line-height: 1.35; }
+        .lvh-why-text { font-size: 0.7rem; color: #adb5bd; line-height: 1.35; }
 
         /* 同じ時期の適時開示。会社側の説明はここに出る */
         .lvh-disclosure { line-height: 1.35; margin-bottom: 0.15rem; }
@@ -549,8 +568,7 @@
             }
             .large-holdings-table .holder-name { font-weight: 600; }
             .large-holdings-table .lvh-reason { margin-top: 0.2rem; }
-            .large-holdings-table .lvh-why { white-space: normal; margin-top: 0.2rem; }
-            .large-holdings-table .lvh-why .lvh-price { display: inline; margin-left: 0.4rem; }
+            .large-holdings-table .lvh-why { min-width: 0; margin-top: 0.25rem; }
         }
     </style>
 </head>
