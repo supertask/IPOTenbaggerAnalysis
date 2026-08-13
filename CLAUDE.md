@@ -3,6 +3,12 @@
 セットアップ・デプロイは `README.md`、これからやることは `docs/TODO.md`。
 手順の詳細はスキルに置いてある。
 
+**`docs/TODO.md` を更新したら、同じ内容を GitHub の issue #1 にも反映する。**
+
+```bash
+gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
+```
+
 | スキル | 使うとき |
 |---|---|
 | `holding-profile` | 保有銘柄の「事業と経営陣の読み解き」を書く／直すとき |
