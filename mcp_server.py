@@ -35,6 +35,7 @@ from __future__ import annotations
 import functools
 import io
 import os
+import re
 import sys
 from contextlib import redirect_stdout
 from typing import Any, Dict, List, Optional
@@ -500,6 +501,82 @@ def tanshin_xbrl(code: str, query: str = "", date: str = "",
             "予想に幅を出す会社は「予想の上限」「予想の下限」も入る"
         ),
     }
+
+
+_TANSHIN_TEXT = os.path.join(BASE_DIR, "data", "output", "tanshin", "text")
+
+
+@server.tool(
+    description=(
+        "決算短信の添付資料の**本文**を返す。"
+        "**四半期のBS・PL・CF・セグメント情報はここにしか無い**"
+        "（有報は年1回、四半期報告書は保有銘柄でも数が少ない）。"
+        "会社が四半期ごとに書いた経営成績の説明と今後の見通しも同じ資料に入っている。"
+        "date を渡すとその日の短信、空なら最新。"
+        "grep に語を渡すとその周りだけ抜く（例: 経営成績、見通し、セグメント、"
+        "のれん、借入）。**表はタブ区切りで残してある。**"
+        "**添付HTMLを出し始めた時期は会社ごとに違う**（保有銘柄では2022年2月〜"
+        "2025年7月にばらけていて、667件中337件しか無い）。"
+        "`読める短信` にある日付だけが読める。それより古い期が要るときは"
+        "company_disclosures で「決算短信」を引いて disclosure_text にPDFのURLを渡す。"
+    )
+)
+@quiet
+def tanshin_text(code: str, date: str = "", grep: str = "",
+                 chars: int = 6000) -> Dict[str, Any]:
+    bad = _guard(code)
+    if bad:
+        return bad
+    code = str(code).strip().upper()
+
+    folder = os.path.join(_TANSHIN_TEXT, code)
+    if not os.path.isdir(folder):
+        return {"error": f"{code} の決算短信の添付資料がまだ無い。"
+                         f"collectors/tanshin_text_collector.py --codes {code} で取れる。"
+                         "ただし添付HTMLを出し始めた時期は会社ごとに違い、"
+                         "それより古い短信には元から無い。"
+                         "東証に上場していない銘柄（353A・9388）も取れない"}
+    files = sorted(os.listdir(folder))
+    if not files:
+        return {"error": f"{code} の添付資料が空"}
+
+    picked = next((f for f in reversed(files) if f.startswith(date)), None) \
+        if date else files[-1]
+    if picked is None:
+        return {"error": f"{code} の {date} の添付資料が無い",
+                "読める短信": [f[:-4] for f in reversed(files)]}
+
+    with open(os.path.join(folder, picked), encoding="utf-8") as f:
+        raw = f.read()
+    head, _, body = raw.partition("\n\n")
+    lines = head.splitlines()
+    meta = lines[0].split("\t") if lines else []
+
+    result = {
+        "コード": code,
+        "日付": meta[0] if meta else picked[:10],
+        "タイトル": meta[2] if len(meta) > 2 else "",
+        "URL": lines[1] if len(lines) > 1 else "",
+        "文字数": len(body),
+        "読める短信": [f[:-4] for f in reversed(files)],
+    }
+
+    if grep:
+        hits = []
+        for m in re.finditer(re.escape(grep), body):
+            start = max(0, m.start() - 200)
+            hits.append(body[start:m.end() + 800])
+        result["一致"] = len(hits)
+        result["抜粋"] = hits[:5]
+        result["注記"] = ("会社が書いた一次資料そのまま。表はタブ区切り"
+                          if hits else f"「{grep}」は本文に無い")
+        return result
+
+    result["本文"] = body[:chars]
+    result["注記"] = ("会社が書いた一次資料そのまま。表はタブ区切り" +
+                      ("。続きがある。grepで絞るか chars を増やす"
+                       if len(body) > chars else ""))
+    return result
 
 
 @server.tool(

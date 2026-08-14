@@ -18,6 +18,7 @@ from .config import (
 )
 from .data_service import DataService
 from .chart_service import ChartService
+from visualizer import company_links as _links
 from visualizer import db as _index_db
 from visualizer import portfolio as _portfolio
 from visualizer import price_service as _price_service
@@ -328,6 +329,7 @@ def company_view(company_code):
         'judgment': _profile.get_judgment(company_code),
         'metric_reading': _profile.get_metric_reading(company_code),
         'lockup_markers': _price_service.get_lockup_markers(company_code),
+        'external_links': _links.get_links(company_code),
     }
     
     return data, None, 200

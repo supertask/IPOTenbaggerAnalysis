@@ -15,8 +15,35 @@
             オレンジの点線はロックアップ解除の目安（上場30日後・180日後・初値1.5倍到達日）。
             日経平均は凡例をクリックすると表示します。
         </div>
+
+        {# 適時開示のラベル。チャートの旗と同じ記号で並べ、PDFへ飛べるようにする #}
+        <div id="disclosure-legend" class="mt-3" style="display: none;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                <h6 class="mb-0">この期間の適時開示</h6>
+                <input type="search" id="disclosure-filter" class="form-control form-control-sm w-auto"
+                       placeholder="タイトルで絞り込み">
+            </div>
+            <div id="disclosure-list" class="disclosure-list border rounded"></div>
+            <div id="disclosure-note" class="text-muted small mt-1"></div>
+        </div>
     </div>
 </div>
+
+<style>
+    /* 開示が多い銘柄だと縦に伸びすぎるので、枠の中でスクロールさせる */
+    .disclosure-list { max-height: 320px; overflow-y: auto; }
+    .disclosure-list .disclosure-day { display: flex; gap: .5rem; padding: .5rem .75rem; }
+    .disclosure-list .disclosure-day + .disclosure-day { border-top: 1px solid #eee; }
+    .disclosure-list .disclosure-day.is-active { background: #fff3cd; }
+    .disclosure-list .disclosure-mark {
+        flex: 0 0 2rem; height: 1.5rem; line-height: 1.5rem; text-align: center;
+        background: #e9ecef; border: 1px solid #ced4da; border-radius: .2rem;
+        font-size: .75rem; font-weight: 600; color: #495057;
+    }
+    .disclosure-list .disclosure-titles { flex: 1 1 auto; min-width: 0; }
+    .disclosure-list .disclosure-titles a { font-size: .875rem; }
+    .disclosure-list .disclosure-date { font-size: .75rem; }
+</style>
 
 <script>
 (function () {
@@ -228,6 +255,10 @@
                 layout.margin.t = 40;   // ずらしたラベルのぶん上に余白を作る
             }
 
+            // ロックアップのラベルは常に出す。開示の旗はここに足していくので、
+            // 作り直せるよう別に持っておく
+            baseAnnotations = layout.annotations.slice();
+
             // 先に表示しておく。display:none のまま描画すると幅が取れず、
             // Plotlyが既定の700pxで描いて画面からはみ出す。
             statusEl.style.display = 'none';
@@ -250,6 +281,112 @@
 
             Plotly.Plots.resize(chartEl);
             buildRangeButtons(payload, dates);
+            setupDisclosures(payload, dates);
+        }
+
+        // --- 適時開示のラベル（IRバンクと同じ見せ方）-------------------------
+        // 開示があった日に A・B・C… の旗を立て、下のリストからPDFへ飛べるようにする。
+        // **旗もリストも「いま表示している期間」に合わせて作り直す。**
+        // 全期間ぶんを出しっぱなしにすると、拡大したときに関係ない開示まで並ぶ。
+        var baseAnnotations = [];
+        var disclosure = { markers: [], priceByDate: {}, all: [] };
+
+        function setupDisclosures(payload, dates) {
+            var data = payload.disclosures || {};
+            var markers = data.markers || [];
+            if (!markers.length) return;
+
+            var p = payload.prices;
+            dates.forEach(function (d, i) {
+                var v = (p.high && p.high[i] != null) ? p.high[i] : (p.close ? p.close[i] : null);
+                if (v != null) disclosure.priceByDate[d] = v;
+            });
+            // 開示日が休場だと株価が無い。直前の営業日の値に寄せて旗を立てる
+            var known = dates.slice();
+            markers.forEach(function (m) {
+                if (disclosure.priceByDate[m.date] != null) return;
+                for (var i = known.length - 1; i >= 0; i--) {
+                    if (known[i] <= m.date && disclosure.priceByDate[known[i]] != null) {
+                        disclosure.priceByDate[m.date] = disclosure.priceByDate[known[i]];
+                        return;
+                    }
+                }
+            });
+
+            disclosure.markers = markers;
+            disclosure.note = data['打ち切り']
+                ? ('開示のあった日は ' + data['全件数'] + ' 日。'
+                   + 'チャートには新しい順に ' + markers.length + ' 件だけ立てています')
+                : '';
+
+            document.getElementById('disclosure-legend').style.display = '';
+            var filterEl = document.getElementById('disclosure-filter');
+            filterEl.addEventListener('input', function () { renderDisclosures(); });
+            renderDisclosures();
+        }
+
+        function visibleRange() {
+            var xr = chartEl.layout && chartEl.layout.xaxis && chartEl.layout.xaxis.range;
+            if (!xr) return null;
+            return [String(xr[0]).slice(0, 10), String(xr[1]).slice(0, 10)];
+        }
+
+        function renderDisclosures() {
+            if (!disclosure.markers.length) return;
+            var span = visibleRange();
+            var filterEl = document.getElementById('disclosure-filter');
+            var needle = (filterEl.value || '').trim();
+
+            var shown = disclosure.markers.filter(function (m) {
+                if (span && (m.date < span[0] || m.date > span[1])) return false;
+                if (!needle) return true;
+                return m['開示'].some(function (d) {
+                    return d['タイトル'].indexOf(needle) !== -1;
+                });
+            });
+
+            // 旗を立て直す。ロックアップのラベルは残す
+            var anns = baseAnnotations.slice();
+            shown.forEach(function (m) {
+                var y = disclosure.priceByDate[m.date];
+                if (y == null) return;
+                anns.push({
+                    x: m.date, y: y, xref: 'x', yref: 'y',
+                    text: m.label, showarrow: true,
+                    arrowhead: 0, arrowwidth: 1, arrowcolor: '#adb5bd',
+                    ax: 0, ay: -30,
+                    font: { size: 9, color: '#495057' },
+                    bgcolor: 'rgba(233,236,239,0.95)',
+                    bordercolor: '#ced4da', borderwidth: 1, borderpad: 2,
+                    hovertext: m.date + '  ' + m['開示'].map(function (d) {
+                        return d['タイトル']; }).join('｜'),
+                    captureevents: true
+                });
+            });
+            Plotly.relayout(chartEl, { annotations: anns });
+
+            var listEl = document.getElementById('disclosure-list');
+            listEl.innerHTML = shown.map(function (m) {
+                var links = m['開示'].map(function (d) {
+                    return '<div><a href="' + d.url + '" target="_blank" rel="noopener">'
+                        + escapeHtml(d['タイトル']) + '</a></div>';
+                }).join('');
+                return '<div class="disclosure-day" data-date="' + m.date + '">'
+                    + '<div class="disclosure-mark">' + m.label + '</div>'
+                    + '<div class="disclosure-titles">' + links
+                    + '<div class="text-muted disclosure-date">' + m.date + '</div></div></div>';
+            }).join('') || '<div class="p-3 text-muted small">この期間に該当する開示はありません</div>';
+
+            var noteEl = document.getElementById('disclosure-note');
+            noteEl.textContent = shown.length + ' 日ぶんを表示中。'
+                + 'タイトルをクリックすると東証の開示PDFが開きます。'
+                + (disclosure.note ? ' ' + disclosure.note : '');
+        }
+
+        function escapeHtml(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
 
         // 表示中の期間だけを見て縦軸を決める。全期間の高値に引っ張られると
@@ -327,6 +464,8 @@
                     b.classList.remove('btn-primary');
                     b.classList.add('btn-outline-secondary');
                 });
+
+                renderDisclosures();   // 見えている期間の開示だけに入れ替える
             });
 
             function apply(range, btn) {
@@ -346,6 +485,8 @@
                 Plotly.relayout(chartEl, update).then(function () {
                     rescaling = false;
                 }, function () { rescaling = false; });
+
+                setTimeout(renderDisclosures, 0);   // 横軸が確定してから作り直す
 
                 buttonsEl.querySelectorAll('button').forEach(function (b) {
                     b.classList.toggle('btn-primary', b === btn);

@@ -21,6 +21,7 @@ gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 | `company_disclosures` | 適時開示の一覧（日付・タイトル・URL） |
 | `disclosure_text` | 適時開示PDFの**本文**。grepで必要なところだけ抜ける |
 | `tanshin_xbrl` | 決算短信サマリーのXBRL。**会社自身の業績予想はここにしか無い**。予想の修正が短信ごとに追える |
+| `tanshin_text` | 決算短信の添付資料の本文。**四半期のBS・PL・CF・セグメント情報**と、四半期ごとの経営成績の説明 |
 | `company_shareholders` | 持株の推移と5%超の売買 |
 | `company_facilities` | 1拠点あたりの採算（単位は店舗/台/戸） |
 | `price_history` | 株価・公開価格・初値・現在何倍・N倍まで何年 |
@@ -49,6 +50,19 @@ iXBRLで、来期・今期の売上／営業利益／経常利益／純利益／
 `tdnet_disclosure_scraper.py` が行の2本目のリンクとして拾い、
 `data/output/tanshin/index.tsv` に貯めている。中身の取り込みは
 `collectors/tanshin_xbrl_collector.py`。
+
+同じ行の3本目のリンクが**添付資料のHTML**で、こちらには
+**四半期のBS・PL・CF・セグメント情報**と、会社が四半期ごとに書いた
+経営成績の説明が入っている（`collectors/tanshin_text_collector.py` → `tanshin_text`）。
+有報は年1回、四半期報告書は保有銘柄でも361件しか無いので、**四半期の財務三表は
+実質ここだけ**。PDFではないので表が崩れない。ただし**出し始めた時期は会社ごとに
+違い**、保有銘柄では2022年2月〜2025年7月にばらけていて667件中337件しか無い。
+それより古い期はPDFを `disclosure_text` で読む。
+
+**全銘柄には広げない。** 東証のページを1社ずつ開くので4,164社で約87時間かかる。
+EDINETの四半期・半期（99,400件・13.6GB・40〜55時間）も広げていない。
+書類が3.3倍になるとインデックスの再ビルドが45分→2.5時間になり、
+**エイリアスを1つ足すたびにそれを払う**ことになるため。
 
 **投資本の本文はこのリポジトリに置かない。** 環境変数 `BOOK_TEXTS_DIR` で
 場所を指す（既定は `../BookScraper/book_texts/stock_investment`）。
@@ -178,13 +192,32 @@ AIの解釈が入るのは `data/meta/` の `business_profile.tsv` `business_mod
 ## インデックス
 
 `python -m visualizer.build_index` で `data/output/index/visualizer.db` を作る。
-44,000件の書類を読むので**45分ほどかかる**。スキーマを変えたら
+44,695件の書類を読むので**20分ほどかかる**。スキーマを変えたら
 `visualizer/db.py` の `SCHEMA_VERSION` を上げる（上げないと古いDBを読み続ける）。
 ビルド中はvisualizerを止めておく（Windowsでは開いたままだと差し替えに失敗する）。
+**`--output` で別の場所に作れる。** 生きているDBに触らずに試せるので、
+ビルドを変えたときはこれで作って中身を突き合わせてから差し替える。
 
 **インデックスに入る指標は `METRIC_ALIASES`（両アプリのconfig）から決まる。**
 そこに無いタグは1行も入らないので、グラフを足すときは
 「エイリアスを足す → ビルドし直す」の順になる。エイリアスだけ足しても出ない。
+
+**DBはTSVの索引であって、原本ではない。** 原本は
+`data/output/edinet_db/` のTSVで、EDINETが出したCSVを1行も落とさず置いてある
+（1ファイル1,294〜1,464行）。DBはそのうち**14%**しか持たない。
+だから指標を足したくなったら、エイリアスを足して作り直せばいい。
+**「あとで使うかもしれない」を理由にDBへ行を増やさない** — 財務諸表の明細を
+丸ごと入れる案を測ったら、行が4.4倍（830万→3,690万）でDBが13GBになるのに、
+得られるのは再ビルドを省けることだけだった。
+
+**`pandas` でDataFrameを作らない。** 1ファイル1,409行のうち使うのは13%で、
+残りのためにオブジェクトを作るのが高くつく。標準の `csv` で読みながら弾き、
+指標・大株主・本文・期末日を**1回のループでまとめて拾う**（`_scan_report_rows`）。
+無作為250ファイルで前の実装と4種類すべて一致することを確かめたうえで4.3倍になった。
+**`iterrows()` は使わない**（1行ごとにSeriesを作り直すので実測18.4倍遅い）。
+**pandasの欠損の扱いに合わせる** — `read_csv` は空欄だけでなく `"NA"` や `"nan"`
+もNaNにし、NaNはSQLiteにNULLで入る。`csv` で読むと空文字になり、
+**NULLと空文字は別物**なのでDBの中身が変わる（`STR_NA_VALUES` で揃えている）。
 
 ## 動作確認
 
@@ -199,5 +232,27 @@ python scripts/verify_visualizer_deep.py    # 3アプリの主要ページとAPI
 
 ## 環境
 
-- Windows。`EDINET_API_KEY` はユーザーの環境変数に設定済み（コミットしない）
-- `.venv` はプロジェクト直下。pyenv-win の Python 3.12.3
+- Windows。`.venv` はプロジェクト直下。pyenv-win の Python 3.12.3
+
+**URLと鍵はリポジトリに書かず、環境変数から取る。** ここは公開リポジトリなので、
+書いたものはそのまま公開される。設定が無ければその機能を出さない（他人がcloneしても壊れない）。
+
+| 環境変数 | 何に使うか | 無いとどうなるか |
+|---|---|---|
+| `EDINET_API_KEY` | EDINETから書類を取る | collectorが動かない |
+| `BOOK_TEXTS_DIR` | 投資本の本文の置き場所（既定は `../BookScraper/book_texts/stock_investment`） | `search_books` がエラーと対処法を返す |
+| `PORTFOLIO_SHEET_URL` | 一覧の絞り込みの下に出す「保有割合のスプレッドシート」へのリンク | リンクを出さない |
+
+```powershell
+[Environment]::SetEnvironmentVariable("PORTFOLIO_SHEET_URL", "https://…", "User")
+```
+
+**設定したら visualizer を再起動する。** 環境変数はプロセスの起動時にしか読まれない。
+**起動しっぱなしのプロセスが残っていないかも確認する** — 多重起動すると、
+古い環境のプロセスが5000番を握ったままになり、直したはずの表示が出ない。
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+  Where-Object { $_.CommandLine -like '*visualizer.app*' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+```

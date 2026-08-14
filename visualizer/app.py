@@ -501,20 +501,37 @@ class GzipMiddleware:
         return [packed]
 
 
+def _share_globals(*apps):
+    """4つのアプリぜんぶで使えるテンプレート変数を入れる。
+
+    **保有割合のスプレッドシートのURLは環境変数から取り、リポジトリに書かない。**
+    ここは公開リポジトリなので、書くとURLがそのまま公開される
+    （投資本の置き場所を `BOOK_TEXTS_DIR` にしているのと同じ理由）。
+    設定していなければリンク自体を出さない。
+    """
+    sheet_url = os.environ.get("PORTFOLIO_SHEET_URL", "").strip()
+    if not sheet_url.startswith("http"):
+        sheet_url = ""
+    for app in apps:
+        app.jinja_env.globals["portfolio_sheet_url"] = sheet_url
+
+
 def create_app():
     """アプリケーションを作成する関数"""
     # ルートアプリケーションを作成
     root_app = create_root_app()
-    
+
     # next_tenbaggerアプリケーションを作成
     next_tenbagger_app = create_next_tenbagger_app()
-    
+
     # past_tenbaggerアプリケーションを作成
     past_tenbagger_app = create_past_tenbagger_app()
-    
+
     # x_baggerアプリケーションを作成
     x_bagger_app = create_x_bagger_app()
-    
+
+    _share_globals(root_app, next_tenbagger_app, past_tenbagger_app, x_bagger_app)
+
     # DispatcherMiddlewareを使用して、各アプリケーションをマウント
     app = DispatcherMiddleware(root_app, {
         '/next_tenbagger': next_tenbagger_app,

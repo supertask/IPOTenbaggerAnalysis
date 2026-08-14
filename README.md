@@ -27,6 +27,29 @@ pyenv global 3.12.3
 pip install -r requirements.txt
 ```
 
+Windowsでは pyenv-win を使い、`.venv` をプロジェクト直下に作ります。
+**cloneのときにファイル名で失敗することがある**ので、その場合は
+`git -c core.protectNTFS=false clone …` を使ってください。
+
+### 環境変数
+
+**URLと鍵はリポジトリに書かず、環境変数から取ります。** ここは公開リポジトリなので、
+書いたものはそのまま公開されます。設定が無ければその機能を出さないので、
+cloneしただけでも壊れません。
+
+| 環境変数 | 何に使うか | 無いとどうなるか |
+|---|---|---|
+| `EDINET_API_KEY` | EDINETから書類を取る | `collectors edinet` が動かない |
+| `BOOK_TEXTS_DIR` | 投資本の本文の置き場所（既定は `../BookScraper/book_texts/stock_investment`） | MCPの `search_books` がエラーと対処法を返す |
+| `PORTFOLIO_SHEET_URL` | 一覧の絞り込みの下に出す「保有割合のスプレッドシート」へのリンク | リンクを出さない |
+
+```powershell
+[Environment]::SetEnvironmentVariable("PORTFOLIO_SHEET_URL", "https://…", "User")
+```
+
+**設定したら visualizer を再起動してください。** 環境変数はプロセスの起動時にしか
+読まれません。
+
 ## データ収集の実行方法
 
 データ収集は以下のコマンドで実行できます：
@@ -63,43 +86,116 @@ python -m collectors combiner
 python -m collectors all
 ```
 
+### 保有銘柄だけを対象にするもの
+
+有価証券報告書・適時開示のように、**全上場企業ぶんを取ると量が跳ね上がるデータは
+保有銘柄だけ**を対象にしています（方針は `CLAUDE.md`）。対象は
+`data/output/portfolio/*.tsv` から決まります。
+
+```bash
+python collectors/tdnet_disclosure_scraper.py --portfolio   # 適時開示
+python collectors/tanshin_xbrl_collector.py                 # 決算短信のXBRL（会社の業績予想）
+python collectors/tanshin_text_collector.py                 # 決算短信の添付（四半期のBS・PL・CF）
+python collectors/interim_report_collector.py               # 四半期・半期報告書
+python collectors/large_holding_collector.py                # 大量保有報告書（--all で全銘柄）
+```
+
+## インデックスの作成
+
+**収集したあとに必ず作ります。** 画面はこのDBを読んでいます。
+
+```bash
+python -m visualizer.build_index                 # data/output/index/visualizer.db（約20分）
+python -m visualizer.build_index --output /tmp/verify.db   # 別の場所に作って試す
+```
+
+44,695件の書類を読みます。**ビルド中は visualizer を止めておいてください**
+（Windowsでは開いたままだとDBの差し替えに失敗します）。
+
+**DBはTSVの索引であって、原本ではありません。** 原本は `data/output/edinet_db/` の
+TSVで、EDINETが出したCSVを1行も落とさず置いてあります。DBはそのうち画面で使う
+14%だけを持ちます。**グラフに指標を足すときは、`METRIC_ALIASES`（両アプリのconfig）に
+タグを足してから作り直します。** エイリアスに無いタグは1行も入りません。
+
+## MCPサーバ
+
+保有銘柄の**生データ**をClaudeから直接呼べます。`.mcp.json` を置いてあるので、
+Claude Codeなら起動時に読み込まれます。ツールは14個で、有報のXBRL・本文、
+適時開示、決算短信（**会社自身の業績予想はここにしか無い**）、四半期の財務三表、
+大株主の推移、株価、投資本の原文検索などを返します。詳細は `CLAUDE.md`。
+
+```bash
+python mcp_server.py    # stdio。クライアントが起動するので手では叩かない
+```
+
 ## ローカルでの可視化
 
 可視化ツールは以下のコマンドで起動できます：
 
 ```bash
-# 直接実行
-python -m visualizer.app
-
-# または、Flask CLIを使用
-export FLASK_APP=visualizer.app
-export FLASK_ENV=development
-flask run --host=0.0.0.0 --port=8080
+python -m visualizer.app       # http://127.0.0.1:5000
 ```
 
-ブラウザで以下のURLにアクセスできます：
-- トップページ: `http://localhost:8080/`
-- 企業詳細ページ: `http://localhost:8080/<企業コード>`
+4つのアプリが1つのプロセスに載っています。
+
+| URL | 中身 |
+|---|---|
+| `http://localhost:5000/` | トップ |
+| `http://localhost:5000/next_tenbagger/` | 直近5年に上場した企業の一覧 |
+| `http://localhost:5000/next_tenbagger/<企業コード>` | 企業の詳細 |
+| `http://localhost:5000/past_tenbagger/` | 過去にテンバガーになった企業 |
+| `http://localhost:5000/x_bagger/` | 何倍株になる条件の集計 |
+
+**一覧の既定の絞り込みは「保有あり」です。** 全銘柄から見たいときは「すべて」を押します。
+
+動作確認とスクリーンショットの取得:
+
+```bash
+python scripts/verify_visualizer_deep.py    # 3アプリの主要ページとAPIを回す
+```
+
+**画面を変えたらスマホ幅（390px）でも確認してください。**
+
+### 表示が変わらないとき
+
+環境変数はプロセスの起動時にしか読まれません。**多重起動していると、古い環境の
+プロセスがポートを握ったままになります。**
+
+```powershell
+Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
+  Where-Object { $_.CommandLine -like '*visualizer.app*' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+```
 
 ## ディレクトリ構造
 
 ```
-IPODataCollectors/
-├── collectors/          # データ収集モジュール
-│   ├── __init__.py
-│   ├── __main__.py
-│   ├── ipo_kiso_details_collector.py
-│   ├── ipo_kiso_list_collector.py
+IPOTenbaggerAnalysis/
+├── collectors/              # データ収集
+│   ├── __main__.py          #   python -m collectors <name>
+│   ├── edinet_report_downloader.py
+│   ├── tdnet_disclosure_scraper.py
+│   ├── tanshin_xbrl_collector.py     # 決算短信のXBRL（会社の業績予想）
+│   ├── tanshin_text_collector.py     # 決算短信の添付（四半期の財務三表）
 │   └── ...
-├── visualizer/          # データ可視化モジュール
-│   ├── __init__.py
-│   ├── app.py
-│   ├── config.py
-│   ├── data_service.py
-│   └── chart_service.py
-├── data/               # 収集したデータの保存先
-│   └── output/
-├── requirements.txt    # 依存パッケージ
+├── visualizer/              # 可視化
+│   ├── app.py               #   4アプリを1プロセスに載せる
+│   ├── build_index.py       #   TSV → SQLite
+│   ├── db.py                #   SCHEMA_VERSION と接続
+│   ├── next_tenbagger/      #   直近5年に上場した企業
+│   ├── past_tenbagger/      #   過去にテンバガーになった企業
+│   ├── x_bagger/            #   何倍株になる条件
+│   ├── common/templates/    #   3アプリ共通のテンプレート
+│   └── *_service.py         #   拠点・持株・大量保有・株価などのサービス層
+├── data/
+│   ├── output/edinet_db/    # **原本。** EDINETのCSVをそのまま置いたTSV（25GB）
+│   ├── output/index/        # 派生物。visualizer.db（gitに入れない）
+│   ├── output/tanshin/      # 決算短信のXBRLと添付
+│   ├── output/portfolio/    # 保有銘柄（自分／テンバガーX／お気に入り）
+│   └── meta/                # AIが書いた読み解き。画面ではバッジで区別する
+├── docs/TODO.md             # これからやること（GitHubのissue #1と同じ内容）
+├── mcp_server.py            # Claudeから生データを呼ぶ
+├── CLAUDE.md                # 作業するときの前提
 └── README.md
 ```
 
@@ -107,6 +203,10 @@ IPODataCollectors/
 
 - データ収集には各種APIキーが必要な場合があります
 - データ収集には時間がかかる場合があります
+- **`data/output/large_holdings/` は再生成できません。** 大量保有報告書はEDINETに
+  5年しか残らないので、消すと二度と取れません（有報は10年）
+- **適時開示と決算短信は東証のサイトから取っています。** 東証に上場していない銘柄
+  （札証・福証の単独上場）は取れません
 
 ## Oracle Cloud Infrastructureでの環境構築
 

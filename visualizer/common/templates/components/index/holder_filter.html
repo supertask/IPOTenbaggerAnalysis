@@ -16,6 +16,16 @@
         </select>
     </div>
     <div class="filter-count text-muted small mt-2"></div>
+    {# 絞り込みの元になっているスプレッドシート。**URLは環境変数から**
+       （PORTFOLIO_SHEET_URL）。ここは公開リポジトリなので書かない #}
+    {% if portfolio_sheet_url %}
+    <div class="mt-1">
+        <a href="{{ portfolio_sheet_url }}" target="_blank" rel="noopener"
+           class="text-muted small text-decoration-none">
+            <i class="bi bi-table"></i> 保有割合のスプレッドシートを開く
+        </a>
+    </div>
+    {% endif %}
 </div>
 
 <script>

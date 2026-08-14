@@ -10,6 +10,8 @@ The visualizer reads the resulting DB read-only via `visualizer.db.get_conn()`.
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import logging
 import re
@@ -19,7 +21,7 @@ import time
 from datetime import datetime, timezone
 from importlib import import_module
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, NamedTuple, Optional
 
 import pandas as pd
 
@@ -304,6 +306,25 @@ _METRIC_ELEMENT_IDS = _collect_metric_element_ids()
 # ...Results のとき、DB経路だけ該当行がゼロになりチャートが丸ごと消える。
 _METRIC_ID_PATTERN = "|".join(sorted(re.escape(i) for i in _METRIC_ELEMENT_IDS))
 
+# **エイリアスにあるタグだけを入れる。財務諸表の明細は入れない。**
+# 売掛金・のれん・販管費の内訳といった明細を丸ごと入れる案を測ったが、
+# 行が4.4倍（830万→3,690万）・DBが13GB前後になるわりに、得られるのは
+# 「あとで指標を足すときに再ビルドが要らない」だけだった。
+# **元データはTSVに1行も落とさず残っているので、必要になったら
+# エイリアスを足して作り直せばいい。** DBは今使う指標の索引に徹する。
+
+# EDINETのXBRL TSVの列。**並び順は決まっている。**
+# そのまま financial_metrics のINSERTの順番にもなる
+_METRIC_COLUMNS = ("要素ID", "項目名", "コンテキストID", "相対年度",
+                   "連結・個別", "期間・時点", "ユニットID", "単位", "値")
+_METRIC_RE = re.compile(_METRIC_ID_PATTERN)
+
+# TSVの列は順番が決まっているので、名前で引かずに位置で取る
+_FIN_WIDTH = len(_METRIC_COLUMNS)
+_METRIC_INDEX = tuple(range(_FIN_WIDTH))
+_CONTEXT_INDEX = _METRIC_COLUMNS.index("コンテキストID")
+_VALUE_INDEX = _METRIC_COLUMNS.index("値")
+
 _BUSINESS_ELEMENT_ID = "jpcrp_cor:DescriptionOfBusinessTextBlock"
 _OFFICERS_ELEMENT_ID = "jpcrp_cor:InformationAboutOfficersTextBlock"
 _PERIOD_END_ELEMENT_ID = "jpdei_cor:CurrentPeriodEndDateDEI"
@@ -320,12 +341,6 @@ _HOLDING_ELEMENTS = {
 
 # XBRL TSVs from EDINET are UTF-16 LE with BOM; some legacy files are UTF-8.
 _FIN_ENCODINGS = ("utf-16", "utf-16-le", "utf-8-sig", "utf-8", "cp932")
-
-# Order of columns in EDINET XBRL TSVs (fixed)
-_FIN_COLUMNS = [
-    "要素ID", "項目名", "コンテキストID", "相対年度", "連結・個別",
-    "期間・時点", "ユニットID", "単位", "値",
-]
 
 _REPORT_SUBDIRS = {
     "annual_securities_reports": "annual",
@@ -361,23 +376,6 @@ def _scan_reports_dir(conn: sqlite3.Connection, root: Path, column: str) -> int:
     return count
 
 
-def _read_xbrl_tsv(path: Path) -> Optional[pd.DataFrame]:
-    """Read an EDINET XBRL TSV file, trying known encodings."""
-    for enc in _FIN_ENCODINGS:
-        try:
-            df = pd.read_csv(path, sep="\t", encoding=enc, dtype=str, on_bad_lines="skip")
-            if len(df.columns) >= len(_FIN_COLUMNS):
-                df.columns = _FIN_COLUMNS + list(df.columns[len(_FIN_COLUMNS):])
-                return df
-            df = df.reindex(columns=_FIN_COLUMNS)
-            return df
-        except (UnicodeError, UnicodeDecodeError):
-            continue
-        except Exception:
-            continue
-    return None
-
-
 def _extract_report_date(file_path: Path) -> str:
     m = _DATE_RE.search(file_path.name)
     return m.group(1) if m else "0000-00-00"
@@ -403,36 +401,85 @@ def _iter_report_files() -> Iterable[tuple]:
                     yield code, report_type, _extract_report_date(tsv), tsv
 
 
-def _period_end(df) -> Optional[str]:
-    """その報告書が「いつ時点」のものかを返す。取れなければ None"""
-    hit = df[df["要素ID"] == _PERIOD_END_ELEMENT_ID]
-    if hit.empty:
-        return None
-    value = hit.iloc[0].get("値")
-    if not isinstance(value, str) or not _DATE_RE.match(value.strip()):
-        return None
-    return value.strip()
+class _Scanned(NamedTuple):
+    """1つの報告書から拾ったもの。DataFrameは作らない"""
+    metrics: list      # financial_metrics に入れる列だけのタプル
+    holdings: list     # (要素ID, コンテキストID, 値)
+    textblocks: dict   # 要素ID → 値（事業の内容・役員の状況）
+    period_end: Optional[str]
 
 
-def _extract_holdings(df, code: str, report_type: str, report_date: str,
+# pandas が欠損とみなす文字列。**csvで読むとこれが素通りしてしまう。**
+# `read_csv` は空欄だけでなく "NA" や "nan" もNaNにしていて、NaNはSQLiteに
+# NULLで入る。ここを揃えないとDBの中身が変わる（NULL と 空文字 は別物）
+try:
+    from pandas._libs.parsers import STR_NA_VALUES as _NA_STRINGS
+except ImportError:  # pandas の内部なので、無ければ既定の一覧で代用する
+    _NA_STRINGS = {"", "#N/A", "#N/A N/A", "#NA", "-1.#IND", "-1.#QNAN",
+                   "-NaN", "-nan", "1.#IND", "1.#QNAN", "<NA>", "N/A", "NA",
+                   "NULL", "NaN", "None", "n/a", "nan", "null"}
+
+
+def _scan_report_rows(path: Path) -> Optional[_Scanned]:
+    """XBRLのTSVを1回だけ読んで、要る行だけ拾う。
+
+    **pandasでDataFrameを作らない。** 1ファイル1,409行のうち使うのは13%ほどで、
+    残りのためにオブジェクトを作るのが高くついていた（実測でパースだけ15分）。
+    標準の csv で読みながら弾くと同じ結果が半分の時間で出る。
+    """
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return None
+    text = None
+    for enc in _FIN_ENCODINGS:
+        try:
+            text = raw.decode(enc)
+            break
+        except (UnicodeError, UnicodeDecodeError):
+            continue
+    if text is None:
+        return None
+
+    metrics, holdings, textblocks = [], [], {}
+    period_end = None
+    reader = csv.reader(io.StringIO(text, newline=""), delimiter="\t")
+    next(reader, None)  # 見出し
+    for row in reader:
+        if len(row) < _FIN_WIDTH:
+            continue
+        element_id = row[0]
+        if _METRIC_RE.search(element_id):
+            metrics.append(tuple(
+                None if row[i] in _NA_STRINGS else row[i] for i in _METRIC_INDEX))
+        if element_id in _HOLDING_ELEMENTS:
+            holdings.append((element_id, row[_CONTEXT_INDEX], row[_VALUE_INDEX]))
+        elif element_id in (_BUSINESS_ELEMENT_ID, _OFFICERS_ELEMENT_ID):
+            textblocks.setdefault(element_id, row[_VALUE_INDEX])
+        elif element_id == _PERIOD_END_ELEMENT_ID and period_end is None:
+            value = row[_VALUE_INDEX].strip()
+            if _DATE_RE.match(value):
+                period_end = value
+    return _Scanned(metrics, holdings, textblocks, period_end)
+
+
+def _extract_holdings(rows, code: str, report_type: str, report_date: str,
                       period_end: Optional[str]) -> list:
     """大株主・役員の持株を (会社, 報告日, 期末, 報告書種別, 種別, 氏名, 株数, 比率) で。
 
     XBRLでは氏名・株数・比率がそれぞれ別行になっていて、同じコンテキストIDを
-    持つものが1人分にあたる。
+    持つものが1人分にあたる。`rows` は (要素ID, コンテキストID, 値)。
     """
-    hit = df[df["要素ID"].isin(_HOLDING_ELEMENTS)]
-    if hit.empty:
+    if not rows:
         return []
 
     people: dict = {}
-    for _, row in hit.iterrows():
-        holder_type, field = _HOLDING_ELEMENTS[row["要素ID"]]
-        context = row.get("コンテキストID")
+    for element_id, context, value in rows:
+        holder_type, field = _HOLDING_ELEMENTS[element_id]
         if not context:
             continue
         entry = people.setdefault((holder_type, context), {})
-        entry[field] = row.get("値")
+        entry[field] = value
 
     def number(value):
         if value is None:
@@ -519,8 +566,8 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
             failed += 1
             continue
 
-        df = _read_xbrl_tsv(path)
-        if df is None:
+        scanned = _scan_report_rows(path)
+        if scanned is None:
             failed += 1
             continue
 
@@ -531,10 +578,7 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
             (_BUSINESS_ELEMENT_ID, business_tracker),
             (_OFFICERS_ELEMENT_ID, officers_tracker),
         )):
-            hit = df[df["要素ID"] == elem_id]
-            if hit.empty:
-                continue
-            value = hit.iloc[0].get("値")
+            value = scanned.textblocks.get(elem_id)
             if not isinstance(value, str) or not value.strip():
                 continue
             _update_textblock_tracker(tracker, code, value, report_type, report_date)
@@ -545,25 +589,11 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
         # 要素が無ければ _extract_holdings が空を返して素通りする
         if report_type in ("annual", "quarterly"):
             holding_rows.extend(_extract_holdings(
-                df, code, report_type, report_date, _period_end(df)))
+                scanned.holdings, code, report_type, report_date,
+                scanned.period_end))
 
-        # Financial metrics: whitelist filter（抽出側と同じ部分一致）
-        filtered = df[df["要素ID"].str.contains(_METRIC_ID_PATTERN, na=False, regex=True)]
-        if filtered.empty:
-            continue
-        for _, row in filtered.iterrows():
-            metric_buffer.append((
-                code, report_type, report_date,
-                row.get("要素ID"),
-                row.get("項目名"),
-                row.get("コンテキストID"),
-                row.get("相対年度"),
-                row.get("連結・個別"),
-                row.get("期間・時点"),
-                row.get("ユニットID"),
-                row.get("単位"),
-                row.get("値"),
-            ))
+        for values in scanned.metrics:
+            metric_buffer.append((code, report_type, report_date, *values))
             if len(metric_buffer) >= BATCH:
                 flush_metrics()
 
@@ -741,6 +771,7 @@ def build(target: Path) -> None:
             (datetime.now(timezone.utc).isoformat(timespec="seconds"),),
         )
         conn.commit()
+
     finally:
         conn.close()
 
