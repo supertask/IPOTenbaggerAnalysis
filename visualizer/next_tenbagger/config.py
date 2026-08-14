@@ -4,7 +4,9 @@ from collections import OrderedDict
 
 # ディレクトリパス設定
 BASE_DIR = Path(__file__).parent.parent.parent
-print(f"BASE_DIR: {BASE_DIR}")
+# 以前ここで BASE_DIR を print していたが、**標準出力を汚す**ので消した。
+# MCPサーバ（mcp_server.py）はstdioでJSONRPCをやりとりするため、
+# import しただけで1行出るとプロトコルが壊れる
 IPO_REPORTS_NEW_DIR = BASE_DIR / 'data/output/edinet_db/ipo_reports_new'
 COMPARISON_DIR = BASE_DIR / 'data/output/comparison'
 ALL_COMPANIES_PATH = BASE_DIR / 'data/output/combiner/all_companies.tsv'

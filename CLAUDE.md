@@ -9,6 +9,20 @@
 gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 ```
 
+保有銘柄の判断材料は **MCPサーバ（`mcp_server.py`）からも呼べる。**
+`.mcp.json` を置いてあるので、Claude Codeなら起動時に読み込まれる。
+ツールは6つ（`list_holdings` / `company_profile` / `company_metrics` /
+`company_facilities` / `company_shareholders` / `company_disclosures`）。
+
+**MCPはインデックスを直接引かず、visualizer のサービス層だけを呼ぶ。**
+同じインデックスを読む場所が増えるとタグの持ち方がずれる（2026-08-14に
+`METRIC_ALIASES`・`metric_diagnose`・`facility_service` の3箇所がずれていて、
+IFRSの会社で営業利益率0.07%という数字が出ていた）。画面と同じ関数を通す。
+
+**stdioでJSONRPCをやりとりするので、標準出力に1行でも print すると壊れる。**
+ツールは `@quiet` で標準出力を捨てている（捨てた内容は標準エラーへ）。
+`config.py` にあったデバッグ用の `print(f"BASE_DIR: ...")` はこれで消した。
+
 | スキル | 使うとき | 画面のどこ |
 |---|---|---|
 | `holding-review` | **画面に出るAIの解釈を書く／直すとき**（四半期ごと） | 事業の内容 / 役員の状況 / 財務指標の比較 / 総括カード / 「5%超の売買」タブの理由の下 |
