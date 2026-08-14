@@ -13,12 +13,15 @@ from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 
 class TDnetDisclosureScraper:
-    def __init__(self, years=None, codes=None, headless=True):
+    def __init__(self, years=None, codes=None, headless=True, refresh=False):
         self.ipo_years = sorted(years or self.get_ipo_years())
         self.only_codes = set(codes or [])
         self.headless = headless
+        self.refresh = refresh
         self.ipo_tsv_path = f"data/output/kiso_urls/companies_%s.tsv"
         self.output_dir = "data/output/tdnet"
+        self.tanshin_dir = "data/output/tanshin"
+        self.tanshin_index_path = os.path.join(self.tanshin_dir, "index.tsv")
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
         self.playwright = None
@@ -188,7 +191,17 @@ class TDnetDisclosureScraper:
             date = self.convert_date_format_revised(raw_date)
             url = link_element.get_attribute("href").strip()
 
-            record = [date, '00:00', company_code, title, url]
+            # 決算短信の行には、PDFのほかに文字の無いリンクが2本並んでいる。
+            # 片方がサマリーのiXBRLで、会社自身の来期予想がタグ付きで入っている。
+            # PDFのURLからは導けないので、ここで拾わないと二度と辿れない。
+            ixbrl_url = ""
+            for anchor in link_elements[1:]:
+                href = (anchor.get_attribute("href") or "").strip()
+                if href.endswith("-ixbrl.htm"):
+                    ixbrl_url = href
+                    break
+
+            record = [date, '00:00', company_code, title, url, ixbrl_url]
             table_rows.append(record)
 
         return table_rows
@@ -243,7 +256,7 @@ class TDnetDisclosureScraper:
                 code, name = company
 
                 # 既に同じ企業がスクレイピング済みの場合はスキップ
-                if code in existing_companies:
+                if code in existing_companies and not self.refresh:
                     print(f"Skipping {code} ({name}) - already scraped")
                     continue
 
@@ -255,7 +268,7 @@ class TDnetDisclosureScraper:
             existing = self.get_existing_companies("other")
             print(f"年の一覧に無い銘柄: {len(leftover)}社 → disclosures_other.tsv")
             for index, code in enumerate(sorted(leftover)):
-                if code in existing:
+                if code in existing and not self.refresh:
                     print(f"Skipping {code} - already scraped")
                     continue
                 self.scrape_disclosure(index, code, code, "other")
@@ -310,10 +323,42 @@ class TDnetDisclosureScraper:
         if new_disclosures:
             with open(self.disclosure_tsv_path, "a", encoding='utf-8') as file:
                 for disclosure in new_disclosures:
-                    file.write("\t".join(disclosure) + "\n")
+                    file.write("\t".join(disclosure[:6]) + "\n")
             print(f"Saved {len(new_disclosures)} new disclosures (skipped {len(disclosures) - len(new_disclosures)} duplicates)")
         else:
             print("No new disclosures to save")
+
+        # iXBRLのURLは別ファイルに寄せる。disclosures_*.tsv は44,000行あって
+        # 読む場所も多いので、保有銘柄だけの話で列を増やしたくない
+        self.save_tanshin_index(disclosures)
+
+    def save_tanshin_index(self, disclosures):
+        """決算短信サマリーのiXBRLのURLを data/output/tanshin/index.tsv に貯める"""
+        rows = [d for d in disclosures if len(d) >= 7 and d[6]]
+        if not rows:
+            return
+
+        os.makedirs(self.tanshin_dir, exist_ok=True)
+        existing = set()
+        if os.path.exists(self.tanshin_index_path):
+            with open(self.tanshin_index_path, encoding="utf-8", newline="") as f:
+                for parts in csv.reader(f, delimiter="\t"):
+                    if len(parts) >= 4:
+                        existing.add(f"{parts[0]}|{parts[1]}|{parts[3]}")
+
+        new_rows = [d for d in rows if f"{d[0]}|{d[3]}|{d[6]}" not in existing]
+        if not new_rows:
+            return
+
+        write_header = not os.path.exists(self.tanshin_index_path)
+        with open(self.tanshin_index_path, "a", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f, delimiter="\t", lineterminator="\n")
+            if write_header:
+                writer.writerow(["日付", "コード", "企業名", "iXBRLのURL",
+                                 "タイトル", "PDFのURL"])
+            for d in new_rows:
+                writer.writerow([d[0], d[3], d[2], d[6], d[4], d[5]])
+        print(f"Saved {len(new_rows)} tanshin iXBRL links")
 
     def save_last_index(self, index):
         os.makedirs("etc/tmp", exist_ok=True)
@@ -358,9 +403,13 @@ if __name__ == "__main__":
                         help="保有銘柄だけを対象にする")
     parser.add_argument("--show-browser", action="store_true",
                         help="ブラウザを表示する（既定は非表示）")
+    parser.add_argument("--refresh", action="store_true",
+                        help="取得済みの銘柄も見に行く。開示は重複を弾くので増えないが、"
+                             "決算短信のiXBRLのURLは新しく貯まる")
     args = parser.parse_args()
 
     codes = args.codes or (_portfolio_codes() if args.portfolio else None)
     scraper = TDnetDisclosureScraper(years=args.years, codes=codes,
-                                     headless=not args.show_browser)
+                                     headless=not args.show_browser,
+                                     refresh=args.refresh)
     scraper.scrape_and_save()

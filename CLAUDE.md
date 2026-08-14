@@ -20,6 +20,7 @@ gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 | `annual_report_text` | 有報の本文（事業の内容・役員・MD&A・リスク・研究開発・設備・セグメント・経営方針） |
 | `company_disclosures` | 適時開示の一覧（日付・タイトル・URL） |
 | `disclosure_text` | 適時開示PDFの**本文**。grepで必要なところだけ抜ける |
+| `tanshin_xbrl` | 決算短信サマリーのXBRL。**会社自身の業績予想はここにしか無い**。予想の修正が短信ごとに追える |
 | `company_shareholders` | 持株の推移と5%超の売買 |
 | `company_facilities` | 1拠点あたりの採算（単位は店舗/台/戸） |
 | `price_history` | 株価・公開価格・初値・現在何倍・N倍まで何年 |
@@ -29,6 +30,15 @@ gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 
 `annual_report_xbrl` と `annual_report_text` は `year` で過去の年度も読める
 （6099は有報を12年ぶん、3496は8年ぶん持っている）。
+
+**有報のXBRLには実績しか無い。会社の予想は決算短信にしか無い。**
+`tanshin_xbrl` が見ているのは東証の適時開示ページに並んでいるサマリーの
+iXBRLで、来期・今期の売上／営業利益／経常利益／純利益／EPS／配当が
+タグ付きで入っている。短信ごとに並べれば、いつ何を上方（下方）修正したかが出る。
+**PDFのURLからは導けない**（拡張子を .zip に変えても404）ので、
+`tdnet_disclosure_scraper.py` が行の2本目のリンクとして拾い、
+`data/output/tanshin/index.tsv` に貯めている。中身の取り込みは
+`collectors/tanshin_xbrl_collector.py`。
 
 **投資本の本文はこのリポジトリに置かない。** 環境変数 `BOOK_TEXTS_DIR` で
 場所を指す（既定は `../BookScraper/book_texts/stock_investment`）。
@@ -69,6 +79,12 @@ IFRSの会社で営業利益率0.07%という数字が出ていた）。画面�
 `.claude/skills/holding-review/references/investor-books.md`。
 **本文は非公開の別リポジトリ `../BookScraper` にあり、ここには置かない**
 （このリポジトリは公開なので、持ってくると本文がそのまま公開される）。
+
+同じ置き場所にエミン・ユルマズの10倍株の4条件があるが、**これだけは本ではなく
+媒体記事から写したもの**で、確からしさが一段違う（ファイルの冒頭に出典と
+その旨を書いてある）。プレジデントオンラインと楽待新聞という独立した2媒体で
+同じ4条件・同じ数値が確認できたものだけを残し、出所がnote記事しか無かった
+「6条件」（PSR1倍未満・ネットキャッシュ>時価総額など）は落とした。
 
 ## いちばん大事な方針: 重いデータは保有銘柄だけ
 

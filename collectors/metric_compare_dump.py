@@ -96,14 +96,19 @@ def _cagr(series: dict):
     return ((last / first) ** (1 / span) - 1) * 100
 
 
-def dump(code: str, brief: bool, diagnose: bool = False) -> None:
+def collect(code: str, brief: bool = True, diagnose: bool = False) -> dict:
+    """比較の中身をそのまま辞書で返す。`dump()` はこれを整形しているだけ。
+
+    画面もCLIもMCPも同じ計算を通すために、数字を作るところと見せ方を分けてある。
+    **`値` は生の値、`表示` は単位を掛けたあとの文字列。** 単位は指標ごとに1つに
+    揃えてあり（`_scale`）、揃えないと競合と見比べられない。
+    """
     from visualizer.next_tenbagger.data_service import DataService
 
     service = DataService()
     data, error = service.get_company_data(code)
     if error or data is None:
-        print(f"■ {code}  データが取れません: {error}")
-        return
+        return {"コード": code, "error": f"データが取れません: {error}"}
     metrics = service.extract_metrics(data)
     competitors = service.get_competitors(code) or []
 
@@ -114,10 +119,11 @@ def dump(code: str, brief: bool, diagnose: bool = False) -> None:
             comp_metrics[c["code"]] = (c.get("name") or c["code"],
                                        service.extract_metrics(comp_data))
 
-    print(f"\n{'=' * 74}")
-    print(f"■ {code}   競合 {len(comp_metrics)}社: "
-          f"{', '.join(n for n, _ in comp_metrics.values()) or '（登録なし）'}")
-    print("=" * 74)
+    result = {
+        "コード": code,
+        "競合": [{"コード": c, "会社名": n} for c, (n, _) in comp_metrics.items()],
+        "指標": [],
+    }
 
     names = [n for n in ORDER if n in metrics]
     names += [n for n in metrics if n not in names]
@@ -143,7 +149,7 @@ def dump(code: str, brief: bool, diagnose: bool = False) -> None:
         scale, unit = _scale(kind, list(series.values())
                              + [v for _, v, _ in peers])
 
-        rank = ""
+        rank = None
         compared = [latest] + [v for _, v, _ in peers if v is not None]
         lower_better = any(name.startswith(w) for w in LOWER_IS_BETTER)
         if (peers and not any(name.startswith(w) for w in NO_RANK)
@@ -152,22 +158,70 @@ def dump(code: str, brief: bool, diagnose: bool = False) -> None:
             # 混ざると負の倍率になり、順位に意味がなくなるので出さない
             better = (lambda v: v < latest) if lower_better else (lambda v: v > latest)
             above = sum(1 for _, v, _ in peers if v is not None and better(v))
-            rank = f"  自社は{above + 1}位/{len(peers) + 1}社"
+            rank = f"{above + 1}位/{len(peers) + 1}社"
 
-        head = f"{name}  直近{years[-1]} {_fmt(latest, scale, unit)}"
-        if cagr is not None:
-            head += f"  年平均{cagr:+.1f}%"
-        print(f"\n{head}{rank}")
+        row = {
+            "指標": name,
+            "直近の年": years[-1],
+            "値": latest,
+            "表示": _fmt(latest, scale, unit),
+            "単位": unit,
+            "年平均成長率": round(cagr, 1) if cagr is not None else None,
+            "自社の順位": rank,
+            "競合": [{"会社名": pn, "値": pv, "表示": _fmt(pv, scale, unit),
+                      "年平均成長率": round(pc, 1) if pc is not None else None}
+                     for pn, pv, pc in peers],
+        }
         if not brief:
-            print("   自社 " + "  ".join(f"{y}:{_fmt(series[y], scale, unit)}"
-                                        for y in years))
-        for peer_name, peer_latest, peer_cagr in peers:
-            growth = f" 年平均{peer_cagr:+.1f}%" if peer_cagr is not None else ""
-            print(f"   {peer_name[:16]:18} "
-                  f"{_fmt(peer_latest, scale, unit)}{growth}")
+            row["推移"] = {y: series[y] for y in years}
+            row["推移の表示"] = {y: _fmt(series[y], scale, unit) for y in years}
+        result["指標"].append(row)
 
     if diagnose:
-        show_diagnosis(code, metrics)
+        from collectors import metric_diagnose
+
+        d = metric_diagnose.diagnose(code, metrics)
+        result["上場情報"] = d.get("info") or {}
+        result["所見"] = d.get("findings") or []
+        result["同じ業種の中央値"] = {
+            "業種": d.get("sector_name", ""), "行": d.get("sector") or []}
+        result["10倍株との比較"] = {
+            "区分": d.get("tenbagger_label", ""),
+            "社数": d.get("tenbagger_counts", {}),
+            "行": d.get("tenbagger") or []}
+        result["データの欠け"] = d.get("gaps") or []
+
+    return result
+
+
+def dump(code: str, brief: bool, diagnose: bool = False) -> None:
+    got = collect(code, brief=brief, diagnose=diagnose)
+    if got.get("error"):
+        print(f"■ {code}  {got['error']}")
+        return
+
+    peers_all = [c["会社名"] for c in got["競合"]]
+    print(f"\n{'=' * 74}")
+    print(f"■ {code}   競合 {len(peers_all)}社: "
+          f"{', '.join(peers_all) or '（登録なし）'}")
+    print("=" * 74)
+
+    for row in got["指標"]:
+        head = f"{row['指標']}  直近{row['直近の年']} {row['表示']}"
+        if row["年平均成長率"] is not None:
+            head += f"  年平均{row['年平均成長率']:+.1f}%"
+        rank = f"  自社は{row['自社の順位']}" if row["自社の順位"] else ""
+        print(f"\n{head}{rank}")
+        if not brief and row.get("推移の表示"):
+            print("   自社 " + "  ".join(f"{y}:{v}"
+                                        for y, v in row["推移の表示"].items()))
+        for peer in row["競合"]:
+            growth = (f" 年平均{peer['年平均成長率']:+.1f}%"
+                      if peer["年平均成長率"] is not None else "")
+            print(f"   {peer['会社名'][:16]:18} {peer['表示']}{growth}")
+
+    if diagnose:
+        show_diagnosis(got)
 
 
 def main() -> int:
@@ -201,10 +255,18 @@ def _fmt_bench(name: str, value, median) -> str:
     return f"自社 {_one(name, value):>12}   中央値 {_one(name, median):>12}"
 
 
-def show_diagnosis(code: str, metrics: dict) -> None:
-    from collectors import metric_diagnose
-
-    d = metric_diagnose.diagnose(code, metrics)
+def show_diagnosis(got: dict) -> None:
+    """`collect(diagnose=True)` の結果を整形する"""
+    d = {
+        "info": got.get("上場情報") or {},
+        "findings": got.get("所見") or [],
+        "sector": (got.get("同じ業種の中央値") or {}).get("行") or [],
+        "sector_name": (got.get("同じ業種の中央値") or {}).get("業種", ""),
+        "tenbagger": (got.get("10倍株との比較") or {}).get("行") or [],
+        "tenbagger_label": (got.get("10倍株との比較") or {}).get("区分", ""),
+        "tenbagger_counts": (got.get("10倍株との比較") or {}).get("社数", {}),
+        "gaps": got.get("データの欠け") or [],
+    }
     info = d["info"]
     if info:
         print(f"\n  上場 {info.get('ipo_date') or '不明'}"

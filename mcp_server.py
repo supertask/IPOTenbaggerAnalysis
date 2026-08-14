@@ -201,21 +201,16 @@ def company_metrics(code: str, brief: bool = True) -> Dict[str, Any]:
 
     from collectors import metric_compare_dump
 
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        metric_compare_dump.dump(code, brief=brief, diagnose=True)
-    text = buf.getvalue().strip()
-    if not text:
-        return {"error": f"{code} の財務データが取れなかった"}
-    return {
-        "コード": code,
-        "本文": text,
-        "注記": (
-            "画面の「財務指標の比較」と同じ計算。"
-            "PER・利益の質・ネットキャッシュ比率・希薄化率は、実測で10倍株を"
-            "見分ける力が無いと分かっているので、そこで劣っていても弱点ではない"
-        ),
-    }
+    got = metric_compare_dump.collect(code, brief=brief, diagnose=True)
+    if got.get("error"):
+        return {"error": f"{code}: {got['error']}"}
+    got["注記"] = (
+        "画面の「財務指標の比較」と同じ計算。"
+        "`値` は生の値、`表示` は指標ごとに揃えた単位を掛けたあとの文字列。"
+        "PER・利益の質・ネットキャッシュ比率・希薄化率は、実測で10倍株を"
+        "見分ける力が無いと分かっているので、そこで劣っていても弱点ではない"
+    )
+    return got
 
 
 @server.tool(
@@ -377,6 +372,104 @@ def company_disclosures(code: str, match: str = "", limit: int = 40,
     out = [{"日付": r[0], "タイトル": r[4], "URL": r[5]} for r in rows[:limit]]
     return {"コード": code, "件数": len(out), "全件数": len(rows), "開示": out,
             "注記": "適時開示を集めているのは保有銘柄だけ。本文は disclosure_text で読む"}
+
+
+_TANSHIN_FACTS = os.path.join(BASE_DIR, "data", "output", "tanshin", "facts")
+# 予想の修正を追うときに見る項目。会社が出しているのはこの粒度
+_FORECAST_TAGS = ("NetSales", "OperatingIncome", "OrdinaryIncome",
+                  "ProfitAttributableToOwnersOfParent", "NetIncome",
+                  "NetIncomePerShare", "DividendPerShare")
+
+
+def _tanshin_rows(code: str) -> Optional[List[Dict[str, str]]]:
+    import csv
+
+    path = os.path.join(_TANSHIN_FACTS, f"{code}.tsv")
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8", newline="") as f:
+        return list(csv.DictReader(f, delimiter="\t"))
+
+
+@server.tool(
+    description=(
+        "決算短信サマリーのXBRLを返す。**会社自身の業績予想はここにしか無い。**"
+        "有報のXBRL（annual_report_xbrl）は実績だけなので、"
+        "「会社が今期・来期をどう見ているか」「予想を何回、いつ、どれだけ"
+        "上方／下方修正したか」を知りたいときはこちら。"
+        "既定では予想の推移（売上・営業利益・経常利益・純利益・EPS・配当を"
+        "短信ごとに並べたもの）と、最新の短信の全項目を返す。"
+        "query に語を渡すと項目名かタグで絞る（例: 配当、自己資本比率、"
+        "CashFlows）。date を渡すとその日の短信だけ。"
+        "**四半期の実績も入っている**（有報は年1回なので期中はこちらが唯一の数字）。"
+    )
+)
+@quiet
+def tanshin_xbrl(code: str, query: str = "", date: str = "",
+                 limit: int = 120) -> Dict[str, Any]:
+    bad = _guard(code)
+    if bad:
+        return bad
+    code = str(code).strip().upper()
+
+    rows = _tanshin_rows(code)
+    if rows is None:
+        return {"error": f"{code} の決算短信XBRLがまだ無い。"
+                         f"collectors/tdnet_disclosure_scraper.py --codes {code} "
+                         f"--refresh のあと collectors/tanshin_xbrl_collector.py "
+                         f"--codes {code} で取れる。"
+                         "東証に上場していない銘柄（353A・9388）は取れない"}
+    if not rows:
+        return {"error": f"{code} の決算短信XBRLが空"}
+
+    dates = sorted({r["日付"] for r in rows})
+
+    # 予想の推移。同じ項目を短信ごとに並べると、いつ何を見直したかが出る
+    trend: Dict[str, List[Dict[str, Any]]] = {}
+    for r in rows:
+        if r["タグ"] not in _FORECAST_TAGS or r["区分"] != "予想" or not r["値"]:
+            continue
+        if r["四半期"] and r["四半期"] != "合計":
+            continue  # 配当は四半期ごとに出るので、年間の合計だけ見る
+        key = f"{r['期']} {r['項目名'] or r['タグ']}"
+        trend.setdefault(key, []).append(
+            {"短信の日付": r["日付"], "値": float(r["値"]),
+             "連単": r["連単"], "表示": r["表示"]})
+    for key in trend:
+        trend[key].sort(key=lambda x: x["短信の日付"])
+
+    target = date or dates[-1]
+    picked = [r for r in rows if r["日付"] == target]
+    if query:
+        q = query.lower()
+        picked = [r for r in rows
+                  if q in (r["項目名"] or "").lower() or q in r["タグ"].lower()]
+        picked.sort(key=lambda r: (r["日付"], r["タグ"]))
+
+    out = [{"日付": r["日付"], "書類": r["書類"], "期": r["期"], "連単": r["連単"],
+            "区分": r["区分"], "四半期": r["四半期"],
+            "項目名": r["項目名"] or r["タグ"], "タグ": r["タグ"],
+            "値": (float(r["値"]) if r["値"] else None),
+            "単位": r["単位"], "表示": r["表示"]}
+           for r in picked[:limit]]
+
+    return {
+        "コード": code,
+        "短信の件数": len(dates),
+        "短信の日付": dates,
+        "予想の推移": trend,
+        "対象": ("query一致" if query else target),
+        "件数": len(out),
+        "全件数": len(picked),
+        "項目": out,
+        "注記": (
+            "東証の適時開示ページから取ったサマリーのiXBRL。会社が出した一次資料。"
+            "`値` は scale を掛けたあとの生の値で、円・株・比率（0.168は16.8%）。"
+            "`単位` の Pure は比率、JPY は円、JPYPerShares は1株当たり。"
+            "予想は ForecastMember、実績は ResultMember。"
+            "予想に幅を出す会社は「予想の上限」「予想の下限」も入る"
+        ),
+    }
 
 
 @server.tool(
