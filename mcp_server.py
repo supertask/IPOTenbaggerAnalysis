@@ -619,6 +619,21 @@ def _book_dir() -> str:
                      "book_texts", "stock_investment"))
 
 
+# 検索の対象にしない本。置き場所には入っているが、この用途では見ない。
+# エミン・ユルマズの『世界インフレ時代の経済指標』は経済指標（CPI・雇用統計など）
+# の本で、**個別株の選び方は書かれていない。** エミンの10倍株の条件は
+# 本ではなくネット記事が出所なので、そちらを別ファイルで置いている
+_SKIP_BOOKS = ("世界インフレ時代の経済指標",)
+
+
+def _book_files() -> List[str]:
+    import glob as _glob
+    directory = _book_dir()
+    return [p for p in sorted(_glob.glob(os.path.join(directory, "*")))
+            if os.path.isfile(p)
+            and not any(s in os.path.basename(p) for s in _SKIP_BOOKS)]
+
+
 @server.tool(
     description=(
         "投資本の原文を検索して、その語の**周辺だけ**返す。"
@@ -650,9 +665,7 @@ def search_books(query: str, limit: int = 8, around: int = 400) -> Dict[str, Any
         return {"error": "検索語が空です"}
 
     hits = []
-    for path in sorted(_glob.glob(os.path.join(directory, "*"))):
-        if not os.path.isfile(path):
-            continue
+    for path in _book_files():
         try:
             with open(path, encoding="utf-8", errors="replace") as f:
                 text = f.read()
@@ -670,7 +683,7 @@ def search_books(query: str, limit: int = 8, around: int = 400) -> Dict[str, Any
     if not hits:
         return {"検索語": query, "件数": 0,
                 "本": [os.path.splitext(os.path.basename(p))[0]
-                       for p in sorted(_glob.glob(os.path.join(directory, "*")))],
+                       for p in _book_files()],
                 "注記": f"「{query}」はどの本にも出てこない"}
 
     # 本ごとに散らして返す。1冊に偏らせない
@@ -707,15 +720,14 @@ def list_books() -> Dict[str, Any]:
             "対処": "環境変数 BOOK_TEXTS_DIR にディレクトリを指定する",
         }
     books = []
-    for path in sorted(_glob.glob(os.path.join(directory, "*"))):
-        if os.path.isfile(path):
-            try:
-                with open(path, encoding="utf-8", errors="replace") as f:
-                    n = len(f.read())
-            except OSError:
-                n = None
-            books.append({"書名": os.path.splitext(os.path.basename(path))[0],
-                          "文字数": n})
+    for path in _book_files():
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                n = len(f.read())
+        except OSError:
+            n = None
+        books.append({"書名": os.path.splitext(os.path.basename(path))[0],
+                      "文字数": n})
     return {"置き場所": directory, "冊数": len(books), "本": books}
 
 
