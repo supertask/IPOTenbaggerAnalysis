@@ -32,23 +32,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from collectors import disclosure_pdf  # noqa: E402
 from collectors.holding_profile_dump import portfolio_codes  # noqa: E402
+from collectors.llm_client import BACKENDS, LLM  # noqa: E402
 
 TSV = os.path.join("data", "meta", "disclosure_reading.tsv")
 COLUMNS = ["URL", "銘柄コード", "開示日", "タイトル", "要約", "株主にとって", "作成日"]
 
-API = "https://openrouter.ai/api/v1/chat/completions"
-MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
-
 # 本文をどこまで渡すか。目的・理由・数字は前半に集まっているので、
 # 全文を渡してもトークンが増えるだけで精度は上がらない
 BODY_CHARS = 6000
-
-# **推論するモデルなので、考える過程で上限に当たる。** 3000だと決算短信で
-# 打ち切られて1件も返らなかった。JSONを吐き切れる余裕を持たせる
-MAX_TOKENS = 12000
-
-# 同時に投げる数。無料枠なので欲張らない。429が出たら下げる
-WORKERS = 5
 
 JUDGMENTS = ("好材料", "悪材料", "中立", "判断できない")
 
@@ -64,7 +55,8 @@ JSONだけを返してください。前置きも説明も不要です。
 {{"要約": "...", "株主にとって": "好材料|悪材料|中立|判断できない"}}
 
 ## 要約の書き方
-- 1〜2文、60〜110字の日本語
+- **1〜2文、110字以内の日本語。これは厳守。** 画面の狭い欄に並べるので、
+  超えたら情報を削って収める。数字は大事なものから2〜3個に絞る
 - 入れるもの: ①何をしたか（誰が・何株・いくら）②会社が書いている理由
   ③株主にとって何を意味するか
 - **本文に書いてあることだけ**。推測や「〜の可能性がある」は書かない
@@ -125,30 +117,7 @@ def save_tsv(rows):
         w.writerows(rows)
 
 
-def ask(key: str, model: str, prompt: str, tries: int = 4):
-    """OpenRouterに投げる。無料枠は502や429が出るので必ずリトライする"""
-    delay = 3.0
-    for attempt in range(tries):
-        try:
-            res = requests.post(
-                API, headers={"Authorization": f"Bearer {key}"},
-                json={"model": model,
-                      "messages": [{"role": "user", "content": prompt}],
-                      "max_tokens": MAX_TOKENS, "temperature": 0.2},
-                timeout=240)
-            data = res.json()
-        except Exception as exc:
-            last = f"通信エラー {exc}"
-        else:
-            if "error" in data:
-                last = json.dumps(data["error"], ensure_ascii=False)[:120]
-            else:
-                text = data["choices"][0]["message"]["content"]
-                return text, data.get("usage") or {}
-        if attempt < tries - 1:
-            time.sleep(delay + random.uniform(0, 1.5))
-            delay *= 2
-    return None, {"error": last}
+MAX_SUMMARY = 130   # 110字を目安に指示しているが、少しの超過は許す
 
 
 def parse(text: str):
@@ -168,6 +137,8 @@ def parse(text: str):
         return None
     if judge not in JUDGMENTS:
         judge = "判断できない"
+    if len(summary) > MAX_SUMMARY:
+        return None      # 長すぎる。呼び出し側が言い直して投げ直す
     return {"要約": summary, "株主にとって": judge}
 
 
@@ -175,19 +146,21 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--codes", nargs="+", help="銘柄コードで絞る")
     parser.add_argument("--limit", type=int, default=0, help="件数の上限")
-    parser.add_argument("--model", default=MODEL)
+    parser.add_argument("--backend", choices=sorted(BACKENDS),
+                        help="openrouter（既定）か lmstudio。環境変数 LLM_BACKEND でも指定できる")
+    parser.add_argument("--model", help="バックエンドの既定モデルを上書きする")
     parser.add_argument("--dry-run", action="store_true",
                         help="TSVに書かず、結果だけ出す")
     parser.add_argument("--redo", action="store_true",
                         help="要約済みのものも書き直す")
-    parser.add_argument("--workers", type=int, default=WORKERS,
-                        help="同時に投げる数。429が出たら下げる")
+    parser.add_argument("--workers", type=int,
+                        help="同時に投げる数。既定はバックエンドごと。429が出たら下げる")
     args = parser.parse_args()
 
-    key = os.environ.get("OPENROUTER_API_KEY_PERSONAL", "").strip()
-    if not key:
-        sys.exit("環境変数 OPENROUTER_API_KEY_PERSONAL が要ります。"
-                 "公開リポジトリなのでキーはコードに書きません")
+    llm = LLM.from_name(args.backend)
+    if args.model:
+        llm.backend.model = args.model
+    workers = args.workers or llm.backend.workers
 
     rows = load_tsv()
     by_url = {r["URL"]: r for r in rows}
@@ -206,7 +179,8 @@ def main() -> int:
     if args.limit:
         todo = todo[:args.limit]
 
-    print(f"対象 {len(todo):,}件 / モデル {args.model} / 同時 {args.workers}")
+    print(f"対象 {len(todo):,}件 / {llm.backend.name} {llm.backend.model}"
+          f" / 同時 {workers}")
     done = failed = 0
     started = time.time()
 
@@ -214,11 +188,13 @@ def main() -> int:
         """PDFを読んでモデルに投げる。**書き込みはしない**（1本に集める）"""
         code, day, title, url = item
         body = disclosure_pdf.fetch(url)
-        if not body:
-            return item, None, "本文を取れず"
+        # **中身が無いPDFはモデルに投げない。** 画像だけのPDFや抽出に失敗したもので、
+        # 投げても「判断できません」という要約が1件ぶんの枠を食うだけになる
+        if not body or len(body.strip()) < 200:
+            return item, None, f"本文を取れず（{len(body or '')}字）"
         prompt = PROMPT.format(code=code, date=day, title=title,
                                body=body[:BODY_CHARS])
-        text, usage = ask(key, args.model, prompt)
+        text, usage = llm.ask(prompt)
         got = parse(text)
         if not got:
             # **返答が壊れることがある。** 上流が途中で切ることがあり、
@@ -230,7 +206,7 @@ def main() -> int:
             got = parse(text)
         return item, got, ("" if got else str(usage)[:80])
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
         for i, (item, got, why) in enumerate(pool.map(work, todo), 1):
             code, day, title, url = item
             if not got:
