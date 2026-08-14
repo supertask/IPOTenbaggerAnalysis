@@ -62,7 +62,8 @@
                             <div id="disclosure-summaries" class="disclosure-list border rounded"></div>
                             <div class="text-muted small mt-1">
                                 <span class="badge bg-info text-dark">AIによる解釈</span>
-                                原文は各タイトルのリンクから。
+                                好材料／悪材料は<strong>中身の良し悪し</strong>で、株価の予測ではありません。
+                                その下の株価は実測です。原文は各タイトルのリンクから。
                             </div>
                         </div>
                     </div>
@@ -93,6 +94,7 @@
     .disclosure-list .disclosure-titles { flex: 1 1 auto; min-width: 0; }
     .disclosure-list .disclosure-titles a { font-size: .875rem; }
     .disclosure-list .disclosure-date { font-size: .75rem; }
+    .disclosure-list .disclosure-react { font-size: .75rem; }
 </style>
 
 <script>
@@ -481,14 +483,45 @@
                     + escapeHtml(d['タイトル']) + '</a></div>';
                 if (withSummary && d['要約']) {
                     html += '<div class="disclosure-summary text-body-secondary mb-1">'
-                        + emphasize(d['要約']) + '</div>';
+                        + impactBadge(d['株主にとって']) + emphasize(d['要約']) + '</div>';
                 }
                 return html;
             }).join('');
             return '<div class="disclosure-day" data-date="' + m.date + '">'
                 + '<div class="disclosure-mark">' + m.label + '</div>'
                 + '<div class="disclosure-titles">' + body
+                + (withSummary ? reactionHtml(m['株価の反応']) : '')
                 + '<div class="text-muted disclosure-date">' + m.date + '</div></div></div>';
+        }
+
+        // 株価への影響。**「判断できない」も色を付けずに出す** —
+        // 3択に押し込まずに「決められなかった」と分かるようにするため
+        var IMPACT = {
+            '好材料': 'bg-success',
+            '悪材料': 'bg-danger',
+            '中立': 'bg-secondary',
+            '判断できない': 'bg-light text-dark border'
+        };
+        function impactBadge(value) {
+            if (!value) return '';
+            var cls = IMPACT[value] || 'bg-light text-dark border';
+            return '<span class="badge ' + cls + ' me-1">' + escapeHtml(value) + '</span>';
+        }
+
+        // **実測の株価。AIの判定とは別物。** 並べて出すと、
+        // 中身が良いのに売られた回（9166の自己株買い終了は5営業日で-13.4%）が拾える
+        function reactionHtml(react) {
+            if (!react) return '';
+            var parts = [];
+            ['翌営業日', '5営業日後'].forEach(function (key) {
+                if (react[key] === undefined) return;
+                var v = react[key];
+                var cls = v > 0 ? 'text-danger' : (v < 0 ? 'text-primary' : 'text-muted');
+                parts.push('<span class="' + cls + '">' + key + ' '
+                    + (v > 0 ? '+' : '') + v.toFixed(1) + '%</span>');
+            });
+            if (!parts.length) return '';
+            return '<div class="disclosure-react text-muted">株価 ' + parts.join(' / ') + '</div>';
         }
 
         // 要約は **強調** の書き方で書かれている。**先にエスケープしてから**

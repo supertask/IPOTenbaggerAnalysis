@@ -390,11 +390,11 @@ def _insider_sale_markers(code: str, prices: Dict[str, list]) -> List[dict]:
     return markers
 
 
-def _disclosure_markers(code: str) -> Dict[str, object]:
+def _disclosure_markers(code: str, prices=None) -> Dict[str, object]:
     """適時開示を集めていない銘柄では空を返す。画面はそれで何も出さない"""
     try:
         from visualizer import disclosure_markers
-        return disclosure_markers.get_markers(code)
+        return disclosure_markers.get_markers(code, prices=prices)
     except Exception:
         return {"markers": [], "全件数": 0, "打ち切り": False}
 
@@ -413,7 +413,7 @@ def get_chart_payload(code: str) -> Dict[str, object]:
         "insider_sales": _insider_sale_markers(code, prices),
         # 適時開示のラベル（IRバンクと同じ見せ方）。株価と同じ取得で返すので、
         # チャートの描画がリクエスト1本で済む
-        "disclosures": _disclosure_markers(code),
+        "disclosures": _disclosure_markers(code, prices),
         "per_limit": 40,
         "per_ideal": 20,
         "has_price": bool(prices["dates"]),
