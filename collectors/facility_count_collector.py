@@ -51,6 +51,21 @@ UNITS = ("店舗", "拠点", "事業所", "施設", "ホーム", "教室", "サ�
 _UNIT_RE = "|".join(sorted(UNITS, key=len, reverse=True))
 COUNT_RE = re.compile(rf"([0-9][0-9,]{{0,6}})\s*(?:の|)({_UNIT_RE})")
 
+# 拠点ではないが、積み上がることが成長の形になっている単位。
+# サブリースの管理戸数、車両の管理台数など。**言い回しごとでしか拾わない。**
+# 「戸」「台」「件」だけで拾うと誤検出が多い（実際に試すと、319Aの
+# 「持ち込まれたM&A案件は累計2,398件」＝収益の単位ではない、350Aの
+# 「最終保障供給契約の契約件数45,871件」＝電力制度全体の数、9388の
+# 「21,400名古屋営業所」＝面積のあとに地名、を拾ってしまった）
+STOCK_RE = re.compile(
+    r"(?:総|)(?:管理|受託|稼働|マスターリース|サブリース)"
+    r"(?:台数|戸数|室数)(?:（[^）]{0,14}）)?[^0-9]{0,12}?"
+    r"([0-9][0-9,]{2,8})\s*(台|戸|室)")
+# 台数・戸数は拠点より桁が大きい。上限は別に持つ。
+# 下限を1,000にしているのは、小さい数だと本業の単位ではないものを拾うため
+# （日本駐車場開発の2018年の「115台」がそれで、本業は時間貸駐車場の区画数）
+MIN_STOCK, MAX_STOCK = 1000, 2000000
+
 # 拾った数値の常識的な範囲。1〜2は文章の綾で出やすく、数万は市場規模の話
 MIN_COUNT, MAX_COUNT = 3, 20000
 
@@ -98,6 +113,26 @@ def _read(path: str):
         except OSError:
             return None
     return None
+
+
+def _stock_candidates(text: str):
+    """管理台数・管理戸数などの (数値, 単位)。言い回しごとで拾う"""
+    body = re.sub(r"<[^>]+>", " ", text).replace("&#160;", " ")
+    body = re.sub(r"[ \t　]+", " ", body)
+    out = []
+    for match in STOCK_RE.finditer(body):
+        try:
+            value = int(match.group(1).replace(",", ""))
+        except ValueError:
+            continue
+        if not (MIN_STOCK <= value <= MAX_STOCK):
+            continue
+        # 「前年同期比2,130戸増」のように動いたぶんは採らない
+        head = body[max(0, match.start() - 12):match.start()]
+        if any(word in head for word in ("前年", "前期", "比")):
+            continue
+        out.append((value, match.group(2)))
+    return out
 
 
 def _candidates(text: str):
@@ -159,6 +194,25 @@ def extract_from_report(path: str):
 
     if not blocks:
         return None
+
+    # 管理台数・管理戸数が書いてあれば、そちらを拠点より優先する。
+    # 「管理戸数は27,354戸」と書く会社は、それが積み上がる単位だと
+    # 自分で言っている。3300は賃貸仲介の17店舗で割るより、
+    # サブリースの管理戸数で割るほうが型に合う
+    stock = defaultdict(set)
+    for label, raw in blocks.items():
+        for value, unit in _stock_candidates(raw):
+            stock[(value, unit)].add(label)
+    if stock:
+        (value, unit), labels = max(
+            stock.items(), key=lambda kv: (len(kv[1]), kv[0][0]))
+        return {
+            "count": value,
+            "unit": unit,
+            "sources": "/".join(sorted(labels)),
+            "candidates": ",".join(
+                str(v) for v in sorted({v for (v, _u) in stock}, reverse=True)[:5]),
+        }
 
     seen = defaultdict(set)      # (値, 単位) -> それが出たセクション
     for label, raw in blocks.items():

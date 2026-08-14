@@ -58,6 +58,16 @@ def _sane_share(value: Optional[float], cost: Optional[float]) -> Optional[float
     return value if value <= cost * 1.2 else None
 
 
+# 単位の種類。同じ種類どうしなら比べてよい。
+# 店舗・施設・拠点は「1か所」の言い換えなので同じ種類。
+# 台・戸・室は積み上がる契約の単位で、1か所あたりとは桁も意味も違う
+_STOCK_UNITS = frozenset({"台", "戸", "室"})
+
+
+def _unit_family(unit: str) -> str:
+    return "stock" if (unit or "").strip() in _STOCK_UNITS else "facility"
+
+
 def _num(value) -> Optional[float]:
     try:
         f = float(value)
@@ -367,9 +377,20 @@ def get_facility_view(company_code, competitors: Optional[List[dict]] = None
                 "latest": series["latest"],
             })
 
-    # 競合と比べて何倍か。業態で桁が違うので、水準そのものより比のほうが意味を持つ
+    # 競合と比べて何倍か。業態で桁が違うので、水準そのものより比のほうが意味を持つ。
+    # **ただし種類が違う単位とは比べない。** 店舗と施設と拠点は同じ「1か所」の
+    # 言い換えなので比べてよいが、自社が「台」で競合が「店舗」のときの
+    # 1台あたり利益と1店舗あたり利益の比には意味がない
+    own_unit = (own["latest"].get("unit") or "拠点").strip()
+    own_family = _unit_family(own_unit)
+    mixed_units = sorted({(p["latest"].get("unit") or "拠点").strip()
+                          for p in peers
+                          if _unit_family((p["latest"].get("unit") or "拠点").strip())
+                          != own_family})
     ratio = None
-    peer_values = sorted(p["latest"]["profit_per"] for p in peers)
+    peer_values = sorted(
+        p["latest"]["profit_per"] for p in peers
+        if _unit_family((p["latest"].get("unit") or "拠点").strip()) == own_family)
     if peer_values and own["latest"]["profit_per"] is not None:
         middle = peer_values[len(peer_values) // 2] if len(peer_values) % 2 else \
             (peer_values[len(peer_values) // 2 - 1] + peer_values[len(peer_values) // 2]) / 2
@@ -402,6 +423,9 @@ def get_facility_view(company_code, competitors: Optional[List[dict]] = None
         "own": own,
         "peers": sorted(peers, key=lambda p: -(p["latest"]["profit_per"] or 0)),
         "ratio_to_peers": ratio,
+        "unit": own_unit,
+        # 単位の違う競合がいるとき、その単位を並べる。画面で断りを出すために使う
+        "mixed_units": mixed_units,
         "latest_interim": latest_interim,
         "interim_points": interim_points,
         "has_series": len(own["points"]) + len(interim_points) >= 2,

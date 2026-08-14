@@ -95,6 +95,17 @@ METRIC_ALIASES: Dict[str, List[str]] = OrderedDict([
     ('長期借入金', ['jppfs_cor:LongTermLoansPayable']),                     # (86)
     ('1年内返済予定の長期借入金', ['jppfs_cor:CurrentPortionOfLongTermLoansPayable']),  # (77)
     ('社債', ['jppfs_cor:BondsPayable']),                                  # (19)
+    # IFRSは科目の切り方が違い、流動(CL)と非流動(NCL)に分かれる。
+    # 流動には1年内返済予定の長期借入金が入っているので、CL+NCLで足りる。
+    # 上の日本基準のタグはIFRSの会社では**提出会社の単体**になり、連結と桁が
+    # 変わる（6098は単体7,431億に対し連結の借入金6.45億）。
+    # **リース負債は入れない。** IFRS16は解約不能のリースをすべて負債に載せるが
+    # 日本基準はオペレーティング・リースを載せないので、入れるとIFRSの会社
+    # だけ借金が桁違いに見える（6098のリース負債は1,856億）
+    ('借入金（IFRS流動）', ['jpigp_cor:BorrowingsCLIFRS']),
+    ('借入金（IFRS非流動）', ['jpigp_cor:BorrowingsNCLIFRS']),
+    ('社債（IFRS流動）', ['jpigp_cor:BondsPayableCLIFRS']),
+    ('社債（IFRS非流動）', ['jpigp_cor:BondsPayableNCLIFRS']),
     # リンチの在庫シグナル。在庫の伸びが売上の伸びを超えたら赤信号
     ('商品及び製品', ['jppfs_cor:MerchandiseAndFinishedGoods']),             # (70)
     # 清原達郎のネットキャッシュ比率に要る3つ。貸借対照表の合計行なので
@@ -137,6 +148,8 @@ HIDDEN_METRICS = frozenset({
     '1年内返済予定の長期借入金', '社債', '商品及び製品', '希薄化後EPS',
     '１株当たり四半期純利益（EPS）',
     '流動資産', '投資有価証券', '負債合計',
+    '借入金（IFRS流動）', '借入金（IFRS非流動）',
+    '社債（IFRS流動）', '社債（IFRS非流動）',
 })
 
 # グラフの表示順序設定

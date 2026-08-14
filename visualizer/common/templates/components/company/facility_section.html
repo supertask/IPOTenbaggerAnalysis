@@ -1,9 +1,15 @@
-{# 拠点数の推移と、拠点あたりの採算を競合と並べた比較 #}
+{# 拠点数の推移と、拠点あたりの採算を競合と並べた比較。
+   単位は会社によって違う（店舗・施設のほか、サブリースの管理戸数、
+   車両の管理台数など）。ラベルは facility.unit から作る #}
 {% if facility %}
+{% set unit = facility.unit or '拠点' %}
+{# 1単位あたりの金額。百万だと台数・戸数のとき0.00になるので、小さければ千円で出す #}
+{% macro per_unit(v) %}{% if v is none %}–{% elif v|abs < 1 %}{{ '%.0f'|format(v * 1000) }}千{% else %}{{ '%.2f'|format(v) }}百万{% endif %}{% endmacro %}
+
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
         <h5 class="mb-0">
-            拠点あたりの採算
+            1{{ unit }}あたりの採算
             <button type="button" class="section-help" data-help="help-facility"
                     title="どのデータをどう計算しているか">?</button>
         </h5>
@@ -11,19 +17,26 @@
         <span class="badge {% if facility.ratio_to_peers >= 1 %}bg-success{% else %}bg-secondary{% endif %}">
             競合中央値の {{ '%.1f'|format(facility.ratio_to_peers) }}倍
         </span>
+        {% elif facility.mixed_units %}
+        <span class="badge bg-secondary" title="1{{ unit }}あたりと1{{ facility.mixed_units|join('・1') }}あたりを比べても意味がないため、倍率は出していません">
+            単位が違うので比較なし
+        </span>
         {% endif %}
     </div>
     <div class="card-body">
         <div id="help-facility" class="section-help-panel" hidden>
             <p class="mb-2">すべて<strong>有価証券報告書</strong>から取っています。</p>
             <table class="help-table">
-                <tr><th>拠点数</th><td>本文（事業の内容 / MD&amp;A / 業績等の概要 / 経営方針）の「○○店舗」という記述。
-                    タグが無いので文章から拾っており、複数箇所に出る数字を優先</td></tr>
+                <tr><th>{{ unit }}数</th><td>本文（事業の内容 / MD&amp;A / 業績等の概要 / 経営方針）の
+                    「○○店舗」という記述。タグが無いので文章から拾っており、複数箇所に出る数字を優先。
+                    <strong>店舗や施設だけでなく、サブリースの管理戸数や車両の管理台数のように、
+                    その会社で積み上がる単位を使います</strong>（「管理台数は」のような決まった言い回しでのみ拾う）</td></tr>
                 <tr><th>売上・利益</th><td>財務諸表の当期値（売上高、営業利益。無ければ経常利益）</td></tr>
-                <tr><th>1拠点あたり</th><td>売上（利益）÷ 拠点数。同じ期どうし</td></tr>
-                <tr><th>競合との比</th><td>競合の「1拠点あたり利益」の中央値との倍率。
-                    水準は業態で桁が違うので、この比で見てください</td></tr>
-                <tr><th>期中の拠点数</th><td>四半期・半期報告書にも書かれているので、そこからも拾っています
+                <tr><th>1{{ unit }}あたり</th><td>売上（利益）÷ {{ unit }}数。同じ期どうし</td></tr>
+                <tr><th>競合との比</th><td>競合の「1{{ unit }}あたり利益」の中央値との倍率。
+                    水準は業態で桁が違うので、この比で見てください。
+                    <strong>単位の違う競合とは比べません</strong>（1台あたりと1店舗あたりの比に意味がないため）</td></tr>
+                <tr><th>期中の{{ unit }}数</th><td>四半期・半期報告書にも書かれているので、そこからも拾っています
                     （保有銘柄のみ）。グラフの薄いほうの棒がそれです。売上・利益は半期ぶんで年次と噛み合わないため、
                     1拠点あたりの計算には使わず、最新の規模を見るためだけに出しています</td></tr>
                 <tr><th>取れる企業</th><td>拠点数が本文から拾えた919社。拠点数を開示しない企業のほうが多いです</td></tr>
@@ -40,9 +53,9 @@
                     <tr>
                         <th>企業</th>
                         <th class="num">期</th>
-                        <th class="num">拠点数</th>
-                        <th class="num">1拠点あたり売上</th>
-                        <th class="num">1拠点あたり利益</th>
+                        <th class="num">{{ unit }}数</th>
+                        <th class="num">1{{ unit }}あたり売上</th>
+                        <th class="num">1{{ unit }}あたり利益</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -50,16 +63,16 @@
                         <td><strong>{{ company_name }}</strong></td>
                         <td class="num">{{ facility.own.latest.date[:7] }}</td>
                         <td class="num">{{ '{:,.0f}'.format(facility.own.latest.count) }}{{ facility.own.latest.unit }}</td>
-                        <td class="num">{% if facility.own.latest.sales_per is not none %}{{ '%.1f'|format(facility.own.latest.sales_per) }}百万{% else %}–{% endif %}</td>
-                        <td class="num"><strong>{% if facility.own.latest.profit_per is not none %}{{ '%.2f'|format(facility.own.latest.profit_per) }}百万{% else %}–{% endif %}</strong></td>
+                        <td class="num">{{ per_unit(facility.own.latest.sales_per) }}</td>
+                        <td class="num"><strong>{{ per_unit(facility.own.latest.profit_per) }}</strong></td>
                     </tr>
                     {% for p in facility.peers %}
                     <tr>
                         <td>{{ p.name }}</td>
                         <td class="num">{{ p.latest.date[:7] }}</td>
                         <td class="num">{{ '{:,.0f}'.format(p.latest.count) }}{{ p.latest.unit }}</td>
-                        <td class="num">{% if p.latest.sales_per is not none %}{{ '%.1f'|format(p.latest.sales_per) }}百万{% else %}–{% endif %}</td>
-                        <td class="num">{% if p.latest.profit_per is not none %}{{ '%.2f'|format(p.latest.profit_per) }}百万{% else %}–{% endif %}</td>
+                        <td class="num">{{ per_unit(p.latest.sales_per) }}</td>
+                        <td class="num">{{ per_unit(p.latest.profit_per) }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -142,7 +155,7 @@
         {% endif %}
 
         <div class="text-muted small mt-2">
-            拠点数の出所: 有報の{{ facility.own.sources or '本文' }}。
+            {{ unit }}数の出所: 有報の{{ facility.own.sources or '本文' }}。
             {% if facility.own.candidates %}
             この期の他の候補値: {{ facility.own.candidates }}。
             {% endif %}
@@ -171,7 +184,7 @@
         POINTS.forEach(function (p) { perByDate[p.date] = p; });
         Plotly.newPlot(el, [
             {
-                type: 'bar', name: '拠点数', x: dates,
+                type: 'bar', name: '{{ unit }}数', x: dates,
                 y: dates.map(function (d) { return countByDate[d]; }),
                 marker: {
                     color: dates.map(function (d) {
@@ -185,7 +198,7 @@
                 yaxis: 'y'
             },
             {
-                type: 'scatter', mode: 'lines+markers', name: '1拠点あたり利益（百万円）',
+                type: 'scatter', mode: 'lines+markers', name: '1{{ unit }}あたり利益（百万円）',
                 x: dates,
                 y: dates.map(function (d) {
                     return perByDate[d] ? perByDate[d].profit_per : null;
@@ -193,7 +206,7 @@
                 line: { color: '#d32f2f' }, connectgaps: true, yaxis: 'y2'
             },
             {
-                type: 'scatter', mode: 'lines+markers', name: '1拠点あたり売上（百万円）',
+                type: 'scatter', mode: 'lines+markers', name: '1{{ unit }}あたり売上（百万円）',
                 x: dates,
                 y: dates.map(function (d) {
                     return perByDate[d] ? perByDate[d].sales_per : null;
@@ -208,8 +221,8 @@
             hovermode: 'x unified',
             dragmode: false,
             xaxis: { type: 'category' },
-            yaxis: { title: { text: '拠点数' }, rangemode: 'tozero' },
-            yaxis2: { title: { text: '1拠点あたり（百万円）' }, overlaying: 'y',
+            yaxis: { title: { text: '{{ unit }}数' }, rangemode: 'tozero' },
+            yaxis2: { title: { text: '1{{ unit }}あたり（百万円）' }, overlaying: 'y',
                       side: 'right', rangemode: 'tozero' }
         }, { responsive: true, displaylogo: false, scrollZoom: false });
     });

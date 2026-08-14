@@ -1106,16 +1106,22 @@ class DataService:
         """
         try:
             parts = ('短期借入金', '長期借入金', '1年内返済予定の長期借入金', '社債')
+            # IFRSの会社は上の日本基準のタグが提出会社の単体になるので、
+            # その年にIFRSの科目があればそちらだけで足す。混ぜると二重に乗る
+            ifrs_parts = ('借入金（IFRS流動）', '借入金（IFRS非流動）',
+                          '社債（IFRS流動）', '社債（IFRS非流動）')
             dates = set()
-            for name in parts:
+            for name in parts + ifrs_parts:
                 dates |= set(metrics_data.get(name) or {})
             if not dates:
                 return
             debt = {}
             for date in dates:
-                total = sum((metrics_data.get(name) or {}).get(date) or 0
-                            for name in parts)
-                debt[date] = total
+                use = ifrs_parts if any(
+                    date in (metrics_data.get(name) or {}) for name in ifrs_parts
+                ) else parts
+                debt[date] = sum((metrics_data.get(name) or {}).get(date) or 0
+                                 for name in use)
             metrics_data['有利子負債'] = debt
 
             ratio = DataService._ratio(debt, metrics_data.get('純資産') or {})
