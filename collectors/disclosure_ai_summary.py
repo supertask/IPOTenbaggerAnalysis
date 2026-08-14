@@ -18,6 +18,7 @@ import argparse
 import concurrent.futures
 import csv
 import io
+import logging
 import json
 import os
 import random
@@ -29,6 +30,9 @@ from datetime import date
 import requests
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# pypdfは壊れたPDFで大量に警告を出す。読めてはいるので黙らせる
+logging.getLogger("pypdf").setLevel(logging.CRITICAL)
 
 from collectors import disclosure_pdf  # noqa: E402
 from collectors.holding_profile_dump import portfolio_codes  # noqa: E402
@@ -42,6 +46,19 @@ COLUMNS = ["URL", "銘柄コード", "開示日", "タイトル", "要約", "株
 BODY_CHARS = 6000
 
 JUDGMENTS = ("好材料", "悪材料", "中立", "判断できない")
+
+# **文字がフォントで描かれていて抽出できないPDFがある。** 実測で6%
+# （行政処分、内部統制の重要な不備など、落とすと痛いものが混ざる）。
+# 埋め込み画像を取り出しても2KBのロゴしか入っていないので、
+# **ページをそのまま描画して見せる**しかない
+IMAGE_SCALE = 2.0    # 72dpi × 2。小さい字が潰れない程度
+IMAGE_PAGES = 3      # 目的と理由は先頭に集まっている
+MIN_BODY = 200       # これ未満なら本文が取れていないとみなす
+
+# **画像はテキストの約10倍かかる**（実測 273秒 対 8〜30秒）。
+# 混ぜて流すと、画像の1件が並列の枠を4分半ふさいで全体が引きずられる。
+# テキストを先に片付けてから、画像だけを少ない並列で流す
+IMAGE_WORKERS = 2
 
 # **理由が書かれていない型。** 月次の進捗報告や訂正は、読んでも
 # 「何株買った」以上のことが出てこない。無理に要約させると水増しになる
@@ -101,6 +118,35 @@ JSONだけを返してください。前置きも説明も不要です。
 """
 
 
+def page_images(url: str):
+    """PDFのページを描画してJPEGにする。取れなければ空"""
+    import base64  # noqa: F401  （llm_client 側で使う）
+    import io as _io
+    import os as _os
+
+    try:
+        import pypdfium2 as pdfium
+    except ImportError:
+        return []
+    path = _os.path.join(disclosure_pdf.CACHE_DIR,
+                         url.strip("/").replace("/", "_"))
+    if not _os.path.exists(path):
+        disclosure_pdf.fetch(url)
+    if not _os.path.exists(path):
+        return []
+    try:
+        doc = pdfium.PdfDocument(path)
+        out = []
+        for i in range(min(len(doc), IMAGE_PAGES)):
+            img = doc[i].render(scale=IMAGE_SCALE).to_pil().convert("RGB")
+            buf = _io.BytesIO()
+            img.save(buf, format="JPEG", quality=80)
+            out.append(buf.getvalue())
+        return out
+    except Exception:
+        return []
+
+
 def load_tsv():
     if not os.path.exists(TSV):
         return []
@@ -155,12 +201,22 @@ def main() -> int:
                         help="要約済みのものも書き直す")
     parser.add_argument("--workers", type=int,
                         help="同時に投げる数。既定はバックエンドごと。429が出たら下げる")
+    parser.add_argument("--skip-images", action="store_true",
+                        help="本文が取れないもの（画像が要るもの）を飛ばす。**まずこれで流す**")
+    parser.add_argument("--images-only", action="store_true",
+                        help="本文が取れないものだけを画像で読む。テキストを片付けたあとに")
     args = parser.parse_args()
 
     llm = LLM.from_name(args.backend)
     if args.model:
         llm.backend.model = args.model
-    workers = args.workers or llm.backend.workers
+    workers = args.workers or (IMAGE_WORKERS if args.images_only
+                               else llm.backend.workers)
+    # **サーバが受け付けられる数を超えない。** 超えて投げても断られず、
+    # キューに積まれて全員が遅くなるだけ
+    workers, note = llm.cap_workers(workers)
+    if note:
+        print(note)
 
     rows = load_tsv()
     by_url = {r["URL"]: r for r in rows}
@@ -187,14 +243,25 @@ def main() -> int:
     def work(item):
         """PDFを読んでモデルに投げる。**書き込みはしない**（1本に集める）"""
         code, day, title, url = item
-        body = disclosure_pdf.fetch(url)
-        # **中身が無いPDFはモデルに投げない。** 画像だけのPDFや抽出に失敗したもので、
-        # 投げても「判断できません」という要約が1件ぶんの枠を食うだけになる
-        if not body or len(body.strip()) < 200:
-            return item, None, f"本文を取れず（{len(body or '')}字）"
+        body = disclosure_pdf.fetch(url) or ""
+        needs_image = len(body.strip()) < MIN_BODY
+        if args.skip_images and needs_image:
+            return item, None, "本文が取れないので後回し（--images-only で拾う）"
+        if args.images_only and not needs_image:
+            return item, None, "本文が取れるので対象外"
+        images = []
+        if needs_image:
+            # **本文が取れないものは画像で読ませる。** 6%あり、行政処分のような
+            # 落とすと痛い開示が混ざっている。画像を見られないバックエンドでは諦める
+            if not llm.can_see:
+                return item, None, f"本文を取れず（{len(body.strip())}字・画像非対応）"
+            images = page_images(url)
+            if not images:
+                return item, None, f"本文も画像も取れず（{len(body.strip())}字）"
+            body = "（本文を抽出できないため、PDFのページを画像で添えています）"
         prompt = PROMPT.format(code=code, date=day, title=title,
                                body=body[:BODY_CHARS])
-        text, usage = llm.ask(prompt)
+        text, usage = llm.ask(prompt, images=images or None)
         got = parse(text)
         if not got:
             # **返答が壊れることがある。** 上流が途中で切ることがあり、

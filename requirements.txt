@@ -21,3 +21,4 @@ numpy
 urllib3
 # MCPサーバ（mcp_server.py）。stdioでClaudeから保有銘柄を呼ぶ
 mcp
+pypdfium2

@@ -34,6 +34,7 @@ LM Studio側は「Serve on Local Network」を有効にしておくこと。
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import random
@@ -108,12 +109,32 @@ class LLM:
             raise SystemExit(f"--backend は {sorted(BACKENDS)} のどれか（指定: {name}）")
         return cls(BACKENDS[name]())
 
+    @property
+    def can_see(self) -> bool:
+        """画像を渡せるか。LM Studioに載せているQwenは vlm なので渡せる。
+        OpenRouterのNemotronは文字だけなので渡せない"""
+        return self.backend.name == "lmstudio"
+
     def ask(self, prompt: str, tries: int = 4,
             max_tokens: int = DEFAULT_MAX_TOKENS,
-            temperature: float = 0.2) -> Tuple[Optional[str], dict]:
+            temperature: float = 0.2,
+            images: Optional[list] = None) -> Tuple[Optional[str], dict]:
         """返答の本文と usage。**必ずリトライする** —
-        無料枠は502や429が普通に出るし、ローカルもモデルの入れ替え中は落ちる"""
+        無料枠は502や429が普通に出るし、ローカルもモデルの入れ替え中は落ちる。
+
+        `images` はJPEGのbytesの並び。**テキストが取れないPDFのため**にある
+        （適時開示の6%は、文字がフォントで描かれていて抽出できない）。
+        """
         b = self.backend
+        if images:
+            content = [{"type": "text", "text": prompt}]
+            for data in images:
+                content.append({"type": "image_url", "image_url": {
+                    "url": "data:image/jpeg;base64,"
+                           + base64.b64encode(data).decode()}})
+            message = {"role": "user", "content": content}
+        else:
+            message = {"role": "user", "content": prompt}
         delay = 3.0
         last = ""
         for attempt in range(tries):
@@ -122,7 +143,7 @@ class LLM:
                     f"{b.base_url}/chat/completions",
                     headers={"Authorization": f"Bearer {b.api_key}"},
                     json={"model": b.model,
-                          "messages": [{"role": "user", "content": prompt}],
+                          "messages": [message],
                           "max_tokens": max_tokens,
                           "temperature": temperature},
                     timeout=b.timeout)
@@ -141,6 +162,34 @@ class LLM:
                 time.sleep(delay + random.uniform(0, 1.5))
                 delay *= 2
         return None, {"error": last}
+
+    def server_parallel(self) -> Optional[int]:
+        """LM Studioが受け付けられる同時数を、サーバに聞いて返す。
+
+        **これを超えて投げても断られない。キューに積まれて全員が遅くなる。**
+        実測では parallel=4 のところに8本投げたら、1本ずつなら数秒の依頼が
+        全部54〜62秒になった（先に投げたものまで巻き添えになる）。
+        """
+        if self.backend.name != "lmstudio":
+            return None
+        base = self.backend.base_url.rsplit("/v1", 1)[0]
+        try:
+            data = requests.get(f"{base}/api/v1/models", timeout=30).json()
+        except Exception:
+            return None
+        for model in data.get("models", []):
+            for inst in model.get("loaded_instances") or []:
+                got = (inst.get("config") or {}).get("parallel")
+                if got:
+                    return int(got)
+        return None
+
+    def cap_workers(self, wanted: int) -> Tuple[int, str]:
+        """サーバの受け入れ数に合わせて同時数を丸める"""
+        limit = self.server_parallel()
+        if limit and wanted > limit:
+            return limit, f"サーバの parallel={limit} に合わせて {wanted}→{limit} に下げた"
+        return wanted, ""
 
     def check(self) -> str:
         """疎通の確認。使えれば説明、駄目なら理由を返す"""
