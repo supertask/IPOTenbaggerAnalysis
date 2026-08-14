@@ -104,18 +104,42 @@ def _round(value, digits=2):
     return round(value, digits) if isinstance(value, (int, float)) else value
 
 
-def _report_path(code: str, report_type: str = "annual") -> Optional[tuple]:
-    """その銘柄の最新の報告書のファイル。(パス, 提出日)"""
+def _report_path(code: str, report_type: str = "annual",
+                 year: Optional[int] = None) -> Optional[tuple]:
+    """その銘柄の報告書のファイル。(パス, 提出日)
+
+    year を渡すと、その年に提出されたものを返す。既定は最新。
+    6099は有報を12年ぶん、3496は8年ぶん持っているので、
+    「何年前はどう書いていたか」を読める
+    """
     from visualizer import db as _index_db
     conn = _index_db.get_conn()
     if conn is None:
         return None
-    row = conn.execute(
-        "SELECT file_path, report_date FROM report_files "
-        "WHERE company_code = ? AND report_type = ? "
-        "ORDER BY report_date DESC LIMIT 1",
-        (code, report_type)).fetchone()
+    if year:
+        row = conn.execute(
+            "SELECT file_path, report_date FROM report_files "
+            "WHERE company_code = ? AND report_type = ? "
+            "AND report_date LIKE ? ORDER BY report_date DESC LIMIT 1",
+            (code, report_type, f"{year}%")).fetchone()
+    else:
+        row = conn.execute(
+            "SELECT file_path, report_date FROM report_files "
+            "WHERE company_code = ? AND report_type = ? "
+            "ORDER BY report_date DESC LIMIT 1",
+            (code, report_type)).fetchone()
     return (row["file_path"], row["report_date"]) if row else None
+
+
+def _report_years(code: str, report_type: str = "annual") -> List[str]:
+    """持っている報告書の提出日。どの年が読めるかを示すため"""
+    from visualizer import db as _index_db
+    conn = _index_db.get_conn()
+    if conn is None:
+        return []
+    return [r["report_date"] for r in conn.execute(
+        "SELECT report_date FROM report_files WHERE company_code = ? "
+        "AND report_type = ? ORDER BY report_date DESC", (code, report_type))]
 
 
 @server.tool(
@@ -203,11 +227,14 @@ def company_metrics(code: str, brief: bool = True) -> Dict[str, Any]:
         "query は要素IDか項目名の一部（例: ResearchAndDevelopment、研究開発、"
         "セグメント、CapitalExpenditure）。"
         "query を空にすると、その報告書にあるタグの一覧だけを返す。"
+        "year を渡すと過去の年度の有報を読む（何年ぶんあるかは list_holdings ではなく"
+        "この関数の error に「読める提出日」として出る）。"
     )
 )
 @quiet
 def annual_report_xbrl(code: str, query: str = "", limit: int = 60,
-                       report_type: str = "annual") -> Dict[str, Any]:
+                       report_type: str = "annual",
+                       year: Optional[int] = None) -> Dict[str, Any]:
     bad = _guard(code)
     if bad:
         return bad
@@ -215,9 +242,10 @@ def annual_report_xbrl(code: str, query: str = "", limit: int = 60,
 
     from collectors.facility_count_collector import _read
 
-    found = _report_path(code, report_type)
+    found = _report_path(code, report_type, year)
     if not found:
-        return {"error": f"{code} の{report_type}が見つからない"}
+        return {"error": f"{code} の{report_type}が見つからない",
+                "読める提出日": _report_years(code, report_type)}
     path, date = found
     text = _read(path) or ""
     lines = text.splitlines()
@@ -259,12 +287,14 @@ def annual_report_xbrl(code: str, query: str = "", limit: int = 60,
         "risk=事業等のリスク、rd=研究開発活動、capex=設備投資等の概要、"
         "segment=セグメント情報、policy=経営方針。"
         "section を空にすると、その報告書にある本文セクションの一覧を返す。"
+        "year を渡すと過去の年度の有報を読む（6099は12年ぶん、3496は8年ぶんある）。"
         "会社が自分の言葉で書いた一次資料なので、事業の中身を知りたいときはここ。"
     )
 )
 @quiet
 def annual_report_text(code: str, section: str = "", chars: int = 6000,
-                       report_type: str = "annual") -> Dict[str, Any]:
+                       report_type: str = "annual",
+                       year: Optional[int] = None) -> Dict[str, Any]:
     bad = _guard(code)
     if bad:
         return bad
@@ -287,9 +317,10 @@ def annual_report_text(code: str, section: str = "", chars: int = 6000,
                    "経営方針"),
     }
 
-    found = _report_path(code, report_type)
+    found = _report_path(code, report_type, year)
     if not found:
-        return {"error": f"{code} の{report_type}が見つからない"}
+        return {"error": f"{code} の{report_type}が見つからない",
+                "読める提出日": _report_years(code, report_type)}
     path, date = found
     text = _read(path) or ""
 
@@ -481,6 +512,211 @@ def company_facilities(code: str) -> Dict[str, Any]:
         "原価の構成": view.get("cost_structure"),
         "注記": "単位の種類が違う競合とは倍率を出さない（1台あたりと1店舗あたりの比に意味がないため）",
     }
+
+
+@server.tool(
+    description=(
+        "1銘柄の株価を返す。いまの株価・公開価格・初値・上場来高値と"
+        "そこからの位置・現在何倍か・最大何倍まで行ったか・"
+        "2倍/3倍/5倍/10倍に何年かかったか。"
+        "days を渡すと、その日数ぶんの終値も返す（既定は返さない）。"
+        "「いま買う水準か」「高値からどれだけ落ちているか」に答えるときに使う。"
+    )
+)
+@quiet
+def price_history(code: str, days: int = 0) -> Dict[str, Any]:
+    bad = _guard(code)
+    if bad:
+        return bad
+    code = str(code).strip().upper()
+
+    import csv as _csv
+    import glob as _glob
+
+    # yfinance の集計（現在何倍・最大何倍・N倍まで何年）
+    facts = {}
+    for path in _glob.glob(os.path.join(BASE_DIR, "data", "output",
+                                        "yfinance", "companies_*.tsv")):
+        with open(path, encoding="utf-8", newline="") as f:
+            for row in _csv.DictReader(f, delimiter="\t"):
+                if (row.get("コード") or "").strip() == code:
+                    facts = {k: v for k, v in row.items() if (v or "").strip()}
+                    break
+        if facts:
+            break
+
+    series = []
+    if days > 0:
+        try:
+            from visualizer import price_service  # type: ignore
+            series = price_service.get_price_history(code, days)  # noqa
+        except Exception:
+            try:
+                import yfinance
+                hist = yfinance.Ticker(f"{code}.T").history(period=f"{days}d")
+                series = [{"日付": str(i.date()), "終値": _round(float(v), 1)}
+                          for i, v in hist["Close"].items()]
+            except Exception as e:
+                series = [{"error": f"株価を取れなかった: {e}"}]
+
+    return {"コード": code, "yfinanceの集計": facts,
+            "終値": series[-200:] if series else "days を渡すと返す",
+            "注記": "倍率は上場時の初値を基準にしている"}
+
+
+@server.tool(
+    description=(
+        "1銘柄の**上場時の諸元**を返す。想定価格・仮条件・公開価格・初値・"
+        "想定時価総額・社長の持株比率・オーナー株比率・公募と売出しの比率・"
+        "オーバーアロットメント・注目度・代表者の上場時の年齢・主幹事など。"
+        "テンバガーの条件（社長の持株が多いか、公開規模が小さいか）を"
+        "確かめるときに使う。上場時点の事実で、AIの判断は入っていない。"
+    )
+)
+@quiet
+def ipo_facts(code: str) -> Dict[str, Any]:
+    bad = _guard(code)
+    if bad:
+        return bad
+    code = str(code).strip().upper()
+
+    import csv as _csv
+    import glob as _glob
+
+    out: Dict[str, Any] = {"コード": code}
+    # 3つのTSVに分かれている。どれも上場時の事実
+    for label, pattern, key in (
+            ("公開価格と初値", "traders/companies_*.tsv", "コード"),
+            ("上場時の諸元", "kiso_details/companies_*.tsv", "コード"),
+            ("上場後の集計", "combiner/companies_*.tsv", "コード")):
+        for path in _glob.glob(os.path.join(BASE_DIR, "data", "output", pattern)):
+            with open(path, encoding="utf-8", newline="") as f:
+                for row in _csv.DictReader(f, delimiter="\t"):
+                    if (row.get(key) or "").strip() == code:
+                        out[label] = {k: v for k, v in row.items()
+                                      if (v or "").strip() and k != key}
+                        break
+            if label in out:
+                break
+    if len(out) == 1:
+        return {"error": f"{code} の上場時の諸元が見つからない",
+                "注記": "上場が古い銘柄はIPO情報のTSVに無いことがある"}
+    return out
+
+
+# --- 投資本。本文はこのリポジトリに置かない（公開リポジトリのため） ---
+
+def _book_dir() -> str:
+    """本文の置き場所。環境変数 BOOK_TEXTS_DIR で指す。
+
+    **本文は非公開の別リポジトリにあり、ここには置かない。**
+    サブモジュールにすると、非公開リポジトリを参照していることが
+    URLごと公開されるうえ、他人のcloneが失敗するので使わない。
+    """
+    return os.environ.get(
+        "BOOK_TEXTS_DIR",
+        os.path.join(os.path.dirname(BASE_DIR), "BookScraper",
+                     "book_texts", "stock_investment"))
+
+
+@server.tool(
+    description=(
+        "投資本の原文を検索して、その語の**周辺だけ**返す。"
+        "リンチ『株で勝つ』、清原達郎『我が投資術』、"
+        "テンバガー投資家X『トイレスマホで無限10倍株』、"
+        "エミン・ユルマズ『世界インフレ時代の経済指標』などが対象。"
+        "query は本文中の語（例: 在庫、ネットキャッシュ、PER、成長率、社長）。"
+        "**要約ではなく原文**なので、その人が実際にどう書いたかを確かめられる。"
+        "抜き書きではなく原文にあたりたいときに使う。"
+    )
+)
+@quiet
+def search_books(query: str, limit: int = 8, around: int = 400) -> Dict[str, Any]:
+    import glob as _glob
+    import re as _re
+
+    directory = _book_dir()
+    if not os.path.isdir(directory):
+        return {
+            "error": f"本文の置き場所が見つからない: {directory}",
+            "対処": (
+                "環境変数 BOOK_TEXTS_DIR に、本文のテキストを置いた"
+                "ディレクトリを指定する。本文は著作物なのでこのリポジトリには"
+                "置いていない（公開リポジトリのため）"
+            ),
+        }
+    query = str(query or "").strip()
+    if not query:
+        return {"error": "検索語が空です"}
+
+    hits = []
+    for path in sorted(_glob.glob(os.path.join(directory, "*"))):
+        if not os.path.isfile(path):
+            continue
+        try:
+            with open(path, encoding="utf-8", errors="replace") as f:
+                text = f.read()
+        except OSError:
+            continue
+        book = os.path.splitext(os.path.basename(path))[0]
+        for m in _re.finditer(_re.escape(query), text):
+            start = max(0, m.start() - around)
+            snippet = text[start:m.end() + around]
+            snippet = " ".join(snippet.split())
+            hits.append({"本": book, "位置": m.start(), "原文": snippet})
+            if len(hits) >= limit * 3:
+                break
+
+    if not hits:
+        return {"検索語": query, "件数": 0,
+                "本": [os.path.splitext(os.path.basename(p))[0]
+                       for p in sorted(_glob.glob(os.path.join(directory, "*")))],
+                "注記": f"「{query}」はどの本にも出てこない"}
+
+    # 本ごとに散らして返す。1冊に偏らせない
+    by_book: Dict[str, List[dict]] = {}
+    for h in hits:
+        by_book.setdefault(h["本"], []).append(h)
+    picked = []
+    while len(picked) < limit and any(by_book.values()):
+        for book in list(by_book):
+            if by_book[book]:
+                picked.append(by_book[book].pop(0))
+            if len(picked) >= limit:
+                break
+
+    return {"検索語": query, "件数": len(hits), "返した数": len(picked),
+            "抜粋": picked,
+            "注記": "本文そのまま。要約ではない"}
+
+
+@server.tool(
+    description=(
+        "検索できる投資本の一覧を返す。書名と文字数。"
+        "search_books で何が引けるかを知りたいときに使う。"
+    )
+)
+@quiet
+def list_books() -> Dict[str, Any]:
+    import glob as _glob
+
+    directory = _book_dir()
+    if not os.path.isdir(directory):
+        return {
+            "error": f"本文の置き場所が見つからない: {directory}",
+            "対処": "環境変数 BOOK_TEXTS_DIR にディレクトリを指定する",
+        }
+    books = []
+    for path in sorted(_glob.glob(os.path.join(directory, "*"))):
+        if os.path.isfile(path):
+            try:
+                with open(path, encoding="utf-8", errors="replace") as f:
+                    n = len(f.read())
+            except OSError:
+                n = None
+            books.append({"書名": os.path.splitext(os.path.basename(path))[0],
+                          "文字数": n})
+    return {"置き場所": directory, "冊数": len(books), "本": books}
 
 
 if __name__ == "__main__":

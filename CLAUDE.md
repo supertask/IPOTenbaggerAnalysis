@@ -22,6 +22,23 @@ gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 | `disclosure_text` | 適時開示PDFの**本文**。grepで必要なところだけ抜ける |
 | `company_shareholders` | 持株の推移と5%超の売買 |
 | `company_facilities` | 1拠点あたりの採算（単位は店舗/台/戸） |
+| `price_history` | 株価・公開価格・初値・現在何倍・N倍まで何年 |
+| `ipo_facts` | 上場時の諸元（公開価格・社長株%・オーナー株%・公募/売出%・注目度） |
+| `search_books` | **投資本の原文を検索して周辺だけ返す。** 要約ではない |
+| `list_books` | 検索できる本の一覧 |
+
+`annual_report_xbrl` と `annual_report_text` は `year` で過去の年度も読める
+（6099は有報を12年ぶん、3496は8年ぶん持っている）。
+
+**投資本の本文はこのリポジトリに置かない。** 環境変数 `BOOK_TEXTS_DIR` で
+場所を指す（既定は `../BookScraper/book_texts/stock_investment`）。
+無ければツールがエラーと対処法を返す。**サブモジュールにはしない** —
+このリポジトリは公開なので、非公開リポジトリを参照していることがURLごと
+公開されるうえ、他人のcloneが失敗する。
+
+**適時開示は東証のサイトから取っているので、東証に上場していない銘柄は取れない。**
+353Aエレベーターコミュニケーションズ（札証アンビシャス）と
+9388パパネッツ（福証Qボード）がこれに当たり、この2社だけ開示が0件。
 
 **MCPはAIが書いたものを出さない。** `business_profile.tsv`（事業の読み解き・
 判定・買う理由）と `disclosure_reading.tsv`（開示の要約）は返さない。

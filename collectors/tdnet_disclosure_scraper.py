@@ -87,6 +87,13 @@ class TDnetDisclosureScraper:
         return table_ids
 
     def go_to_table_page(self, company_code):
+        """東証のサイトで銘柄を引き、適時開示のタブまで進む。
+
+        **東証に上場していない銘柄は、ここで detail_button が出ずに落ちる。**
+        札証アンビシャスや福証Qボードの単独上場はこの経路では取れない
+        （保有銘柄では353Aエレベーターコミュニケーションズと9388パパネッツ）。
+        別の取引所の開示が要るなら、その取引所のサイトを見に行く実装が要る。
+        """
         try:
             self.page.goto('https://www2.jpx.co.jp/tseHpFront/JJK010010Action.do')
             time.sleep(random.uniform(2.0, 2.5))
