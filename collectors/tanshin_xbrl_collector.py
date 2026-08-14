@@ -105,6 +105,33 @@ LABELS = {
     "ChangesOtherThanOnesBasedOnRevisionsOfAccountingStandard": "それ以外の会計方針の変更",
     "ChangesInAccountingEstimates": "会計上の見積りの変更",
     "RetrospectiveRestatement": "修正再表示",
+    # IFRSの会社は別のタグを使う。**経常利益が無く、税引前利益になる。**
+    # 保有銘柄では3774・6574・9158がこちら
+    "SalesIFRS": "売上収益（IFRS）",
+    "ChangeInSalesIFRS": "売上収益の増減率（IFRS）",
+    "OperatingIncomeIFRS": "営業利益（IFRS）",
+    "ChangeInOperatingIncomeIFRS": "営業利益の増減率（IFRS）",
+    "ProfitBeforeTaxIFRS": "税引前利益（IFRS）",
+    "ChangeInProfitBeforeTaxIFRS": "税引前利益の増減率（IFRS）",
+    "ProfitIFRS": "当期利益（IFRS）",
+    "ChangeInProfitIFRS": "当期利益の増減率（IFRS）",
+    "ProfitAttributableToOwnersOfParentIFRS": "親会社の所有者に帰属する当期利益（IFRS）",
+    "ChangeInProfitAttributableToOwnersOfParentIFRS":
+        "親会社の所有者に帰属する当期利益の増減率（IFRS）",
+    "ComprehensiveIncomeIFRS": "当期包括利益（IFRS）",
+    "ChangeInComprehensiveIncomeIFRS": "当期包括利益の増減率（IFRS）",
+    "BasicEarningsPerShareIFRS": "基本的1株当たり当期利益（IFRS）",
+    "DilutedEarningsPerShareIFRS": "希薄化後1株当たり当期利益（IFRS）",
+    "TotalAssetsIFRS": "資産合計（IFRS）",
+    "EquityIFRS": "資本合計（IFRS）",
+    "EquityAttributableToOwnersOfParentIFRS": "親会社の所有者に帰属する持分（IFRS）",
+    "RatioOfOwnersEquityToGrossAssetsIFRS": "親会社所有者帰属持分比率（IFRS）",
+    "EquityPerShareAttributableToOwnersOfParentIFRS":
+        "1株当たり親会社所有者帰属持分（IFRS）",
+    "RatioOfProfitToEquityAttributableToOwnersOfParentIFRS":
+        "親会社所有者帰属持分当期利益率（IFRS）",
+    "RatioOfProfitBeforeTaxToTotalAssetsIFRS": "資産合計税引前利益率（IFRS）",
+    "RatioOfOperatingIncomeToSalesIFRS": "売上収益営業利益率（IFRS）",
 }
 
 # コンテキストIDの部品
@@ -260,14 +287,47 @@ def portfolio_codes():
     return codes
 
 
+def relabel(codes):
+    """項目名の列を LABELS から付け直す。
+
+    項目名はタグから決まるだけなので、**落とし直す必要はない。**
+    IFRSのタグを足したときのように、対応表だけが増えた場合に使う。
+    """
+    for code in sorted(codes):
+        path = os.path.join(FACTS_DIR, f"{code}.tsv")
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8", newline="") as f:
+            rows = list(csv.DictReader(f, delimiter="\t"))
+        changed = 0
+        for row in rows:
+            name = LABELS.get(row["タグ"], "")
+            if name and name != row["項目名"]:
+                row["項目名"] = name
+                changed += 1
+        if not changed:
+            continue
+        with open(path, "w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, COLUMNS, delimiter="\t",
+                                    lineterminator="\n", extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(rows)
+        print(f"{code}: {changed}行の項目名を付け直した")
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--codes", nargs="+", help="銘柄コードで絞る")
     parser.add_argument("--force", action="store_true",
                         help="取得済みの短信も落とし直す")
+    parser.add_argument("--relabel", action="store_true",
+                        help="項目名だけ LABELS から付け直す。タグから決まる列なので"
+                             "落とし直さなくていい（IFRSのタグを足したときなど）")
     args = parser.parse_args()
 
     codes = args.codes or portfolio_codes()
+    if args.relabel:
+        return relabel(codes)
     rows = read_index(codes)
     by_code = {}
     for row in rows:

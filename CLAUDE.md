@@ -29,7 +29,17 @@ gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 | `list_books` | 検索できる本の一覧 |
 
 `annual_report_xbrl` と `annual_report_text` は `year` で過去の年度も読める
-（6099は有報を12年ぶん、3496は8年ぶん持っている）。
+（6099は有報を12年ぶん、3496は8年ぶん持っている）。`report_type` は
+`annual`（41,308件）／`quarterly`（361件・保有銘柄のみ）／
+`securities_registration`（2,231件・上場時の届出書）。
+
+**MCPは長い文字列ではなく構造を返す。** 読む側が毎回パースし直さなくて済むよう、
+`company_metrics` は `metric_compare_dump.collect()`、`company_shareholders` は
+`holdings_service.get_holdings_history()` の構造をそのまま渡す。
+**キーの言語も揃える** — サービス層は英語のキーで返すので、MCPの外に出すところで
+日本語に直す（`_rename`）。文字列のまま返すのは、それ自体が中身である
+`本文`（有報・開示PDF）と `原文`（本）だけ。
+`annual_report_text` の `section` は日本語の節名でも受ける。
 
 **有報のXBRLには実績しか無い。会社の予想は決算短信にしか無い。**
 `tanshin_xbrl` が見ているのは東証の適時開示ページに並んでいるサマリーの

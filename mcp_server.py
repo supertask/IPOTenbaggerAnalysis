@@ -100,6 +100,13 @@ def _guard(code: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def _rename(value, mapping: Dict[str, str]):
+    """辞書のキーを日本語に置き換える。無いキーはそのまま残す"""
+    if not isinstance(value, dict):
+        return value
+    return {mapping.get(k, k): v for k, v in value.items()}
+
+
 def _round(value, digits=2):
     return round(value, digits) if isinstance(value, (int, float)) else value
 
@@ -224,6 +231,9 @@ def company_metrics(code: str, brief: bool = True) -> Dict[str, Any]:
         "query を空にすると、その報告書にあるタグの一覧だけを返す。"
         "year を渡すと過去の年度の有報を読む（何年ぶんあるかは list_holdings ではなく"
         "この関数の error に「読める提出日」として出る）。"
+        "report_type は annual（有報・年1回）／quarterly（四半期・半期報告書、"
+        "保有銘柄のみ）／securities_registration（上場時の届出書）。"
+        "**会社の予想はここには無い。実績だけ。予想は tanshin_xbrl。**"
     )
 )
 @quiet
@@ -281,9 +291,14 @@ def annual_report_xbrl(code: str, query: str = "", limit: int = 60,
         "business=事業の内容、officers=役員の状況、mdna=経営者による分析（MD&A）、"
         "risk=事業等のリスク、rd=研究開発活動、capex=設備投資等の概要、"
         "segment=セグメント情報、policy=経営方針。"
+        "**日本語の節名でも受ける**（事業の内容・役員の状況・事業等のリスクなど）。"
         "section を空にすると、その報告書にある本文セクションの一覧を返す。"
         "year を渡すと過去の年度の有報を読む（6099は12年ぶん、3496は8年ぶんある）。"
+        "report_type は annual（有報・年1回）／quarterly（四半期・半期報告書、"
+        "保有銘柄のみ）／securities_registration（上場時の届出書）。"
         "会社が自分の言葉で書いた一次資料なので、事業の中身を知りたいときはここ。"
+        "**四半期ごとの経営成績の説明は有報には無い。** 決算短信のPDFにあるので、"
+        "company_disclosures で「決算短信」を引いて disclosure_text で読む。"
     )
 )
 @quiet
@@ -335,9 +350,19 @@ def annual_report_text(code: str, section: str = "", chars: int = 6000,
                                        for t, v in sorted(blocks.items())],
         }
 
-    key = section.strip().lower()
+    # **日本語でも受ける。** 説明文に「事業の内容・役員の状況」と書いてあるので、
+    # 呼ぶ側はそのまま渡してくる。英語のキーだけだと毎回1往復むだになる
+    aliases = {label: key for key, (_tag, label) in known.items()}
+    aliases.update({"事業": "business", "役員": "officers", "リスク": "risk",
+                    "研究開発": "rd", "設備": "capex", "セグメント": "segment",
+                    "経営方針": "policy", "mdna": "mdna", "md&a": "mdna",
+                    "経営者による分析": "mdna", "業績": "mdna"})
+
+    raw_section = section.strip()
+    key = aliases.get(raw_section, raw_section.lower())
     if key not in known:
-        return {"error": f"section は {sorted(known)} のどれか"}
+        return {"error": f"section は {sorted(known)} のどれか"
+                         f"（{sorted(aliases)} の日本語でも受ける）"}
     tag, name = known[key]
     for element, (label, raw) in blocks.items():
         if element.endswith(tag):
@@ -375,10 +400,15 @@ def company_disclosures(code: str, match: str = "", limit: int = 40,
 
 
 _TANSHIN_FACTS = os.path.join(BASE_DIR, "data", "output", "tanshin", "facts")
-# 予想の修正を追うときに見る項目。会社が出しているのはこの粒度
+# 予想の修正を追うときに見る項目。会社が出しているのはこの粒度。
+# **IFRSの会社はタグが別で、経常利益の代わりに税引前利益が来る**
+# （保有銘柄では3774・6574・9158）
 _FORECAST_TAGS = ("NetSales", "OperatingIncome", "OrdinaryIncome",
                   "ProfitAttributableToOwnersOfParent", "NetIncome",
-                  "NetIncomePerShare", "DividendPerShare")
+                  "NetIncomePerShare", "DividendPerShare",
+                  "SalesIFRS", "OperatingIncomeIFRS", "ProfitBeforeTaxIFRS",
+                  "ProfitIFRS", "ProfitAttributableToOwnersOfParentIFRS",
+                  "BasicEarningsPerShareIFRS")
 
 
 def _tanshin_rows(code: str) -> Optional[List[Dict[str, str]]]:
@@ -527,12 +557,27 @@ def company_shareholders(code: str) -> Dict[str, Any]:
         return bad
     code = str(code).strip().upper()
 
-    from collectors import holding_judgment_dump
+    from visualizer import holdings_service
 
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        holding_judgment_dump.show_holdings(code)
-    holders = buf.getvalue().strip()
+    # 画面と同じサービスから構造のまま取る。テキストに整形したものを
+    # 渡すと、読む側が毎回パースし直すことになる
+    view = holdings_service.get_holdings_history(code) or {}
+    holders: Dict[str, Any] = {}
+    for key, label in (("major", "大株主"), ("officer", "役員")):
+        table = view.get(key)
+        if not table:
+            continue
+        periods = [{"期": c["date"], "中間期": bool(c["interim"])}
+                   for c in table["columns"]]
+        holders[label] = {
+            "期": periods,
+            "人": [{"名前": p["name"], "株数": p["values"],
+                    "増減": p.get("change")}
+                   for p in table["people"]],
+        }
+    if view.get("officer_decreases"):
+        holders["役員の合計が減った期"] = [
+            {"期": d["date"], "増減": d["diff"]} for d in view["officer_decreases"]]
 
     from visualizer import large_holding_service
     large = large_holding_service.get_large_holdings(code) or {}
@@ -548,7 +593,7 @@ def company_shareholders(code: str) -> Dict[str, Any]:
 
     return {
         "コード": code,
-        "持株の推移": holders[:6000],
+        "持株の推移": holders,
         "5%超の売買": trades,
         "売買の総数": large.get("total"),
         "保有者": large.get("holders"),
@@ -601,8 +646,14 @@ def company_facilities(code: str) -> Dict[str, Any]:
                  for p in view["peers"]],
         "競合中央値との比": _round(view.get("ratio_to_peers")),
         "単位が違う競合": view.get("mixed_units"),
-        "期中の最新": view.get("latest_interim"),
-        "原価の構成": view.get("cost_structure"),
+        # サービス層は英語のキーで返す。**MCPの外に出すところで日本語に揃える** —
+        # 同じ戻りの中でキーの言語が混ざると、読む側が名前を推測することになる
+        "期中の最新": _rename(view.get("latest_interim"), {
+            "date": "期", "count": "数", "unit": "単位", "sources": "出所"}),
+        "原価の構成": _rename(view.get("cost_structure"), {
+            "date": "期", "cost_ratio": "原価率", "purchase": "仕入",
+            "purchase_ratio": "仕入の比率", "labor": "労務費",
+            "labor_ratio": "労務費の比率"}),
         "注記": "単位の種類が違う競合とは倍率を出さない（1台あたりと1店舗あたりの比に意味がないため）",
     }
 
