@@ -143,8 +143,15 @@ def get_company_name(row):
         company_name = str(company_name)
     return company_name
 
+# この一覧に出す上場年の幅。**ここだけを直せば全部に効く。**
+# 以前は3年で、DBのSQL・TSVのフォールバック・data_service に同じ数字が
+# 散らばっていた。保有銘柄でも7115（2022年上場）と7388（2022年）が
+# 一覧から漏れていたので5年に広げた
+IPO_YEARS_WINDOW = 5
+
+
 def _load_companies_from_db() -> Optional[list]:
-    """DBから直近3年IPO企業をロード。DB無しなら None を返す。"""
+    """DBから直近{IPO_YEARS_WINDOW}年のIPO企業をロード。DB無しなら None"""
     conn = _index_db.get_conn()
     if conn is None:
         return None
@@ -155,9 +162,9 @@ def _load_companies_from_db() -> Optional[list]:
            FROM companies
            WHERE (company_dir_new IS NOT NULL OR company_dir_old IS NOT NULL)
              AND ipo_year IS NOT NULL
-             AND ? - ipo_year <= 3
+             AND ? - ipo_year <= ?
            ORDER BY ipo_year DESC""",
-        (current_year,),
+        (current_year, IPO_YEARS_WINDOW),
     ).fetchall()
     companies = []
     for row in rows:
@@ -245,7 +252,8 @@ def load_companies_data() -> Tuple[list, bool]:
                             company = create_company_dict(row, company_code, company_name)
                             companies.append(company)
                 else:
-                    # 上場年のカラムがある場合は、3年以内の企業をフィルタリング（ただし、DataServiceに存在する企業のみ）
+                    # 上場年のカラムがある場合は、IPO_YEARS_WINDOW 年以内の企業に絞る
+                    # （ただし、DataServiceに存在する企業のみ）
                     for _, row in df.iterrows():
                         # 上場年を取得
                         ipo_year = None
@@ -261,8 +269,8 @@ def load_companies_data() -> Tuple[list, bool]:
                                 except (ValueError, TypeError):
                                     ipo_year = None
                         
-                        # 上場年が3年以内の企業のみを追加（ただし、DataServiceに存在する企業のみ）
-                        if ipo_year is not None and current_year - ipo_year <= 3:
+                        # 上場年が範囲内の企業のみを追加（DataServiceに存在するものだけ）
+                        if ipo_year is not None and current_year - ipo_year <= IPO_YEARS_WINDOW:
                             company_code = str(row['コード'])
                             # DataServiceに存在する企業のみを追加
                             if company_code in company_code_name_map:

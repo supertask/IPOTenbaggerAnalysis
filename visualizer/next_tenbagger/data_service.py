@@ -108,10 +108,15 @@ class DataService:
 
     @staticmethod
     def get_recent_ipo_companies() -> List[Dict[str, Any]]:
-        """直近3年でIPOした企業のリストを取得"""
+        """直近 IPO_YEARS_WINDOW 年でIPOした企業のリストを取得。
+
+        幅は root.py の IPO_YEARS_WINDOW に合わせる（一覧と食い違うと、
+        一覧に出ているのに詳細で「対象外」になる銘柄が生まれる）
+        """
+        from visualizer.next_tenbagger.root import IPO_YEARS_WINDOW
         conn = _index_db.get_conn()
         if conn is not None:
-            cutoff = (datetime.now() - timedelta(days=3 * 365)).strftime("%Y-%m-%d")
+            cutoff = (datetime.now() - timedelta(days=IPO_YEARS_WINDOW * 365)).strftime("%Y-%m-%d")
             rows = conn.execute(
                 """SELECT code, name, ipo_date FROM companies
                    WHERE ipo_date IS NOT NULL AND ipo_date >= ?
@@ -127,7 +132,7 @@ class DataService:
         companies = []
 
         try:
-            # 直近3年のIPO企業リストを読み込む
+            # 直近のIPO企業リストを読み込む
             if os.path.exists(RECENT_IPO_COMPANIES_PATH):
                 df = pd.read_csv(RECENT_IPO_COMPANIES_PATH, sep='\t')
                 required_columns = ['企業名', 'コード', 'IPO日']
@@ -135,13 +140,14 @@ class DataService:
                 if all(col in df.columns for col in required_columns):
                     # 現在の日付を取得
                     current_date = datetime.now()
-                    # 3年前の日付を計算
-                    three_years_ago = current_date - timedelta(days=3*365)
+                    # 何年前までを対象にするか
+                    from visualizer.next_tenbagger.root import IPO_YEARS_WINDOW
+                    three_years_ago = current_date - timedelta(days=IPO_YEARS_WINDOW*365)
                     
                     # IPO日を日付型に変換
                     df['IPO日'] = pd.to_datetime(df['IPO日'], errors='coerce')
                     
-                    # 直近3年以内にIPOした企業をフィルタリング
+                    # 範囲内にIPOした企業をフィルタリング
                     recent_ipo_df = df[df['IPO日'] >= three_years_ago]
                     
                     for _, row in recent_ipo_df.iterrows():
@@ -152,7 +158,7 @@ class DataService:
                             'ipo_date': row['IPO日'].strftime('%Y-%m-%d') if pd.notna(row['IPO日']) else None
                         })
                     
-                    logger.info(f"直近3年でIPOした企業数: {len(companies)}")
+                    logger.info(f"直近でIPOした企業数: {len(companies)}")
                 else:
                     missing_columns = [col for col in required_columns if col not in df.columns]
                     logger.warning(f"recent_ipo_companies.tsvに必要な列がありません: {missing_columns}")

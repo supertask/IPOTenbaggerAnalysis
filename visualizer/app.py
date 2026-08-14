@@ -222,7 +222,7 @@ def create_root_app():
                                 <h3 class="card-title mb-0">次のテンバガー企業予測</h3>
                             </div>
                             <div class="card-body text-center">
-                                <p class="card-text mb-4">直近3年で上場した企業から次のテンバガー候補を分析するツールです。</p>
+                                <p class="card-text mb-4">直近5年で上場した企業から次のテンバガー候補を分析するツールです。</p>
                                 <a href="/next_tenbagger/" class="btn btn-primary btn-lg">分析ツールを開く</a>
                             </div>
                         </div>
@@ -280,7 +280,7 @@ def create_next_tenbagger_app():
     
     @app.route('/')
     def index():
-        """トップページ - 直近3年でIPOした企業一覧"""
+        """トップページ - 直近5年でIPOした企業一覧"""
         data, error, status_code = next_tenbagger_index()
         if error:
             return error, status_code
