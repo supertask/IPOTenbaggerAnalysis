@@ -1,30 +1,74 @@
 {# 株価・出来高・PERの時系列。データはAPIから非同期で取る #}
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <h5 class="mb-0">株価</h5>
+        <h5 class="mb-0">株価
+            {# 読み方の断り書きは畳んでおく。毎回読むものではないので場所を取らせない #}
+            <button class="btn btn-sm btn-link text-muted p-0 ms-1 align-baseline"
+                    type="button" data-bs-toggle="collapse" data-bs-target="#price-chart-note"
+                    aria-expanded="false" aria-controls="price-chart-note"
+                    title="このグラフの読み方">
+                <i class="bi bi-question-circle"></i>
+            </button>
+        </h5>
         <div class="btn-group btn-group-sm" role="group" id="price-range-buttons"></div>
     </div>
     <div class="card-body">
         <div id="price-chart-warning" class="alert alert-warning py-2 px-3" style="display: none;"></div>
-        <div id="price-chart-status" class="text-muted small">株価を読み込んでいます...</div>
-        <div id="price-chart" style="min-height: 520px; display: none;"></div>
-        <div id="price-chart-note" class="text-muted small mt-2" style="display: none;">
-            株価・出来高は株式分割を調整済み。PERは終値 ÷ 直近の有価証券報告書の1株当たり当期純利益（実績）で、
-            EPSは発表後の分割に合わせて調整しています。<br>
-            PER欄の背景は緑が20倍以下、黄が20〜40倍、赤が40倍超。
-            オレンジの点線はロックアップ解除の目安（上場30日後・180日後・初値1.5倍到達日）。
-            日経平均は凡例をクリックすると表示します。
-        </div>
-
-        {# 適時開示のラベル。チャートの旗と同じ記号で並べ、PDFへ飛べるようにする #}
-        <div id="disclosure-legend" class="mt-3" style="display: none;">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                <h6 class="mb-0">この期間の適時開示</h6>
-                <input type="search" id="disclosure-filter" class="form-control form-control-sm w-auto"
-                       placeholder="タイトルで絞り込み">
+        <div class="collapse" id="price-chart-note">
+            <div class="text-muted small border rounded p-2 mb-2">
+                株価・出来高は株式分割を調整済み。PERは終値 ÷ 直近の有価証券報告書の1株当たり当期純利益（実績）で、
+                EPSは発表後の分割に合わせて調整しています。<br>
+                PER欄の背景は緑が20倍以下、黄が20〜40倍、赤が40倍超。
+                オレンジの点線はロックアップ解除の目安（上場30日後・180日後・初値1.5倍到達日）。
+                日経平均は凡例をクリックすると表示します。<br>
+                <strong>灰色の札</strong>は適時開示のあった日。押すと右（スマホでは下）の一覧の
+                その日に移動します。
             </div>
-            <div id="disclosure-list" class="disclosure-list border rounded"></div>
-            <div id="disclosure-note" class="text-muted small mt-1"></div>
+        </div>
+        <div id="price-chart-status" class="text-muted small">株価を読み込んでいます...</div>
+
+        {# **広い画面ではチャートの右に開示を並べる。** 見比べる手数がゼロになる。
+           狭い画面では横に置けないので下に積む（Bootstrapのグリッドで折り返す） #}
+        <div class="row g-3">
+            <div class="col-12 col-lg-9">
+                <div id="price-chart" style="min-height: 520px; display: none;"></div>
+            </div>
+            <div class="col-12 col-lg-3">
+                <div id="disclosure-legend" style="display: none;">
+                    {# 一覧と要約をタブで分ける。**要約はAIが書いたもの**なので、
+                       開示そのものと混ぜず、AIのバッジを付けて別のタブに置く #}
+                    <ul class="nav nav-tabs nav-tabs-sm" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active py-1 px-2" id="tab-disc-list"
+                                    data-bs-toggle="tab" data-bs-target="#pane-disc-list"
+                                    type="button" role="tab">開示</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link py-1 px-2" id="tab-disc-note"
+                                    data-bs-toggle="tab" data-bs-target="#pane-disc-note"
+                                    type="button" role="tab">
+                                要約 <span class="badge bg-secondary" id="disclosure-note-count">0</span>
+                            </button>
+                        </li>
+                    </ul>
+                    <input type="search" id="disclosure-filter"
+                           class="form-control form-control-sm my-2"
+                           placeholder="タイトルで絞り込み">
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="pane-disc-list" role="tabpanel">
+                            <div id="disclosure-list" class="disclosure-list border rounded"></div>
+                        </div>
+                        <div class="tab-pane fade" id="pane-disc-note" role="tabpanel">
+                            <div id="disclosure-summaries" class="disclosure-list border rounded"></div>
+                            <div class="text-muted small mt-1">
+                                <span class="badge bg-info text-dark">AIによる解釈</span>
+                                原文は各タイトルのリンクから。
+                            </div>
+                        </div>
+                    </div>
+                    <div id="disclosure-note" class="text-muted small mt-1"></div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -32,6 +76,12 @@
 <style>
     /* 開示が多い銘柄だと縦に伸びすぎるので、枠の中でスクロールさせる */
     .disclosure-list { max-height: 320px; overflow-y: auto; }
+    /* 広い画面ではチャートの右に並ぶので、高さをチャートに合わせる */
+    @media (min-width: 992px) { .disclosure-list { max-height: 430px; } }
+    /* 幅が狭いので、タイトルは小さめにして折り返す */
+    .disclosure-list .disclosure-summary { font-size: .8125rem; line-height: 1.45; }
+    .nav-tabs-sm .nav-link { font-size: .8125rem; }
+    .disclosure-list .disclosure-day { cursor: pointer; }
     .disclosure-list .disclosure-day { display: flex; gap: .5rem; padding: .5rem .75rem; }
     .disclosure-list .disclosure-day + .disclosure-day { border-top: 1px solid #eee; }
     .disclosure-list .disclosure-day.is-active { background: #fff3cd; }
@@ -65,7 +115,6 @@
         var statusEl = document.getElementById('price-chart-status');
         var warnEl = document.getElementById('price-chart-warning');
         var chartEl = document.getElementById('price-chart');
-        var noteEl = document.getElementById('price-chart-note');
         var buttonsEl = document.getElementById('price-range-buttons');
 
         fetch('/' + APP + '/api/price_history/' + encodeURIComponent(CODE))
@@ -263,7 +312,6 @@
             // Plotlyが既定の700pxで描いて画面からはみ出す。
             statusEl.style.display = 'none';
             chartEl.style.display = '';
-            noteEl.style.display = '';
 
             Plotly.newPlot(chartEl, traces, layout, {
                 responsive: true,
@@ -322,7 +370,38 @@
             document.getElementById('disclosure-legend').style.display = '';
             var filterEl = document.getElementById('disclosure-filter');
             filterEl.addEventListener('input', function () { renderDisclosures(); });
+
+            // **旗を押したら一覧のその日へ飛ばす。** ホバーはタッチで効かないので、
+            // スマホでも中身にたどり着ける道がこれしか無い
+            chartEl.on('plotly_clickannotation', function (ev) {
+                var date = ev && ev.annotation && ev.annotation.customdata;
+                if (date) focusDay(date);
+            });
             renderDisclosures();
+        }
+
+        // 一覧の該当日へスクロールして色を付ける。
+        // どの旗を見ているかが分かるよう、直前の強調は外す
+        function focusDay(date) {
+            // 開いているタブのほうへスクロールする
+            var panes = ['disclosure-list', 'disclosure-summaries'].map(function (id) {
+                return document.getElementById(id);
+            });
+            panes.forEach(function (pane) {
+                pane.querySelectorAll('.disclosure-day').forEach(function (el) {
+                    el.classList.toggle('is-active', el.dataset.date === date);
+                });
+            });
+            var listEl = panes.find(function (pane) { return pane.offsetParent !== null; })
+                || panes[0];
+            var target = listEl.querySelector('.disclosure-day[data-date="' + date + '"]');
+            if (!target) return;
+            listEl.scrollTop = target.offsetTop - listEl.offsetTop;
+            // 狭い画面では一覧がチャートの下にあるので、一覧自体も画面内に入れる
+            if (window.innerWidth < 992) {
+                document.getElementById('disclosure-legend')
+                    .scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
         }
 
         function visibleRange() {
@@ -360,6 +439,7 @@
                     bordercolor: '#ced4da', borderwidth: 1, borderpad: 2,
                     hovertext: m.date + '  ' + m['開示'].map(function (d) {
                         return d['タイトル']; }).join('｜'),
+                    customdata: m.date,   // クリックしたときに一覧を引く鍵
                     captureevents: true
                 });
             });
@@ -367,20 +447,54 @@
 
             var listEl = document.getElementById('disclosure-list');
             listEl.innerHTML = shown.map(function (m) {
-                var links = m['開示'].map(function (d) {
-                    return '<div><a href="' + d.url + '" target="_blank" rel="noopener">'
-                        + escapeHtml(d['タイトル']) + '</a></div>';
-                }).join('');
-                return '<div class="disclosure-day" data-date="' + m.date + '">'
-                    + '<div class="disclosure-mark">' + m.label + '</div>'
-                    + '<div class="disclosure-titles">' + links
-                    + '<div class="text-muted disclosure-date">' + m.date + '</div></div></div>';
+                return dayHtml(m, m['開示'], false);
             }).join('') || '<div class="p-3 text-muted small">この期間に該当する開示はありません</div>';
+
+            // 要約のタブ。**要約があるものだけ**を並べる（無い開示を混ぜると
+            // 「まだ書いていない」のか「読む価値が無い」のか分からなくなる）
+            var withNote = shown.map(function (m) {
+                return { m: m, items: m['開示'].filter(function (d) { return d['要約']; }) };
+            }).filter(function (x) { return x.items.length; });
+            document.getElementById('disclosure-summaries').innerHTML =
+                withNote.map(function (x) { return dayHtml(x.m, x.items, true); }).join('')
+                || '<div class="p-3 text-muted small">この期間には要約がありません</div>';
+            document.getElementById('disclosure-note-count').textContent =
+                withNote.reduce(function (n, x) { return n + x.items.length; }, 0);
+
+            document.querySelectorAll('.disclosure-list .disclosure-day').forEach(function (el) {
+                el.addEventListener('click', function (ev) {
+                    if (ev.target.tagName === 'A') return;   // リンクはそのまま開く
+                    focusDay(el.dataset.date);
+                });
+            });
 
             var noteEl = document.getElementById('disclosure-note');
             noteEl.textContent = shown.length + ' 日ぶんを表示中。'
                 + 'タイトルをクリックすると東証の開示PDFが開きます。'
                 + (disclosure.note ? ' ' + disclosure.note : '');
+        }
+
+        // 1日ぶんの行。要約タブでは本文を添える
+        function dayHtml(m, items, withSummary) {
+            var body = items.map(function (d) {
+                var html = '<div><a href="' + d.url + '" target="_blank" rel="noopener">'
+                    + escapeHtml(d['タイトル']) + '</a></div>';
+                if (withSummary && d['要約']) {
+                    html += '<div class="disclosure-summary text-body-secondary mb-1">'
+                        + emphasize(d['要約']) + '</div>';
+                }
+                return html;
+            }).join('');
+            return '<div class="disclosure-day" data-date="' + m.date + '">'
+                + '<div class="disclosure-mark">' + m.label + '</div>'
+                + '<div class="disclosure-titles">' + body
+                + '<div class="text-muted disclosure-date">' + m.date + '</div></div></div>';
+        }
+
+        // 要約は **強調** の書き方で書かれている。**先にエスケープしてから**
+        // 太字に直す（順番を逆にするとHTMLを埋め込まれる）
+        function emphasize(text) {
+            return escapeHtml(text).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
         }
 
         function escapeHtml(text) {

@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from visualizer import db as _db
+
 # チャートに立てる旗の上限。多すぎると重なって読めなくなる。
 # 6099は開示のある日が130日あり、全部立てるとチャートが埋まる
 MAX_MARKERS = 40
@@ -27,6 +29,29 @@ def _label(index: int) -> str:
     return letters
 
 
+def _summaries(code: str) -> Dict[str, str]:
+    """開示のURL → AIが書いた要約。
+
+    **これはAIの出力なので、画面では「AIによる解釈」と分かるように出す。**
+    書いた時点の精度がそのまま残るため、原文（PDF）への導線を必ず残す。
+    """
+    import csv
+    import os
+
+    path = os.path.join(_db.BASE_DIR, "data", "meta", "disclosure_reading.tsv")
+    if not os.path.exists(path):
+        return {}
+    out = {}
+    with open(path, encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f, delimiter="\t"):
+            if (row.get("銘柄コード") or "").strip() != code:
+                continue
+            text = (row.get("要約") or "").strip()
+            if text:
+                out[(row.get("URL") or "").strip()] = text
+    return out
+
+
 def get_markers(company_code: str, limit: int = MAX_MARKERS) -> Dict[str, Any]:
     """日付ごとにまとめた開示。新しい順、ラベル付き"""
     from collectors import disclosure_pdf
@@ -36,6 +61,7 @@ def get_markers(company_code: str, limit: int = MAX_MARKERS) -> Dict[str, Any]:
         return {"markers": [], "全件数": 0}
 
     rows = disclosure_pdf.find(code, months=240)
+    notes = _summaries(code)
     by_date: Dict[str, List[Dict[str, str]]] = {}
     for row in rows:
         if len(row) < 6 or not row[0]:
@@ -45,15 +71,18 @@ def get_markers(company_code: str, limit: int = MAX_MARKERS) -> Dict[str, Any]:
             # TSVには東証のサイト内のパスだけが入っている
             "url": ("https://www2.jpx.co.jp" + row[5]
                     if row[5].startswith("/") else row[5]),
+            "要約": notes.get(row[5], ""),
         })
 
     markers = []
     for i, date in enumerate(sorted(by_date, reverse=True)):
+        items = sorted(by_date[date], key=lambda d: d["時刻"], reverse=True)
         markers.append({
             "date": date,
             "label": _label(i),
-            "件数": len(by_date[date]),
-            "開示": sorted(by_date[date], key=lambda d: d["時刻"], reverse=True),
+            "件数": len(items),
+            "要約あり": sum(1 for d in items if d["要約"]),
+            "開示": items,
         })
 
     return {
@@ -62,4 +91,5 @@ def get_markers(company_code: str, limit: int = MAX_MARKERS) -> Dict[str, Any]:
         "markers": markers[:limit],
         "全件数": len(markers),
         "打ち切り": len(markers) > limit,
+        "要約の件数": len(notes),
     }
