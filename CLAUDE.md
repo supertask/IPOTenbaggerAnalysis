@@ -38,7 +38,11 @@ gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 |---|---|---|
 | 自分 | `data/output/portfolio/myself.tsv` | あり |
 | テンバガーX | `data/output/portfolio/tenbagger_x.tsv` | あり |
-| お気に入り | `data/output/portfolio/favorites.tsv`（未作成） | 無し（保有していない監視銘柄） |
+| お気に入り | `data/output/portfolio/favorites.tsv` | 無し（保有していない監視銘柄）。**見出しだけの空ファイル。** 銘柄コードの列だけ埋めれば足りる |
+
+**一覧の既定の絞り込みは「保有あり」。** 見るのはたいてい持っている銘柄なので、
+全銘柄から探し直さなくていいようにしてある（`components/index/holder_filter.html`）。
+全件から見せたいページは `{% set default_holder_filter = '' %}` を include の前に置く。
 
 対象を取るときは `collectors/holding_profile_dump.py` の `portfolio_codes()`。
 `data/output/portfolio/*.tsv` を読むので、TSVを足せば自動で対象に入る。
