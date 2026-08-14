@@ -9,12 +9,28 @@
 gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 ```
 
-保有銘柄の判断材料は **MCPサーバ（`mcp_server.py`）からも呼べる。**
+保有銘柄の**生データ**は **MCPサーバ（`mcp_server.py`）から呼べる。**
 `.mcp.json` を置いてあるので、Claude Codeなら起動時に読み込まれる。
-ツールは6つ（`list_holdings` / `company_profile` / `company_metrics` /
-`company_facilities` / `company_shareholders` / `company_disclosures`）。
 
-**MCPはインデックスを直接引かず、visualizer のサービス層だけを呼ぶ。**
+| ツール | 返すもの |
+|---|---|
+| `list_holdings` | 保有32銘柄（コード・上場日・市場・業種・倍率・保有区分） |
+| `company_metrics` | 38指標を競合・業種中央値・10倍株の3群と並べる |
+| `annual_report_xbrl` | **有報のXBRLをタグ名か項目名で検索。1銘柄386種類**（画面に出しているのは65種類だけ） |
+| `annual_report_text` | 有報の本文（事業の内容・役員・MD&A・リスク・研究開発・設備・セグメント・経営方針） |
+| `company_disclosures` | 適時開示の一覧（日付・タイトル・URL） |
+| `disclosure_text` | 適時開示PDFの**本文**。grepで必要なところだけ抜ける |
+| `company_shareholders` | 持株の推移と5%超の売買 |
+| `company_facilities` | 1拠点あたりの採算（単位は店舗/台/戸） |
+
+**MCPはAIが書いたものを出さない。** `business_profile.tsv`（事業の読み解き・
+判定・買う理由）と `disclosure_reading.tsv`（開示の要約）は返さない。
+**書いた時点のAIの精度がそのまま残り、あとから読む側を古い結論で縛るため。**
+呼ぶ側がそのつど生データから判断できるように、一次資料と、そこから
+機械的に計算した数字だけを返す。画面は「AIによる解釈」のバッジで区別できるが、
+MCPには区別する手段が無いので最初から混ぜない。
+
+**インデックスを直接引かず、visualizer のサービス層と collectors を通す。**
 同じインデックスを読む場所が増えるとタグの持ち方がずれる（2026-08-14に
 `METRIC_ALIASES`・`metric_diagnose`・`facility_service` の3箇所がずれていて、
 IFRSの会社で営業利益率0.07%という数字が出ていた）。画面と同じ関数を通す。

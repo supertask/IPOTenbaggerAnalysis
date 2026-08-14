@@ -1,4 +1,4 @@
-"""保有銘柄の判断材料を、MCPでClaudeから直接呼べるようにする。
+"""保有銘柄の**生データ**を、MCPでClaudeから直接呼べるようにする。
 
     python mcp_server.py          # stdio で起動（クライアントが起動するので手では叩かない）
 
@@ -6,13 +6,25 @@
 コマンドで叩いて出力を読ませていた。ターミナルの無いところ（claude.ai や
 スマホ）からは触れなかったのを、ここで埋める。
 
+## 出すのは生データだけ。AIが書いた解釈は出さない
+
+`data/meta/business_profile.tsv`（事業の読み解き・判定・買う理由）と
+`data/meta/disclosure_reading.tsv`（開示の要約）は、**AIが書いたもの**なので
+ここからは出さない。**書いた時点のAIの精度がそのまま残り、あとから読む側の
+判断を古い結論で縛ってしまう。** 呼ぶ側がそのつど生データから判断できるよう、
+有報の本文・XBRLの値・適時開示のPDF本文・大量保有報告書といった
+**一次資料と、そこから機械的に計算した数字**だけを返す。
+
+画面（visualizer）はAIの解釈も出すが、あちらは「AIによる解釈」のバッジで
+区別している。MCPは区別する手段が無いので、最初から混ぜない。
+
 ## 守っていること
 
-**インデックスを直接引かない。visualizer のサービス層だけを呼ぶ。**
+**インデックスを直接引かず、visualizer のサービス層と collectors を通す。**
 2026-08-14に、同じインデックスを読む場所が3つに分かれてタグの持ち方が
 ずれていたせいで、営業利益率0.07%（IFRSの会社で基準の違う数字どうしの
 割り算）、表とグラフの食い違い、拠点あたりの中央値ずれが同時に起きた。
-ここが4つ目の読み手になって同じずれを生まないよう、**画面と同じ関数**を通す。
+ここが新しい読み手になって同じずれを生まないよう、**画面と同じ関数**を通す。
 
 **対象は保有銘柄だけ。** 全銘柄に広げるとトークンが持たない
 （`CLAUDE.md` の「重いデータは保有銘柄だけ」と同じ方針）。
@@ -53,13 +65,16 @@ def quiet(func):
                 print(leaked, file=sys.stderr, end="")
     return wrapper
 
+
 server = MCPServer(
     name="ipo-tenbagger",
     instructions=(
         "日本のIPO銘柄のうち、ユーザーが保有・監視している32銘柄について、"
-        "有価証券報告書・適時開示・大量保有報告書から作った判断材料を返す。"
-        "数字はすべて画面（visualizer）と同じ計算を通しているので、"
-        "画面と食い違うことはない。保有外の銘柄には答えられない。"
+        "有価証券報告書・適時開示・大量保有報告書の**生データ**と、"
+        "そこから機械的に計算した指標を返す。"
+        "AIが書いた解釈（事業の読み解き・投資判断・開示の要約）は含まない。"
+        "解釈が要るときは、ここで取った生データを読んでそのつど判断すること。"
+        "保有外の銘柄には答えられない。"
     ),
 )
 
@@ -71,7 +86,7 @@ def _portfolio_codes() -> List[str]:
     return sorted(portfolio_codes())
 
 
-def _guard(code: str) -> Optional[Dict[str, str]]:
+def _guard(code: str) -> Optional[Dict[str, Any]]:
     """保有銘柄でなければ、理由を添えて断る"""
     code = str(code or "").strip().upper()
     if not code:
@@ -85,30 +100,31 @@ def _guard(code: str) -> Optional[Dict[str, str]]:
     return None
 
 
-def _profile_row(code: str) -> Dict[str, str]:
-    """business_profile.tsv の1行。AIが書いた解釈で、抽出した数字とは別もの"""
-    import csv
-    path = os.path.join(BASE_DIR, "data", "meta", "business_profile.tsv")
-    if not os.path.exists(path):
-        return {}
-    with open(path, encoding="utf-8", newline="") as f:
-        for row in csv.DictReader(f, delimiter="\t"):
-            if (row.get("コード") or "").strip() == code:
-                return {k: v for k, v in row.items() if (v or "").strip()}
-    return {}
-
-
 def _round(value, digits=2):
     return round(value, digits) if isinstance(value, (int, float)) else value
+
+
+def _report_path(code: str, report_type: str = "annual") -> Optional[tuple]:
+    """その銘柄の最新の報告書のファイル。(パス, 提出日)"""
+    from visualizer import db as _index_db
+    conn = _index_db.get_conn()
+    if conn is None:
+        return None
+    row = conn.execute(
+        "SELECT file_path, report_date FROM report_files "
+        "WHERE company_code = ? AND report_type = ? "
+        "ORDER BY report_date DESC LIMIT 1",
+        (code, report_type)).fetchone()
+    return (row["file_path"], row["report_date"]) if row else None
 
 
 @server.tool(
     description=(
         "ユーザーが保有・監視している銘柄の一覧を返す。"
-        "銘柄コード・銘柄名・上場年・最大何倍まで上がったか・"
-        "どのポートフォリオが持っているか・AIの判定（買い増し検討/継続保有/"
-        "様子見/縮小検討/判断保留）。どの銘柄について聞かれているか分からないとき、"
-        "まずこれを呼ぶ。"
+        "銘柄コード・銘柄名・上場年・上場してから最大何倍まで上がったか・業種・"
+        "どのポートフォリオ（自分／テンバガーX／お気に入り）が持っているか。"
+        "どの銘柄について聞かれているか分からないとき、まずこれを呼ぶ。"
+        "すべて事実で、AIの判断は含まない。"
     )
 )
 @quiet
@@ -121,47 +137,25 @@ def list_holdings() -> Dict[str, Any]:
     info = {}
     if conn is not None:
         for row in conn.execute(
-                "SELECT code, name, ipo_year, max_multiple, industry FROM companies"):
+                "SELECT code, name, ipo_year, ipo_date, max_multiple, "
+                "current_multiple, industry, market FROM companies"):
             info[row["code"]] = row
 
     out = []
     for code in codes:
         row = info.get(code)
-        profile = _profile_row(code)
         out.append({
             "コード": code,
-            "銘柄名": (row["name"] if row else None) or profile.get("銘柄名"),
-            "上場年": (row["ipo_year"] if row else None),
+            "銘柄名": row["name"] if row else None,
+            "上場日": row["ipo_date"] if row else None,
+            "上場年": row["ipo_year"] if row else None,
+            "市場": row["market"] if row else None,
+            "業種": row["industry"] if row else None,
             "最大倍率": _round(row["max_multiple"], 1) if row else None,
-            "業種": (row["industry"] if row else None),
+            "現在倍率": _round(row["current_multiple"], 1) if row else None,
             "保有": [h["label"] for h in _portfolio.get_holders(code)],
-            "判定": profile.get("判定"),
-            "稼ぎ方の型": profile.get("稼ぎ方の型"),
         })
-    return {"件数": len(out), "銘柄": out,
-            "注記": "判定と稼ぎ方の型はAIが書いた解釈。数字の抽出とは別もの"}
-
-
-@server.tool(
-    description=(
-        "1銘柄の事業・経営陣・投資判断の読み解きを返す。"
-        "収益の源泉、稼ぎ方の型、競合との違い、事業の弱み、経営陣の経歴と懸念、"
-        "判定、買う理由、持ち続ける条件、降りる条件、株価水準。"
-        "**これはAIが有報を読んで書いた解釈**で、抽出した数字とは区別している。"
-        "「この会社はどういう会社か」「持ち続けていいか」に答えるときに使う。"
-    )
-)
-@quiet
-def company_profile(code: str) -> Dict[str, Any]:
-    bad = _guard(code)
-    if bad:
-        return bad
-    code = str(code).strip().upper()
-    profile = _profile_row(code)
-    if not profile:
-        return {"error": f"{code} の読み解きはまだ書かれていない"}
-    return {"コード": code, "読み解き": profile,
-            "注記": "AIによる解釈。画面では「AIによる解釈」のバッジが付く欄と同じ内容"}
+    return {"件数": len(out), "銘柄": out}
 
 
 @server.tool(
@@ -170,8 +164,8 @@ def company_profile(code: str) -> Dict[str, Any]:
         "「上場後に何倍になったか」で分けた3群（10倍以上／3〜10倍／2倍未満）と"
         "並べて返す。売上・営業利益率・ROE・ROA・自己資本比率・PER・PEG・PSR・"
         "キャッシュフロー・有利子負債など38指標。"
-        "所見（売上↑なのに利益率↓、借入で嵩上げされたROEなど）と、"
-        "データの欠けも付く。財務の良し悪しを聞かれたらこれを使う。"
+        "所見（売上↑なのに利益率↓、借入で嵩上げされたROEなど）は規則で当てたもので、"
+        "AIの判断ではない。データの欠けも付く。財務の良し悪しを聞かれたらこれを使う。"
     )
 )
 @quiet
@@ -181,8 +175,6 @@ def company_metrics(code: str, brief: bool = True) -> Dict[str, Any]:
         return bad
     code = str(code).strip().upper()
 
-    import io
-    from contextlib import redirect_stdout
     from collectors import metric_compare_dump
 
     buf = io.StringIO()
@@ -204,11 +196,253 @@ def company_metrics(code: str, brief: bool = True) -> Dict[str, Any]:
 
 @server.tool(
     description=(
+        "有価証券報告書のXBRLの生の値を、タグ名か項目名で検索して返す。"
+        "**画面に出している38指標より広い。** 1銘柄あたり380種類ほどのタグがあり、"
+        "研究開発費・設備投資・セグメント情報・リース・税金・従業員の内訳など、"
+        "画面では扱っていない項目もここから取れる。"
+        "query は要素IDか項目名の一部（例: ResearchAndDevelopment、研究開発、"
+        "セグメント、CapitalExpenditure）。"
+        "query を空にすると、その報告書にあるタグの一覧だけを返す。"
+    )
+)
+@quiet
+def annual_report_xbrl(code: str, query: str = "", limit: int = 60,
+                       report_type: str = "annual") -> Dict[str, Any]:
+    bad = _guard(code)
+    if bad:
+        return bad
+    code = str(code).strip().upper()
+
+    from collectors.facility_count_collector import _read
+
+    found = _report_path(code, report_type)
+    if not found:
+        return {"error": f"{code} の{report_type}が見つからない"}
+    path, date = found
+    text = _read(path) or ""
+    lines = text.splitlines()
+    if not lines:
+        return {"error": "報告書を読めなかった"}
+
+    rows = []
+    tags = set()
+    for line in lines[1:]:
+        parts = [p.strip('"') for p in line.split("\t")]
+        if len(parts) < 9:
+            continue
+        element, label = parts[0], parts[1]
+        tags.add((element, label))
+        if query and query.lower() not in element.lower() and query not in label:
+            continue
+        value = parts[8]
+        # TextBlockは本文なので、ここでは頭だけ。全文は annual_report_text で
+        if element.endswith("TextBlock") and len(value) > 200:
+            value = value[:200] + "…（全文は annual_report_text で）"
+        rows.append({"要素ID": element, "項目名": label,
+                     "相対年度": parts[3], "連結個別": parts[4],
+                     "期間時点": parts[5], "単位": parts[7], "値": value})
+
+    if not query:
+        return {"コード": code, "提出日": date, "タグの種類": len(tags),
+                "タグ一覧": [{"要素ID": e, "項目名": l} for e, l in sorted(tags)],
+                "注記": "query に一部を渡すと、その値を返す"}
+
+    return {"コード": code, "提出日": date, "検索語": query,
+            "件数": len(rows), "行": rows[:limit],
+            "注記": "有報のXBRLそのまま。画面に出している38指標より広い範囲が取れる"}
+
+
+@server.tool(
+    description=(
+        "有価証券報告書の**本文**を返す。section で選ぶ。"
+        "business=事業の内容、officers=役員の状況、mdna=経営者による分析（MD&A）、"
+        "risk=事業等のリスク、rd=研究開発活動、capex=設備投資等の概要、"
+        "segment=セグメント情報、policy=経営方針。"
+        "section を空にすると、その報告書にある本文セクションの一覧を返す。"
+        "会社が自分の言葉で書いた一次資料なので、事業の中身を知りたいときはここ。"
+    )
+)
+@quiet
+def annual_report_text(code: str, section: str = "", chars: int = 6000,
+                       report_type: str = "annual") -> Dict[str, Any]:
+    bad = _guard(code)
+    if bad:
+        return bad
+    code = str(code).strip().upper()
+
+    from collectors.facility_count_collector import _read
+    from collectors.holding_profile_dump import plain
+
+    known = {
+        "business": ("DescriptionOfBusinessTextBlock", "事業の内容"),
+        "officers": ("InformationAboutOfficersTextBlock", "役員の状況"),
+        "mdna": ("ManagementAnalysisOfFinancialPositionOperatingResults"
+                 "AndCashFlowsTextBlock", "経営者による分析"),
+        "risk": ("BusinessRisksTextBlock", "事業等のリスク"),
+        "rd": ("ResearchAndDevelopmentActivitiesTextBlock", "研究開発活動"),
+        "capex": ("OverviewOfCapitalExpendituresEtcTextBlock", "設備投資等の概要"),
+        "segment": ("NotesSegmentInformationEtcFinancialStatementsTextBlock",
+                    "セグメント情報"),
+        "policy": ("BusinessPolicyBusinessEnvironmentIssuesToAddressEtcTextBlock",
+                   "経営方針"),
+    }
+
+    found = _report_path(code, report_type)
+    if not found:
+        return {"error": f"{code} の{report_type}が見つからない"}
+    path, date = found
+    text = _read(path) or ""
+
+    blocks = {}
+    for line in text.splitlines()[1:]:
+        parts = [p.strip('"') for p in line.split("\t")]
+        if len(parts) >= 9 and parts[0].endswith("TextBlock") and parts[8]:
+            blocks.setdefault(parts[0], (parts[1], parts[8]))
+
+    if not section:
+        return {
+            "コード": code, "提出日": date,
+            "使えるsection": [k for k, (tag, _n) in known.items()
+                              if any(t.endswith(tag) for t in blocks)],
+            "報告書にある本文すべて": [{"要素ID": t, "項目名": v[0],
+                                        "文字数": len(v[1])}
+                                       for t, v in sorted(blocks.items())],
+        }
+
+    key = section.strip().lower()
+    if key not in known:
+        return {"error": f"section は {sorted(known)} のどれか"}
+    tag, name = known[key]
+    for element, (label, raw) in blocks.items():
+        if element.endswith(tag):
+            body = plain(raw)
+            return {"コード": code, "提出日": date, "section": key,
+                    "項目名": label or name, "文字数": len(body),
+                    "本文": body[:chars],
+                    "注記": "有報の本文そのまま。会社が書いた一次資料"}
+    return {"error": f"{code} の{report_type}に「{name}」が無い"}
+
+
+@server.tool(
+    description=(
+        "1銘柄の適時開示（TDnet）の一覧を新しい順に返す。日付・タイトル・PDFのURL。"
+        "業績予想の修正、配当、自己株買い、M&A、大株主の異動、"
+        "ストックオプションなどが入っている。"
+        "match にキーワードを渡すとタイトルで絞れる（例: 業績予想、自己株式、売出）。"
+        "**中身を読むには disclosure_text にURLを渡す。**"
+    )
+)
+@quiet
+def company_disclosures(code: str, match: str = "", limit: int = 40,
+                        months: int = 60) -> Dict[str, Any]:
+    bad = _guard(code)
+    if bad:
+        return bad
+    code = str(code).strip().upper()
+
+    from collectors import disclosure_pdf
+
+    rows = disclosure_pdf.find(code, match=match, months=months)
+    out = [{"日付": r[0], "タイトル": r[4], "URL": r[5]} for r in rows[:limit]]
+    return {"コード": code, "件数": len(out), "全件数": len(rows), "開示": out,
+            "注記": "適時開示を集めているのは保有銘柄だけ。本文は disclosure_text で読む"}
+
+
+@server.tool(
+    description=(
+        "適時開示のPDFの**本文**を返す。company_disclosures で得たURLを渡す。"
+        "会社が書いた一次資料そのもので、要約ではない。"
+        "grep に語を渡すと、その語の周りだけを抜く（例: 修正の理由、目的、"
+        "取得した株式の総数）。長い開示から必要なところだけ読みたいときに使う。"
+    )
+)
+@quiet
+def disclosure_text(url: str, grep: str = "", chars: int = 6000) -> Dict[str, Any]:
+    import re as _re
+    from collectors import disclosure_pdf
+
+    url = str(url or "").strip()
+    if not url.startswith("/disc/"):
+        return {"error": "URLは company_disclosures が返す /disc/... の形で渡す"}
+    text = disclosure_pdf.fetch(url)
+    if not text:
+        return {"error": "PDFを取れなかった（消えているか、画像だけのPDF）"}
+
+    if grep:
+        hits = []
+        for m in _re.finditer(_re.escape(grep), text):
+            start = max(0, m.start() - 200)
+            hits.append(text[start:m.end() + 600])
+        if not hits:
+            return {"URL": url, "検索語": grep, "件数": 0,
+                    "注記": f"「{grep}」は本文に無い。全文を見るなら grep を空にする"}
+        return {"URL": url, "検索語": grep, "件数": len(hits),
+                "抜粋": [h[:1200] for h in hits[:5]]}
+
+    return {"URL": url, "文字数": len(text), "本文": text[:chars],
+            "注記": "開示PDFの本文そのまま" +
+                    ("（続きがある。grepで絞るか chars を増やす）"
+                     if len(text) > chars else "")}
+
+
+@server.tool(
+    description=(
+        "1銘柄の株主の動きを返す。大株主・役員の持株の推移（有報から）と、"
+        "5%超の株主の売買（大量保有報告書から、日付単位）。"
+        "売買には提出事由と、書類の「増減の内訳」から読んだ理由のタグ"
+        "（売出し・立会外分売・公開買付・関係者間で移動など）が付く。"
+        "**経営陣が売っているかを確かめるときに使う。**"
+        "株数が減っていても、分割調整のずれや関係者間の移動、"
+        "上場基準を満たすための売出しのことがあるので、理由まで見ること。"
+    )
+)
+@quiet
+def company_shareholders(code: str) -> Dict[str, Any]:
+    bad = _guard(code)
+    if bad:
+        return bad
+    code = str(code).strip().upper()
+
+    from collectors import holding_judgment_dump
+
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        holding_judgment_dump.show_holdings(code)
+    holders = buf.getvalue().strip()
+
+    from visualizer import large_holding_service
+    large = large_holding_service.get_large_holdings(code) or {}
+    events = (large.get("events") or [])[:40]
+    trades = [{
+        "日付": e.get("date"), "保有者": e.get("name"),
+        "動き": e.get("action"), "提出事由": e.get("reason"),
+        "保有割合": e.get("ratio"), "株数": e.get("shares"),
+        "関連する開示": [{"日付": d.get("date"), "タイトル": d.get("full") or d.get("title"),
+                          "URL": d.get("url")}
+                         for d in (e.get("disclosures") or [])],
+    } for e in events]
+
+    return {
+        "コード": code,
+        "持株の推移": holders[:6000],
+        "5%超の売買": trades,
+        "売買の総数": large.get("total"),
+        "保有者": large.get("holders"),
+        "注記": (
+            "大量保有報告書はEDINETに5年しか残らない。"
+            "理由が不明なのは、書類に書かれていないという意味で推測ではない。"
+            "関連する開示の中身は disclosure_text にURLを渡して読む"
+        ),
+    }
+
+
+@server.tool(
+    description=(
         "1銘柄の「1拠点あたりの採算」を競合と並べて返す。"
         "単位は会社によって違い、店舗・施設のほか、サブリースの管理戸数や"
         "車両の管理台数のこともある。多店舗展開型のビジネスモデルが実際に"
         "効いているか（拠点を増やしながら採算を保てているか）を見るのに使う。"
-        "原価の構成（原価率・仕入・労務費）も返す。"
+        "拠点数は有報の本文から拾った数字で、原価の構成（原価率・仕入・労務費）も返す。"
     )
 )
 @quiet
@@ -234,6 +468,9 @@ def company_facilities(code: str) -> Dict[str, Any]:
         "自社": {"期": own["date"], "数": own["count"], "単位": own.get("unit"),
                  "1単位あたり売上_百万": _round(own.get("sales_per")),
                  "1単位あたり利益_百万": _round(own.get("profit_per"))},
+        "推移": [{"期": p.get("date"), "数": p.get("count"),
+                  "1単位あたり利益_百万": _round(p.get("profit_per"))}
+                 for p in (view["own"].get("points") or [])],
         "競合": [{"名前": p["name"], "期": p["latest"]["date"],
                   "数": p["latest"]["count"], "単位": p["latest"].get("unit"),
                   "1単位あたり利益_百万": _round(p["latest"].get("profit_per"))}
@@ -243,106 +480,6 @@ def company_facilities(code: str) -> Dict[str, Any]:
         "期中の最新": view.get("latest_interim"),
         "原価の構成": view.get("cost_structure"),
         "注記": "単位の種類が違う競合とは倍率を出さない（1台あたりと1店舗あたりの比に意味がないため）",
-    }
-
-
-@server.tool(
-    description=(
-        "1銘柄の株主の動きを返す。大株主・役員の持株の推移（有報から）と、"
-        "5%超の株主の売買（大量保有報告書から、日付単位）。"
-        "売買には理由のタグ（売出し・立会外分売・公開買付・関係者間で移動など）と、"
-        "その前後に出た適時開示のAI要約が付く。"
-        "**経営陣が売っているかを確かめるときに使う。**"
-        "株数が減っていても、分割調整のずれや関係者間の移動、"
-        "上場基準を満たすための売出しのことがあるので、理由まで見ること。"
-    )
-)
-@quiet
-def company_shareholders(code: str) -> Dict[str, Any]:
-    bad = _guard(code)
-    if bad:
-        return bad
-    code = str(code).strip().upper()
-
-    import io
-    from contextlib import redirect_stdout
-    from collectors import holding_judgment_dump
-
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        holding_judgment_dump.show_holdings(code)
-    holders = buf.getvalue().strip()
-
-    from visualizer import large_holding_service
-    large = large_holding_service.get_large_holdings(code) or {}
-    # events が本筋の売買、noise は証券会社の在庫など畳んでいるもの
-    events = (large.get("events") or [])[:40]
-    trades = [{
-        "日付": e.get("date"), "保有者": e.get("name"),
-        "動き": e.get("action"), "なぜ": e.get("reason"),
-        "保有割合": e.get("ratio"), "株数": e.get("shares"),
-        "開示": [{"日付": d.get("date"), "タイトル": d.get("title"),
-                  "要約": d.get("summary"), "AIが書いた": d.get("by_ai")}
-                 for d in (e.get("disclosures") or [])],
-    } for e in events]
-
-    return {
-        "コード": code,
-        "持株の推移": holders[:6000],
-        "5%超の売買": trades,
-        "売買の総数": large.get("total"),
-        "保有者": large.get("holders"),
-        "注記": (
-            "大量保有報告書はEDINETに5年しか残らない。"
-            "「なぜ」が不明なのは、書類に書かれていないという意味で、推測ではない。"
-            "株数が減っていても、分割調整のずれ・関係者間の移動・上場基準を"
-            "満たすための売出しのことがあるので、理由まで見ること"
-        ),
-    }
-
-
-@server.tool(
-    description=(
-        "1銘柄の適時開示（TDnet）を新しい順に返す。日付・タイトル・"
-        "AIが読んで書いた要約・PDFのURL。"
-        "業績予想の修正、配当、自己株買い、M&A、大株主の異動、"
-        "ストックオプションなどが入っている。"
-        "「最近この会社に何があったか」に答えるときに使う。"
-    )
-)
-@quiet
-def company_disclosures(code: str, limit: int = 30) -> Dict[str, Any]:
-    bad = _guard(code)
-    if bad:
-        return bad
-    code = str(code).strip().upper()
-
-    import csv
-    from visualizer import large_holding_service as lhs
-
-    items = lhs._load_tdnet().get(code) or []
-    readings = {}
-    path = os.path.join(BASE_DIR, "data", "meta", "disclosure_reading.tsv")
-    if os.path.exists(path):
-        with open(path, encoding="utf-8", newline="") as f:
-            for row in csv.DictReader(f, delimiter="\t"):
-                readings[row["URL"]] = row.get("要約")
-
-    summaries = lhs._load_summaries()
-    out = []
-    for date, title, url in sorted(items, reverse=True)[:limit]:
-        ai = readings.get(url)
-        rule, _by_ai = summaries.get(url, ("", False))
-        out.append({"日付": date, "タイトル": title,
-                    "要約": ai or rule or None,
-                    "要約はAIが書いた": bool(ai), "URL": url})
-    return {
-        "コード": code, "件数": len(out), "開示": out,
-        "注記": (
-            "適時開示を集めているのは保有銘柄だけ。"
-            "要約がAIのものは前後の文脈を読んで書いたもの、"
-            "そうでないものは本文から規則で1文を抜いただけ"
-        ),
     }
 
 
