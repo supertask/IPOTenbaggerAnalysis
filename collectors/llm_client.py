@@ -88,7 +88,11 @@ def _lmstudio() -> Backend:
         base_url=base,
         model=os.environ.get("LMSTUDIO_MODEL", "qwen3.6-35b-a3b"),
         api_key=os.environ.get("LMSTUDIO_API_KEY", "lm-studio"),
-        workers=int(os.environ.get("LMSTUDIO_WORKERS", "4")),
+        # **1本が速い。** 実測で同時1本が7.8件/分だったのに対し、
+        # 2本・4本は8件が30分以上終わらなかった。EVO-X2の統合GPUは
+        # メモリ帯域を共有するので、並列にすると全員がメモリ待ちになる。
+        # LM Studioの parallel は「受け付ける数」で「速く処理できる数」ではない
+        workers=int(os.environ.get("LMSTUDIO_WORKERS", "1")),
         timeout=900,   # ローカルは1件が長い。待てる時間を長めに取る
     )
 

@@ -77,7 +77,11 @@ JSONだけを返してください。前置きも説明も不要です。
 - 入れるもの: ①何をしたか（誰が・何株・いくら）②会社が書いている理由
   ③株主にとって何を意味するか
 - **本文に書いてあることだけ**。推測や「〜の可能性がある」は書かない
-- 数字は本文のものをそのまま。丸めない
+- **数字は本文にある表記をそのまま写す。計算しない。**
+  複数の区分（取締役ぶんと従業員ぶんなど）が別々に書かれていても、
+  **足し合わせて合計を作らない。** 代表的な1つを選ぶか、区分ごとに書く。
+  実際に7,500株と7,326株を足して16,196株という存在しない数字を書いた例がある
+- 丸めない。「約5億円」ではなく本文どおりの「25,650,000円」
 
 ## 「株主にとって」の決め方
 - **中身の良し悪しであって、株価の予測ではない**
@@ -145,6 +149,47 @@ def page_images(url: str):
         return out
     except Exception:
         return []
+
+
+def unverified_numbers(summary: str, body: str):
+    """要約の数字のうち、本文に見当たらないものを返す。
+
+    **書かせたあとに検算する。** いちばん多い誤りが数字のでっち上げで、
+    しかも機械で見つけられる。見つけたら言い直させれば直ることが多い。
+    判定は `disclosure_ai_check` と同じものを使う（物差しを1つにする）。
+    """
+    from collectors.disclosure_ai_check import (_same_after_scaling, normalize,
+                                                numbers)
+
+    flat = normalize(body)
+    missing = []
+    for n in numbers(summary):
+        if len(n) < 2 or n in flat:
+            continue
+        if _same_after_scaling(n, flat):
+            continue
+        missing.append(n)
+    return missing
+
+
+def _drop_numbers(summary: str, bad) -> str:
+    """本文に無い数字を含む文を落とす。**残すより消すほうが安全**"""
+    from collectors.disclosure_ai_check import normalize
+
+    kept = []
+    for part in re.split(r"(?<=。)", summary):
+        flat = normalize(part)
+        if any(_matches(flat, n) for n in bad):
+            continue
+        kept.append(part)
+    return "".join(kept).strip() or summary
+
+
+def _matches(flat_part: str, value: str) -> bool:
+    """その文にその数字が入っているか（桁の書き方の違いを吸収する）"""
+    from collectors.disclosure_ai_check import numbers
+
+    return value in numbers(flat_part)
 
 
 def load_tsv():
@@ -263,6 +308,28 @@ def main() -> int:
                                body=body[:BODY_CHARS])
         text, usage = llm.ask(prompt, images=images or None)
         got = parse(text)
+
+        # **数字を検算して、合わなければ言い直させる。** 実測でいちばん多い誤りが
+        # 数字のでっち上げ（複数の区分を足して存在しない合計を作る）で、
+        # 本文と突き合わせれば機械で気づける
+        if got and not images:
+            missing = unverified_numbers(got["要約"], body)
+            if missing:
+                retry = (prompt + "\n\n【やり直し】前回の要約に、本文に無い数字が"
+                         f"含まれていました: {', '.join(missing[:5])}。"
+                         "**本文にある表記だけを写してください。足し算をしないでください。**"
+                         "確認できない数字は書かず、言葉で述べてください。")
+                text2, usage2 = llm.ask(retry, tries=2)
+                got2 = parse(text2 or "")
+                if got2:
+                    left = unverified_numbers(got2["要約"], body)
+                    if not left:
+                        got, usage = got2, usage2
+                    else:
+                        # **2回言っても直らない数字は、書かせるより消す。**
+                        # でっち上げた数字が残るくらいなら、数字が減るほうがまし
+                        got, usage = got2, usage2
+                        got["要約"] = _drop_numbers(got2["要約"], left)
         if not got:
             # **返答が壊れることがある。** 上流が途中で切ることがあり、
             # completion_tokens が2桁で返ってきた例があった。言い直して1回だけ試す
@@ -273,8 +340,12 @@ def main() -> int:
             got = parse(text)
         return item, got, ("" if got else str(usage)[:80])
 
+    # **`map` は投入順にしか返さない。** 1件目が遅いと、あとが終わっていても
+    # 表示されず「止まっている」ように見える。終わったものから出す
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
-        for i, (item, got, why) in enumerate(pool.map(work, todo), 1):
+        futures = [pool.submit(work, it) for it in todo]
+        for i, future in enumerate(concurrent.futures.as_completed(futures), 1):
+            item, got, why = future.result()
             code, day, title, url = item
             if not got:
                 print(f"  {i}/{len(todo)} {code} {day} 失敗: {why}")

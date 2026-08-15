@@ -40,8 +40,14 @@ MAX_LEN = 130
 GUESS = re.compile(r"(可能性がある|とみられる|と思われる|だろう|かもしれない|"
                    r"期待される|懸念される|示唆|恐れがある)")
 
-# 数字の拾い方。桁区切りと小数、単位までを1つとして取る
-NUMBER = re.compile(r"\d[\d,]*(?:\.\d+)?")
+# 数字の拾い方。桁区切りと小数を1つとして取る。
+# **「5億6,758万円」のような書き方を分解しない。** 分解すると
+# 167 と 6758 という存在しない数字を照合してしまい、正しい要約を誤りと数える
+NUMBER = re.compile(
+    r"\d[\d,]*(?:\.\d+)?"           # 先頭の数
+    r"(?:[兆億万]\d[\d,]*)*"          # 「億6758」「万3000」が続くぶん
+    r"[兆億万]?")                     # 「5億」で終わる形
+_UNITS = (("兆", 10 ** 12), ("億", 10 ** 8), ("万", 10 ** 4))
 
 
 def normalize(text: str) -> str:
@@ -52,7 +58,44 @@ def normalize(text: str) -> str:
 
 
 def numbers(text: str):
-    return [n.replace(",", "") for n in NUMBER.findall(normalize(text))]
+    """要約に出てくる数字。**漢数字の単位をまたぐものは1つの値にまとめる**。
+
+    「5億6,758万円」は 5×10^8 + 6758×10^4 = 567,580,000。
+    分解して 5 と 6758 として照合すると、正しい要約を誤りと数えてしまう。
+    """
+    out = []
+    for raw in NUMBER.findall(normalize(text)):
+        token = raw.replace(",", "")
+        if not any(u in token for u in ("兆", "億", "万")):
+            out.append(token)
+            continue
+        total = 0.0
+        rest = token
+        for unit, scale in _UNITS:
+            if unit not in rest:
+                continue
+            head, rest = rest.split(unit, 1)
+            try:
+                total += float(head) * scale
+            except ValueError:
+                pass
+        if rest:
+            try:
+                total += float(rest)
+            except ValueError:
+                pass
+        out.append(f"{total:.0f}")
+    return out
+
+
+# 「1兆円」「500億円」のような概数は、数値に直すと本文と一致しない。
+# **本文に同じ書き方があるかも見る**（normalize後の生の文字列で照合）
+_ROUND = re.compile(r"\d+(?:\.\d+)?[兆億万]")
+
+
+def _written_as_is(summary: str, flat: str) -> set:
+    """「1兆」「3,800億」のような書き方が本文にそのままあるか"""
+    return {m for m in _ROUND.findall(normalize(summary)) if m in flat}
 
 
 def _same_after_scaling(value: str, flat: str) -> bool:
@@ -65,10 +108,19 @@ def _same_after_scaling(value: str, flat: str) -> bool:
         num = float(value)
     except ValueError:
         return False
-    for factor in (100, 1000, 10000, 0.01, 0.001, 0.0001):
+    # 開示は千円・百万円、要約は万円・億円で書く。**円と万円は10,000倍、
+    # 円と億円は100,000,000倍**離れていて、100倍や1000倍だけでは届かない。
+    # 実際に「5,539万円」を本文の「55,390,000円」と照合できていなかった
+    factors = (100, 1000, 10_000, 100_000, 1_000_000, 10_000_000, 100_000_000,
+               0.01, 0.001, 0.0001, 0.00001, 0.000001, 0.0000001, 0.00000001)
+    for factor in factors:
         scaled = num * factor
-        for text in ({f"{scaled:.0f}"} if scaled == int(scaled) else
-                     {f"{scaled:.1f}", f"{scaled:.2f}"}):
+        if scaled < 1:
+            continue
+        texts = {f"{scaled:.0f}"}
+        if scaled != int(scaled):
+            texts |= {f"{scaled:.1f}", f"{scaled:.2f}"}
+        for text in texts:
             if len(text) >= 2 and text in flat:
                 return True
     return False
@@ -102,12 +154,17 @@ def check_row(row, body: str):
     # 1桁の数字は本文のどこにでもあるので照合しない。誤検知が増えるだけ。
     # **単位を変えた書き方も本文にあるとみなす** — 「816百万円」を
     # 「8.16億円」と書くのは正しい変換で、誤りではない
+    # 「1兆円」のような概数が本文にそのまま書かれていれば、数値化した値は
+    # 一致しなくてよい。**書き方をそのまま写しているので誤りではない**
+    as_is = _written_as_is(summary, flat)
     missing = []
     for n in numbers(summary):
         if len(n) < 2 or n in flat:
             continue
         if _same_after_scaling(n, flat):
             continue
+        if as_is and float(n or 0) >= 10 ** 8:
+            continue    # 兆・億の概数はここで許す
         missing.append(n)
     if missing:
         problems.append(f"本文に無い数字: {', '.join(missing[:5])}")
