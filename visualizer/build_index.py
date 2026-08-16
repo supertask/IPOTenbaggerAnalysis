@@ -515,6 +515,45 @@ def _update_textblock_tracker(
         slot["oldest"] = entry
 
 
+def _merge_textblocks(conn: sqlite3.Connection, table: str,
+                      tracker: dict[str, dict]) -> list[tuple]:
+    """既にDBにある本文と見比べて、**新しいほうだけ**を残す。
+
+    「最新の本文」は全報告書を見ないと決まらない。増分ビルドでは一部しか
+    読んでいないので、そのまま `INSERT OR REPLACE` すると
+    **2年前の本文で上書きしてしまう**（実測で105社がそうなった）。
+    最古のほうも同じ理屈で、より古いものだけを採る。
+    """
+    rows = _textblock_rows(tracker)
+    if not rows:
+        return rows
+    codes = [r[0] for r in rows]
+    marks = ",".join("?" * len(codes))
+    current = {}
+    try:
+        for row in conn.execute(
+                f"SELECT company_code, latest_html, latest_source_report_type, "
+                f"latest_source_report_date, oldest_html, oldest_source_report_type, "
+                f"oldest_source_report_date FROM {table} "
+                f"WHERE company_code IN ({marks})", codes):
+            current[row[0]] = row
+    except sqlite3.Error:
+        return rows
+
+    merged = []
+    for row in rows:
+        old = current.get(row[0])
+        if not old:
+            merged.append(row)
+            continue
+        # 最新は日付が新しいほう、最古は古いほうを残す
+        latest = row[1:4] if (row[3] or "") > (old[3] or "") else old[1:4]
+        oldest = row[4:7] if (old[6] is None or
+                              (row[6] or "9999") < (old[6] or "9999")) else old[4:7]
+        merged.append((row[0], *latest, *oldest))
+    return merged
+
+
 def _textblock_rows(tracker: dict[str, dict]) -> list[tuple]:
     out = []
     for code, slot in tracker.items():
@@ -524,8 +563,13 @@ def _textblock_rows(tracker: dict[str, dict]) -> list[tuple]:
     return out
 
 
-def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
-    """Load financial_metrics, business_descriptions, officers_info, report_files."""
+def _load_financials(conn: sqlite3.Connection, only=None) -> tuple[int, int, int, int]:
+    """Load financial_metrics, business_descriptions, officers_info, report_files.
+
+    `only` を渡すと、その報告書だけを読む（増分ビルド）。
+    **本文の最古と最新は全体を見ないと決まらない**ので、増分のときは
+    その会社ぶんだけを入れ替える形になる。
+    """
     metric_rows = 0
     business_tracker: dict[str, dict] = {}
     officers_tracker: dict[str, dict] = {}
@@ -553,7 +597,7 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
         metric_rows += len(metric_buffer)
         metric_buffer.clear()
 
-    for code, report_type, report_date, path in _iter_report_files():
+    for code, report_type, report_date, path in (only or _iter_report_files()):
         processed += 1
         try:
             stat = path.stat()
@@ -628,7 +672,7 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
             latest_html, latest_source_report_type, latest_source_report_date,
             oldest_html, oldest_source_report_type, oldest_source_report_date)
            VALUES (?,?,?,?,?,?,?)""",
-        _textblock_rows(business_tracker),
+        _merge_textblocks(conn, "business_descriptions", business_tracker),
     )
     conn.executemany(
         """INSERT OR REPLACE INTO officers_info
@@ -636,7 +680,7 @@ def _load_financials(conn: sqlite3.Connection) -> tuple[int, int, int, int]:
             latest_html, latest_source_report_type, latest_source_report_date,
             oldest_html, oldest_source_report_type, oldest_source_report_date)
            VALUES (?,?,?,?,?,?,?)""",
-        _textblock_rows(officers_tracker),
+        _merge_textblocks(conn, "officers_info", officers_tracker),
     )
     conn.commit()
     elapsed = time.time() - started
@@ -743,10 +787,74 @@ def _load_x_bagger(conn: sqlite3.Connection) -> tuple[int, int]:
     return cond_count, prob_count
 
 
-def build(target: Path) -> None:
+def _alias_fingerprint() -> str:
+    """`METRIC_ALIASES` の中身を1つの値にする。
+
+    **エイリアスを足すと、原本のTSVは変わらないのにDBの中身が足りなくなる。**
+    mtimeだけを見ていると「足したはずの指標が入っていない」のに気づけない。
+    ここが増分ビルドでいちばん危ない落とし穴なので、変化したら全件読み直す。
+    """
+    import hashlib
+
+    joined = chr(10).join(sorted(_METRIC_ELEMENT_IDS))
+    return hashlib.sha256(joined.encode("utf-8")).hexdigest()[:16]
+
+
+def _reusable(target: Path) -> bool:
+    """既存のDBを土台にできるか。**迷ったら False**（全件読み直す）"""
+    if not target.exists():
+        return False
+    try:
+        conn = sqlite3.connect(f"file:{target}?mode=ro", uri=True)
+        conn.row_factory = sqlite3.Row
+        meta = {r["key"]: r["value"] for r in conn.execute(
+            "SELECT key, value FROM build_meta")}
+        has_files = conn.execute(
+            "SELECT COUNT(*) n FROM report_files").fetchone()["n"]
+        conn.close()
+    except Exception as exc:
+        logger.info("既存DBを読めないので全件作り直す: %s", exc)
+        return False
+    if meta.get("schema_version") != SCHEMA_VERSION:
+        logger.info("スキーマが変わったので全件作り直す")
+        return False
+    if meta.get("metric_aliases") != _alias_fingerprint():
+        logger.info("METRIC_ALIASES が変わったので全件作り直す")
+        return False
+    if not has_files:
+        return False
+    return True
+
+
+def _changed_files(conn: sqlite3.Connection):
+    """原本と突き合わせて、読み直しが要るものと、消えたものを返す"""
+    known = {r["file_path"]: r["file_mtime"] for r in conn.execute(
+        "SELECT file_path, file_mtime FROM report_files")}
+    seen = set()
+    todo = []
+    for code, report_type, report_date, path in _iter_report_files():
+        rel = str(path.relative_to(BASE_DIR)).replace("\\", "/")
+        seen.add(rel)
+        old = known.get(rel)
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            continue
+        # 1秒の余裕を見る。ファイルシステムによって粒度が違う
+        if old is None or abs(old - mtime) > 1:
+            todo.append((code, report_type, report_date, path))
+    gone = [p for p in known if p not in seen]
+    return todo, gone
+
+
+def build(target: Path, full: bool = False) -> None:
     tmp = target.with_suffix(target.suffix + ".tmp")
     if tmp.exists():
         tmp.unlink()
+
+    if not full and _reusable(target):
+        _build_incremental(target, tmp)
+        return
 
     conn = sqlite3.connect(tmp)
     conn.execute("PRAGMA journal_mode = OFF")
@@ -770,12 +878,95 @@ def build(target: Path) -> None:
             "INSERT INTO build_meta (key, value) VALUES ('built_at', ?)",
             (datetime.now(timezone.utc).isoformat(timespec="seconds"),),
         )
+        conn.execute(
+            "INSERT INTO build_meta (key, value) VALUES ('metric_aliases', ?)",
+            (_alias_fingerprint(),),
+        )
         conn.commit()
 
     finally:
         conn.close()
 
     _swap_in(tmp, target)
+
+
+def _build_incremental(target: Path, tmp: Path) -> None:
+    """既存のDBを土台にして、変わったぶんだけ入れ直す。
+
+    **20分のうち18分は25GBのTSVを読むのに使われている**（DBへの書き込みは
+    42秒、インデックス作成は30秒）。実測では43,900件のうち変わっていたのは
+    0件、新規が795件だけだった。全部読み直す理由がない。
+
+    ただし**安全側に倒す。** エイリアスやスキーマが変わっていたら、
+    ここには来ずに全件作り直している（`_reusable`）。
+    """
+    import shutil
+
+    started = time.time()
+    shutil.copyfile(target, tmp)
+    conn = sqlite3.connect(tmp)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA journal_mode = OFF")
+    conn.execute("PRAGMA synchronous = OFF")
+    try:
+        todo, gone = _changed_files(conn)
+        logger.info("incremental: %d files to read, %d gone (%.1fs to compare)",
+                    len(todo), len(gone), time.time() - started)
+
+        # 消えた原本の行を落とす。残すと存在しない書類を参照してしまう
+        for rel in gone:
+            row = conn.execute(
+                "SELECT company_code, report_type, report_date FROM report_files "
+                "WHERE file_path = ?", (rel,)).fetchone()
+            if row:
+                _forget(conn, row["company_code"], row["report_type"],
+                        row["report_date"])
+            conn.execute("DELETE FROM report_files WHERE file_path = ?", (rel,))
+
+        # 読み直すぶんは、先に古い行を消してから入れる
+        for code, report_type, report_date, _path in todo:
+            _forget(conn, code, report_type, report_date)
+
+        if todo:
+            _load_financials(conn, only=todo)
+
+        # **ファイルをまたぐ集計は毎回作り直す。** 会社ごとの最古と最新は
+        # 全体を見ないと決まらない。実測35秒なので惜しまない
+        _load_all_companies(conn)
+        _load_recent_ipo(conn)
+        _scan_reports_dir(conn, IPO_REPORTS_NEW_DIR, "company_dir_new")
+        _scan_reports_dir(conn, IPO_REPORTS_DIR, "company_dir_old")
+        _load_competitors(conn)
+        _load_x_bagger(conn)
+
+        conn.execute("INSERT OR REPLACE INTO build_meta (key, value) "
+                     "VALUES ('built_at', ?)",
+                     (datetime.now(timezone.utc).isoformat(timespec="seconds"),))
+        conn.execute("INSERT OR REPLACE INTO build_meta (key, value) "
+                     "VALUES ('metric_aliases', ?)", (_alias_fingerprint(),))
+        conn.commit()
+
+        files = conn.execute("SELECT COUNT(*) n FROM report_files").fetchone()["n"]
+        metrics = conn.execute(
+            "SELECT COUNT(*) n FROM financial_metrics").fetchone()["n"]
+        logger.info("incremental: %d files, %d metric rows, done in %.1fs",
+                    files, metrics, time.time() - started)
+    finally:
+        conn.close()
+
+    _swap_in(tmp, target)
+
+
+def _forget(conn: sqlite3.Connection, code: str, report_type: str,
+            report_date: str) -> None:
+    """その報告書から入れた行を消す。**入れ直す前に必ず呼ぶ** —
+    消さずに入れると同じ行が二重になる"""
+    conn.execute("DELETE FROM financial_metrics WHERE company_code = ? "
+                 "AND report_type = ? AND report_date = ?",
+                 (code, report_type, report_date))
+    conn.execute("DELETE FROM share_holdings WHERE company_code = ? "
+                 "AND report_type = ? AND report_date = ?",
+                 (code, report_type, report_date))
 
 
 def _swap_in(tmp: Path, target: Path, attempts: int = 30, wait: float = 10.0) -> None:
@@ -812,12 +1003,15 @@ def main(argv: list[str] | None = None) -> int:
         default=DB_PATH,
         help=f"Output SQLite path (default: {DB_PATH})",
     )
+    parser.add_argument(
+        "--full", action="store_true",
+        help="既存DBを使わず全部作り直す（既定は変わったぶんだけ）")
     args = parser.parse_args(argv)
 
     INDEX_DIR.mkdir(parents=True, exist_ok=True)
     started = time.time()
     logger.info("Building visualizer index at %s", args.output)
-    build(args.output)
+    build(args.output, full=args.full)
     logger.info("Done in %.1fs", time.time() - started)
     return 0
 
