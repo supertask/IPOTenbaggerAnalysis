@@ -382,7 +382,19 @@ def _extract_report_date(file_path: Path) -> str:
 
 
 def _iter_report_files() -> Iterable[tuple]:
-    """Yield (code, report_type, report_date, path) tuples for every XBRL TSV."""
+    """Yield (code, report_type, report_date, path) tuples for every XBRL TSV.
+
+    **同じ書類を2回返さない。** 社名が変わるとcollectorが新しいフォルダを作り、
+    古いフォルダも残る。
+
+        1375_ユキグニファクトリー株式会社/…/2020-08-14_有価証券届出書.tsv
+        1375_株式会社雪国まいたけ/…/2020-08-14_有価証券届出書.tsv   ← 同じ書類
+
+    795件がこれで、両方読んでいたためDBに344,585組の重複が入っていた。
+    `report_files` は主キーで1行に潰れるので気づけなかった。
+    **新しいほう（更新日時が新しいファイル）を採る。**
+    """
+    seen: dict = {}
     for root_dir in (IPO_REPORTS_NEW_DIR, IPO_REPORTS_DIR):
         if not root_dir.exists():
             continue
@@ -398,7 +410,18 @@ def _iter_report_files() -> Iterable[tuple]:
                 if not subdir.exists():
                     continue
                 for tsv in sorted(subdir.glob("*.tsv")):
-                    yield code, report_type, _extract_report_date(tsv), tsv
+                    key = (code, report_type, _extract_report_date(tsv))
+                    old = seen.get(key)
+                    if old is None:
+                        seen[key] = tsv
+                        continue
+                    try:
+                        if tsv.stat().st_mtime > old.stat().st_mtime:
+                            seen[key] = tsv
+                    except OSError:
+                        pass
+    for (code, report_type, report_date), path in seen.items():
+        yield code, report_type, report_date, path
 
 
 class _Scanned(NamedTuple):

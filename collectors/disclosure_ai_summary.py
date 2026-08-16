@@ -248,6 +248,8 @@ def main() -> int:
                         help="同時に投げる数。既定はバックエンドごと。429が出たら下げる")
     parser.add_argument("--skip-images", action="store_true",
                         help="本文が取れないもの（画像が要るもの）を飛ばす。**まずこれで流す**")
+    parser.add_argument("--only-bad", action="store_true",
+                        help="検査で問題が出たものだけ書き直す（--redo と一緒に使う）")
     parser.add_argument("--images-only", action="store_true",
                         help="本文が取れないものだけを画像で読む。テキストを片付けたあとに")
     args = parser.parse_args()
@@ -267,11 +269,29 @@ def main() -> int:
     by_url = {r["URL"]: r for r in rows}
     codes = args.codes or sorted(portfolio_codes())
 
+    # **検査で問題が出たものだけを狙い撃つ。** 全部やり直すと時間もかかるし、
+    # いま正しいものを壊す危険もある
+    bad_urls = None
+    if args.only_bad:
+        from collectors.disclosure_ai_check import check_row
+
+        bad_urls = set()
+        for row in rows:
+            if not row.get("要約"):
+                continue
+            problems = check_row(row, disclosure_pdf.fetch(row["URL"]) or "")
+            # 本文が取れないものは直しようがない
+            if problems and not any("本文を取れず" in p for p in problems):
+                bad_urls.add(row["URL"])
+        print(f"検査で問題が出たもの {len(bad_urls)}件")
+
     todo = []
     for code in codes:
         for row in disclosure_pdf.find(code, months=240):
             url = row[5]
             if SKIP_TITLE.search(row[4]):
+                continue
+            if bad_urls is not None and url not in bad_urls:
                 continue
             if not args.redo and (by_url.get(url) or {}).get("要約"):
                 continue
