@@ -21,9 +21,13 @@
                 AIの解釈ではなく、開示された数字そのもの。<br><br>
                 <strong>期初の伸び</strong> … 会社が毎年置く「今期はこれくらい」が、
                 去年の期初よりどれだけ伸びたか（年ごとの中央値）。
-                <strong>成長そのもので、いちばん効く。</strong>
-                保有22銘柄で見ると、最高値の9割を保っている7社のうち6社が+30%以上、
-                半分を切った6社は測れる5社すべてが+23%以下だった。<br>
+                <strong>成長そのもので、良さの物差しになる。</strong>
+                保有22銘柄では、+35%以上の8社が最高値の86%を保っていた。<br>
+                <strong>直近</strong> … その最新の年ぶん。
+                <strong>前年割れがいちばん鋭い。</strong>
+                前年割れの4社は全部が61%以下、うち3社は最高値の半分を切っていた。
+                中央値には埋もれるうえ、期中の修正でもないので、ここに出さないと見えない
+                （9158は新年度の期初を55.0億→38.0億と3割下げた）。<br>
                 <strong>期中の修正</strong> … その期初の数字を、期の途中で上げ下げしたか。
                 <strong>上方修正は後追い</strong>（発表前に株価が+12%動き、発表後は+5%）。
                 <strong>下方修正は先行する</strong>（発表前は-1.5%、発表後に-8%）。
@@ -48,7 +52,11 @@
                 </thead>
                 <tbody>
                     {% for row in forecast.要約 %}
-                    {% set warn = row.最後の修正 and row.最後の修正.向き == '下方修正' %}
+                    {# **新年度の期初が前年割れなら塗る。** 保有22銘柄では
+                       前年割れの4社が全部61%以下、うち3社は最高値の半分を
+                       切っていた。期中の下方修正より鋭い #}
+                    {% set warn = (row.直近の伸び is not none and row.直近の伸び < 0)
+                                  or (row.最後の修正 and row.最後の修正.向き == '下方修正') %}
                     <tr {% if warn %}class="table-warning"{% endif %}>
                         <td class="text-nowrap">{{ row.指標 }}</td>
 
@@ -60,6 +68,15 @@
                                 {{ '%+.0f'|format(row.期初の伸び) }}%<span class="small">/年</span>
                             </span>
                             {% else %}<span class="text-muted">—</span>{% endif %}
+                            {# **前年割れは中央値に埋もれる。** 9158は新年度の
+                               期初を55.0億→38.0億と3割下げたのに、中央値は
+                               +16%/年のまま。期中の修正でもないので出なかった #}
+                            {% if row.直近の伸び is not none %}
+                            <div class="small {{ 'text-primary fw-bold' if row.直近の伸び < 0
+                                             else ('text-danger' if row.直近の伸び >= 20 else 'text-muted') }}">
+                                直近 {{ '%+.0f'|format(row.直近の伸び) }}%
+                            </div>
+                            {% endif %}
                             <div class="text-muted small">{{ row.期数 }}期</div>
                         </td>
 

@@ -182,8 +182,9 @@ def _summarize(label: str, years: List[dict]) -> Optional[dict]:
     # **平均ではなく中央値を採る。** 赤字の翌年や、基数がごく小さい年が
     # 1つあるだけで平均は壊れる（6574は0.1億→30億の年があり平均+462%になる）
     starts = [y["点"][0]["値"] for y in years]
-    growth = sorted(r for a, b in zip(starts, starts[1:])
-                    if (r := _rate(a, b)) is not None)
+    yearly = [_rate(a, b) for a, b in zip(starts, starts[1:])]
+    growth = sorted(r for r in yearly if r is not None)
+    last_growth = yearly[-1] if yearly else None
 
     last = years[-1]["点"]
     last_change = None
@@ -201,6 +202,11 @@ def _summarize(label: str, years: List[dict]) -> Optional[dict]:
         # **これがいちばん効く。** 保有24銘柄では、年+50%以上の8社が
         # 最高値の91%を保ち、+20%未満の11社は56%まで落ちていた
         "期初の伸び": _median(growth),
+        # **中央値は直近を埋もれさせる。** 9158は期初55.0億→38.0億（-31%）
+        # と新年度の見通しを3割下げたが、中央値は+16%/年のまま。
+        # これは期中の修正ではないので「下方修正」にも出ない。
+        # **いちばん新しくて、いちばん効く数字なので別に出す**
+        "直近の伸び": last_growth,
         "今期": {
             "期初日": last[0]["日付"], "期初": last[0]["値"],
             "直近日": last[-1]["日付"], "直近": last[-1]["値"],
