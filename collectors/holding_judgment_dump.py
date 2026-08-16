@@ -162,6 +162,22 @@ def show_holdings(code: str) -> None:
                         for d in view["officer_decreases"]))
 
 
+def _context_rank(context_id: str):
+    """連結を0、単体を1、セグメント別はNone（使わない）。
+
+    **同じ有報に両方載る年は連結を採る**（CLAUDE.md）。単体だけの会社は
+    `_NonConsolidatedMember` しか無いので、連結が無いときの受け皿にする。
+    """
+    ctx = (context_id or "").strip()
+    if not ctx:
+        return None
+    if "_" not in ctx:
+        return 0
+    if ctx.endswith("_NonConsolidatedMember"):
+        return 1
+    return None
+
+
 def show_financials(code: str) -> None:
     """売上と利益の推移。成長が続いているかを見る"""
     conn = _db.get_conn()
@@ -240,24 +256,34 @@ def show_brief(code: str, name: str) -> None:
     ids = facility_service.SALES_IDS + facility_service.PROFIT_IDS
     marks = ",".join("?" * len(ids))
     rows = conn.execute(
-        f"""SELECT report_date, element_id, value FROM financial_metrics
+        f"""SELECT report_date, element_id, context_id, value FROM financial_metrics
             WHERE company_code = ? AND relative_period = '当期'
               AND report_type = 'annual' AND element_id IN ({marks})
-            ORDER BY report_date""", (code, *ids)).fetchall() if conn else []
+            ORDER BY report_date, id""", (code, *ids)).fetchall() if conn else []
     by_date: dict = {}
     for row in rows:
         try:
             value = float(row["value"])
         except (TypeError, ValueError):
             continue
+        # **最大値を採ってはいけない。** 同じタグ・同じ書類にセグメント別の
+        # 内訳が並んでおり、調整前の合計が連結より大きいことがある。9158は
+        # 45.55+9.80+14.16-2.62+0.27=67.16億（調整前）と57.83億（連結、
+        # 調整-9.33億）が両方入っていて、最大だと16%高いほうを拾っていた。
+        # 後勝ちにしても駄目で、売上が単体の73.9億（連結543.5億）になる。
+        # **見分けるのは context_id。** 素の `CurrentYearDuration` が連結、
+        # `_NonConsolidatedMember` が単体、それ以外はセグメント（CLAUDE.md）
+        rank = _context_rank(row["context_id"])
+        if rank is None:
+            continue
         key = "売上" if row["element_id"] in facility_service.SALES_IDS else "利益"
         bucket = by_date.setdefault(row["report_date"], {})
-        if key not in bucket or value > bucket[key]:
-            bucket[key] = value
+        if key not in bucket or rank <= bucket[key][0]:
+            bucket[key] = (rank, value)
     parts = []
     for date in sorted(by_date)[-4:]:
-        sales = by_date[date].get("売上")
-        profit = by_date[date].get("利益")
+        sales = (by_date[date].get("売上") or (None, None))[1]
+        profit = (by_date[date].get("利益") or (None, None))[1]
         margin = f"({profit / sales * 100:.1f}%)" if sales and profit else ""
         parts.append(f"{date[:7]} 売上{(sales or 0) / 1e6:,.0f} 利益{(profit or 0) / 1e6:,.0f}{margin}")
     print("  業績: " + (" / ".join(parts) or "取れず"))
