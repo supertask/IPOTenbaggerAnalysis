@@ -1,6 +1,6 @@
 {# 会社自身の業績予想が、決算のたびにどう動いたか。
    **有報には実績しか無い。見通しは決算短信にしか無い。**
-   実績が悪化する前に、会社の見通しが下を向くほうが先に見える #}
+   期初の予想の年次の伸びと、期中の修正は別のもの。混ぜない #}
 {% if forecast and forecast.要約 %}
 <div class="card mb-4">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -16,11 +16,21 @@
     <div class="card-body">
         <div class="collapse" id="forecast-note">
             <div class="text-muted small border rounded p-2 mb-2">
-                決算短信のサマリーに載る<strong>会社自身の予想</strong>を、短信ごとに並べたもの。
-                有価証券報告書には実績しか無いので、見通しはここにしか無い。<br>
-                <strong>実績より早く出る。</strong>「利益率が3%を割った」のような実績の条件は
-                起きてから分かるが、会社の見通しが下を向くほうが先に見える。<br>
-                下方修正のあるものを上に並べている。AIの解釈ではなく、開示された数字そのもの。
+                決算短信のサマリーに載る<strong>会社自身の予想</strong>。
+                有価証券報告書には実績しか無いので、見通しはここにしか無い。
+                AIの解釈ではなく、開示された数字そのもの。<br><br>
+                <strong>期初の伸び</strong> … 会社が毎年置く「今期はこれくらい」が、
+                去年の期初よりどれだけ伸びたか（年ごとの中央値）。
+                <strong>成長そのもので、いちばん効く。</strong>
+                保有22銘柄で見ると、最高値の9割を保っている7社のうち6社が+30%以上、
+                半分を切った6社は測れる5社すべてが+23%以下だった。<br>
+                <strong>期中の修正</strong> … その期初の数字を、期の途中で上げ下げしたか。
+                <strong>上方修正は後追い</strong>（発表前に株価が+12%動き、発表後は+5%）。
+                <strong>下方修正は先行する</strong>（発表前は-1.5%、発表後に-8%）。
+                <strong>未達</strong>は期末の予想が期初を下回った期の数で、
+                単発は意味が薄く、毎期続くかを見る。<br><br>
+                期をまたいだ変化は修正に数えない。単体から連結への切り替わりも同じ。
+                赤字をまたぐ%は読めないので出さない。
             </div>
         </div>
 
@@ -29,48 +39,72 @@
                 <thead>
                     <tr class="text-muted small">
                         <th>指標</th>
-                        <th class="text-end">最初の予想</th>
-                        <th class="text-end">直近の予想</th>
-                        <th class="text-end">累計</th>
-                        <th>修正</th>
-                        <th>最後の修正</th>
+                        <th class="text-end">期初の伸び</th>
+                        <th class="d-none d-lg-table-cell text-end pe-4">直近の予想</th>
+                        {# **最後の修正は「期中の修正」の一部。** 別の列にすると
+                           390pxで右端が切れて、いちばん動く材料が読めなくなる #}
+                        <th>期中の修正</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for row in forecast.要約 %}
-                    <tr>
+                    {% set warn = row.最後の修正 and row.最後の修正.向き == '下方修正' %}
+                    <tr {% if warn %}class="table-warning"{% endif %}>
                         <td class="text-nowrap">{{ row.指標 }}</td>
-                        <td class="text-end text-nowrap small">
-                            {{ row.初回.日付 }}<br>{{ row.初回.値 | forecast_value(row.指標) }}
-                        </td>
-                        <td class="text-end text-nowrap small">
-                            {{ row.直近.日付 }}<br><strong>{{ row.直近.値 | forecast_value(row.指標) }}</strong>
-                        </td>
+
                         <td class="text-end text-nowrap">
-                            {% if row.累計の変化率 is not none %}
-                            <span class="{{ 'text-danger' if row.累計の変化率 > 0 else ('text-primary' if row.累計の変化率 < 0 else 'text-muted') }}">
-                                {{ '%+.1f'|format(row.累計の変化率) }}%
+                            {% if row.期初の伸び is not none %}
+                            <span class="{{ 'text-danger fw-bold' if row.期初の伸び >= 50
+                                       else ('text-danger' if row.期初の伸び >= 20
+                                       else ('text-primary' if row.期初の伸び < 0 else 'text-muted')) }}">
+                                {{ '%+.0f'|format(row.期初の伸び) }}%<span class="small">/年</span>
                             </span>
+                            {% else %}<span class="text-muted">—</span>{% endif %}
+                            <div class="text-muted small">{{ row.期数 }}期</div>
+                        </td>
+
+                        {# **期初と同じなら期初を書かない。** 期の途中で動いて
+                           いなければ、同じ数字が2つ並ぶだけで読む足しにならない #}
+                        <td class="d-none d-lg-table-cell text-end text-nowrap small pe-4">
+                            <strong>{{ row.今期.直近 | forecast_value(row.指標) }}</strong>
+                            <div class="text-muted">{{ row.今期.直近日 }}</div>
+                            {% if row.今期.率 %}
+                            <div class="{{ 'text-danger' if row.今期.率 > 0 else 'text-primary' }}">
+                                期初 {{ row.今期.期初 | forecast_value(row.指標) }}
+                                （{{ '%+.1f'|format(row.今期.率) }}%）
+                            </div>
                             {% endif %}
                         </td>
+
                         <td class="text-nowrap small">
                             {% if row.上方修正 %}<span class="badge bg-success">上{{ row.上方修正 }}</span>{% endif %}
                             {% if row.下方修正 %}<span class="badge bg-danger">下{{ row.下方修正 }}</span>{% endif %}
                             {% if not row.上方修正 and not row.下方修正 %}<span class="text-muted">据え置き</span>{% endif %}
-                        </td>
-                        <td class="text-nowrap small">
+                            {% if row.未達 %}
+                            <span class="text-primary">未達 {{ row.未達 }}/{{ row.期数 }}期</span>
+                            {% endif %}
+                            {# **率と日付は別の行にする。** 1行に並べると390pxで
+                               右端が切れ、「-30.」までしか読めなかった #}
                             {% if row.最後の修正 %}
-                            <span class="{{ 'text-danger' if row.最後の修正.向き == '上方修正' else 'text-primary' }}">
-                                {{ row.最後の修正.日付 }} {{ row.最後の修正.向き }}
-                                {% if row.最後の修正.率 is not none %}{{ '%+.1f'|format(row.最後の修正.率) }}%{% endif %}
-                            </span>
-                            {% else %}<span class="text-muted">なし</span>{% endif %}
+                            <div class="{{ 'text-danger' if row.最後の修正.向き == '上方修正' else 'text-primary fw-bold' }}">
+                                {{ row.最後の修正.向き[:2] }} {{ '%+.1f'|format(row.最後の修正.率) }}%
+                            </div>
+                            <div class="text-muted">{{ row.最後の修正.日付 }}</div>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        {% if forecast.要約 | selectattr('赤字またぎ') | list %}
+        <div class="text-muted small mb-2">
+            <i class="bi bi-info-circle"></i>
+            赤字をまたぐ期があり、その変化率は出していない
+        </div>
+        {% endif %}
+
         <div id="forecast-chart" style="min-height: 300px;"></div>
     </div>
 </div>
@@ -81,11 +115,14 @@
     document.addEventListener('DOMContentLoaded', function () {
         var el = document.getElementById('forecast-chart');
         if (!el || !window.Plotly) return;
-        // **利益の予想だけを描く。** 売上と配当は桁が違って重ねると読めない
+        // **営業利益と当期純利益の2本だけ描く。** 売上と配当は桁が違って
+        // 重ねると読めない。経常利益は営業利益とほぼ同額の会社が多く、
+        // 6099では完全に重なって青い線が緑に隠れていた（表には出してある）。
+        // 当期と来期は同じ期の話なので1本にまとめてある
         var traces = [];
-        Object.keys(SERIES).forEach(function (name) {
-            if (name.indexOf('利益') === -1) return;
+        ['営業利益', '当期純利益'].forEach(function (name) {
             var points = SERIES[name];
+            if (!points || !points.length) return;
             traces.push({
                 type: 'scatter', mode: 'lines+markers', name: name,
                 x: points.map(function (p) { return p['日付']; }),
