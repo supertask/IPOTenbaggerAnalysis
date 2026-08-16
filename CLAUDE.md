@@ -11,6 +11,7 @@ gh issue edit 1 --repo supertask/IPOTenbaggerAnalysis --body-file docs/TODO.md
 
 保有銘柄の**生データ**は **MCPサーバ（`mcp_server.py`）から呼べる。**
 `.mcp.json` を置いてあるので、Claude Codeなら起動時に読み込まれる。
+**引数と使い分けの詳細は `docs/MCP.md`**（以下は要点だけ）。
 
 | ツール | 返すもの |
 |---|---|

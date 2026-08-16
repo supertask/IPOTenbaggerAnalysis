@@ -122,7 +122,9 @@ TSVで、EDINETが出したCSVを1行も落とさず置いてあります。DB�
 保有銘柄の**生データ**をClaudeから直接呼べます。`.mcp.json` を置いてあるので、
 Claude Codeなら起動時に読み込まれます。ツールは14個で、有報のXBRL・本文、
 適時開示、決算短信（**会社自身の業績予想はここにしか無い**）、四半期の財務三表、
-大株主の推移、株価、投資本の原文検索などを返します。詳細は `CLAUDE.md`。
+大株主の推移、株価、投資本の原文検索などを返します。
+
+**ツールの一覧と使い分け、落とし穴は `docs/MCP.md`。**
 
 ```bash
 python mcp_server.py    # stdio。クライアントが起動するので手では叩かない
@@ -194,6 +196,7 @@ IPOTenbaggerAnalysis/
 │   ├── output/portfolio/    # 保有銘柄（自分／テンバガーX／お気に入り）
 │   └── meta/                # AIが書いた読み解き。画面ではバッジで区別する
 ├── docs/TODO.md             # これからやること（GitHubのissue #1と同じ内容）
+├── docs/MCP.md              # MCPの14ツールの一覧・使い分け・落とし穴
 ├── mcp_server.py            # Claudeから生データを呼ぶ
 ├── CLAUDE.md                # 作業するときの前提
 └── README.md
