@@ -501,6 +501,16 @@ class GzipMiddleware:
         return [packed]
 
 
+def _forecast_value(value, metric_name=""):
+    """業績予想の値を読める形にする。**指標で単位が違う** —
+    金額は億円、1株当たりは円のまま出さないと桁が意味不明になる"""
+    if value is None:
+        return "–"
+    if "1株" in (metric_name or "") or "配当" in (metric_name or ""):
+        return f"{value:,.0f}円"
+    return f"{value / 1e8:,.1f}億円"
+
+
 def _share_globals(*apps):
     """4つのアプリぜんぶで使えるテンプレート変数を入れる。
 
@@ -514,6 +524,7 @@ def _share_globals(*apps):
         sheet_url = ""
     for app in apps:
         app.jinja_env.globals["portfolio_sheet_url"] = sheet_url
+        app.jinja_env.filters["forecast_value"] = _forecast_value
 
 
 def create_app():

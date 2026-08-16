@@ -1,0 +1,110 @@
+{# 会社自身の業績予想が、決算のたびにどう動いたか。
+   **有報には実績しか無い。見通しは決算短信にしか無い。**
+   実績が悪化する前に、会社の見通しが下を向くほうが先に見える #}
+{% if forecast and forecast.要約 %}
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0">会社の業績予想の推移
+            <button class="btn btn-sm btn-link text-muted p-0 ms-1 align-baseline"
+                    type="button" data-bs-toggle="collapse" data-bs-target="#forecast-note"
+                    aria-expanded="false" title="この表の読み方">
+                <i class="bi bi-question-circle"></i>
+            </button>
+        </h5>
+        <span class="badge bg-secondary">決算短信のXBRL</span>
+    </div>
+    <div class="card-body">
+        <div class="collapse" id="forecast-note">
+            <div class="text-muted small border rounded p-2 mb-2">
+                決算短信のサマリーに載る<strong>会社自身の予想</strong>を、短信ごとに並べたもの。
+                有価証券報告書には実績しか無いので、見通しはここにしか無い。<br>
+                <strong>実績より早く出る。</strong>「利益率が3%を割った」のような実績の条件は
+                起きてから分かるが、会社の見通しが下を向くほうが先に見える。<br>
+                下方修正のあるものを上に並べている。AIの解釈ではなく、開示された数字そのもの。
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-2">
+                <thead>
+                    <tr class="text-muted small">
+                        <th>指標</th>
+                        <th class="text-end">最初の予想</th>
+                        <th class="text-end">直近の予想</th>
+                        <th class="text-end">累計</th>
+                        <th>修正</th>
+                        <th>最後の修正</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in forecast.要約 %}
+                    <tr>
+                        <td class="text-nowrap">{{ row.指標 }}</td>
+                        <td class="text-end text-nowrap small">
+                            {{ row.初回.日付 }}<br>{{ row.初回.値 | forecast_value(row.指標) }}
+                        </td>
+                        <td class="text-end text-nowrap small">
+                            {{ row.直近.日付 }}<br><strong>{{ row.直近.値 | forecast_value(row.指標) }}</strong>
+                        </td>
+                        <td class="text-end text-nowrap">
+                            {% if row.累計の変化率 is not none %}
+                            <span class="{{ 'text-danger' if row.累計の変化率 > 0 else ('text-primary' if row.累計の変化率 < 0 else 'text-muted') }}">
+                                {{ '%+.1f'|format(row.累計の変化率) }}%
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-nowrap small">
+                            {% if row.上方修正 %}<span class="badge bg-success">上{{ row.上方修正 }}</span>{% endif %}
+                            {% if row.下方修正 %}<span class="badge bg-danger">下{{ row.下方修正 }}</span>{% endif %}
+                            {% if not row.上方修正 and not row.下方修正 %}<span class="text-muted">据え置き</span>{% endif %}
+                        </td>
+                        <td class="text-nowrap small">
+                            {% if row.最後の修正 %}
+                            <span class="{{ 'text-danger' if row.最後の修正.向き == '上方修正' else 'text-primary' }}">
+                                {{ row.最後の修正.日付 }} {{ row.最後の修正.向き }}
+                                {% if row.最後の修正.率 is not none %}{{ '%+.1f'|format(row.最後の修正.率) }}%{% endif %}
+                            </span>
+                            {% else %}<span class="text-muted">なし</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div id="forecast-chart" style="min-height: 300px;"></div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var SERIES = {{ forecast.系列 | tojson }};
+    document.addEventListener('DOMContentLoaded', function () {
+        var el = document.getElementById('forecast-chart');
+        if (!el || !window.Plotly) return;
+        // **利益の予想だけを描く。** 売上と配当は桁が違って重ねると読めない
+        var traces = [];
+        Object.keys(SERIES).forEach(function (name) {
+            if (name.indexOf('利益') === -1) return;
+            var points = SERIES[name];
+            traces.push({
+                type: 'scatter', mode: 'lines+markers', name: name,
+                x: points.map(function (p) { return p['日付']; }),
+                y: points.map(function (p) { return p['値'] / 1e8; }),
+                hovertemplate: '%{x}  %{y:,.1f}億円<extra>' + name + '</extra>'
+            });
+        });
+        if (!traces.length) { el.style.display = 'none'; return; }
+        Plotly.newPlot(el, traces, {
+            margin: { l: 55, r: 10, t: 10, b: 40 },
+            height: 320,
+            xaxis: { title: '短信の発表日' },
+            yaxis: { title: '予想（億円）' },
+            legend: { orientation: 'h', y: -0.25 },
+            hovermode: 'x unified'
+        }, { responsive: true, displaylogo: false,
+             modeBarButtonsToRemove: ['zoom2d','pan2d','select2d','lasso2d',
+                                      'zoomIn2d','zoomOut2d','autoScale2d'] });
+    });
+})();
+</script>
+{% endif %}
