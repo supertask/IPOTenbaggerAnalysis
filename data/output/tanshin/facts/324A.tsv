@@ -1,0 +1,556 @@
+日付	書類	期	連単	区分	四半期	項目名	タグ	値	単位	表示	コンテキスト	出所
+2025-03-13		当期第3四半期累計				書類名	DocumentName			第３四半期決算短信〔日本基準〕(非連結)	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計				提出日	FilingDate			2025年３月13日	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計				会社名	CompanyName			株式会社ブッキングリゾート	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					TokyoStockExchange			東	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計				証券コード	SecuritiesCode			324A0	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計				URL	URL			https://www.booking-resort.jp/	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計				代表者の役職	TitleRepresentative			代表取締役	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計				代表者名	NameRepresentative			坂根 正生	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					TitleInquiries			取締役	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					NameInquiries			今井 裕二	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					Tel			06(6147)5481	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					SupplementalMaterialOfResults			無	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					ConveningBriefingOfResults			無	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					NoteToFractionProcessingMethod			(百万円未満切捨て)	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		売上高	NetSales	1145000000	JPY	1,145	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		営業利益	OperatingIncome	438000000	JPY	438	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		経常利益	OrdinaryIncome	433000000	JPY	433	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		当期純利益	NetIncome	324000000	JPY	324	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		1株当たり当期純利益	NetIncomePerShare	60.02	JPYPerShares	60.02	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		経営成績の注記	NoteToOperatingResults			(注) １．2024年４月期第３四半期については、四半期財務諸表を作成していないため、2024年４月期第３四半期の数値及び対前年同四半期増減率並びに2025年４月期第３四半期の対前年同四半期増減率は記載しておりません。 ２．潜在株式調整後１株当たり四半期純利益については、潜在株式が存在しないため記載しておりません。３．当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。当事業年度の期首に当該株式分割が行なわれたと仮定し、１株当たり四半期純利益及び潜在株式調整後１株当たり四半期純利益を算定しております。	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		総資産	TotalAssets	1910000000	JPY	1,910	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		純資産	NetAssets	1302000000	JPY	1,302	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		自己資本比率	CapitalAdequacyRatio	0.681	Pure	68.1	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		前期	単体	実績		総資産	TotalAssets	1504000000	JPY	1,504	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		前期	単体	実績		純資産	NetAssets	978000000	JPY	978	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		前期	単体	実績		自己資本比率	CapitalAdequacyRatio	0.650	Pure	65.0	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		自己資本	OwnersEquity	1302000000	JPY	1,302	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		前期	単体	実績		自己資本	OwnersEquity	978000000	JPY	978	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		前期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		前期	単体	実績	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_YearEndMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		前期	単体	実績	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_YearEndMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_AnnualMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	実績	合計	当四半期における配当予想の修正	CorrectionOfDividendForecastInThisQuarter			無	CurrentYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		業績予想の見出し	TitleForForecasts			３．2025年４月期の業績予想（2024年５月１日～2025年４月30日）	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		売上高	NetSales	1436000000	JPY	1,436	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		売上高の増減率	ChangeInNetSales	0.357	Pure	35.7	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		営業利益	OperatingIncome	496000000	JPY	496	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		営業利益の増減率	ChangeInOperatingIncome	0.295	Pure	29.5	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		経常利益	OrdinaryIncome	479000000	JPY	479	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		経常利益の増減率	ChangeInOrdinaryIncome	0.231	Pure	23.1	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		当期純利益	NetIncome	363000000	JPY	363	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		当期純利益の増減率	ChangeInNetIncome	0.331	Pure	33.1	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		1株当たり当期純利益	NetIncomePerShare	66.55	JPYPerShares	66.55	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想			CorrectionOfFinancialForecastInThisQuarter			無	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期	単体	予想		業績予想の注記	NoteToForecasts			２．当社は、2025年２月20日を払込期日とする公募（ブックビルディング方式による募集）により普通株式300,000株を発行しており、その影響を考慮して１株当たり当期純利益を算定しております。	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績			ApplyingOfSpecificAccountingOfTheQuarterlyFinancialStatements			無	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		会計基準等の改正に伴う変更	ChangesBasedOnRevisionsOfAccountingStandard			無	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		それ以外の会計方針の変更	ChangesOtherThanOnesBasedOnRevisionsOfAccountingStandard			無	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		会計上の見積りの変更	ChangesInAccountingEstimates			無	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		修正再表示	RetrospectiveRestatement			無	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5400000	Shares	5,400,000	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		前期	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5400000	Shares	5,400,000	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績		期中平均株式数	AverageNumberOfShares	5400000	Shares	5,400,000	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		前期第3四半期累計	単体	実績		期中平均株式数	AverageNumberOfShares	5400000	Shares	5,400,000	PriorAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計	単体	実績			NoteToNumberOfIssuedAndOutstandingSharesCommonStock			(注) 当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行なわれたと仮定し、期末発行済株式数、期末自己株式数、期中平均株式数を算定しております。	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					ReviewOfAttachedQuarterlyFinancialStatementsByACertifiedPublicAccountantOrAnAuditFirm			無	CurrentAccumulatedQ3Duration	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期				将来情報の利用に関する注意	NotesForUsingForecastedInformationAndOthers			本資料に記載されている業績見通し等の将来に関する記述は、当社が現在入手している情報及び合理的であると判断する一定の前提に基づいており、その達成を当社として約束する趣旨のものではありません。また、実際の業績等は様々な要因により大きく異なる可能性があります。	CurrentYearDuration	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					TokyoStockExchangePrime			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					TokyoStockExchangeStandard			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					TokyoStockExchangeGrowth			true	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					TokyoStockExchangePROMarket			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					TokyoStockExchangeOthers			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					NagoyaStockExchange1stSection			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					NagoyaStockExchange2ndSection			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					NagoyaStockExchangeCentrex			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					NagoyaStockExchangeOthers			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					SapporoStockExchangeEstablished			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					SapporoStockExchangeAmbitious			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					SapporoStockExchangeOthers			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					FukuokaStockExchangeEstablished			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					FukuokaStockExchangeQBoard			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					FukuokaStockExchangeOthers			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計					JapanSecuritiesDealersAssociationGreenSheet			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期					GeneralBusiness			true	CurrentYearInstant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期					SpecificBusiness			false	CurrentYearInstant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期				決算期末	FiscalYearEnd			2025-04-30	CurrentYearInstant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-03-13		当期第3四半期累計				四半期	QuarterlyPeriod	3	Pure	3	CurrentAccumulatedQ3Instant	/disc/324A0/081220250313592956_tse-qnedjpsm-324A0-202503133324A0-ixbrl.htm
+2025-06-12		当期				書類名	DocumentName			決算短信〔日本基準〕(非連結)	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期				提出日	FilingDate			2025年６月12日	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期				会社名	CompanyName			株式会社ブッキングリゾート	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TokyoStockExchange			東	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期				証券コード	SecuritiesCode			324A0	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期				URL	URL			https://www.booking-resort.jp/	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期				代表者の役職	TitleRepresentative			代表取締役	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期				代表者名	NameRepresentative			坂根 正生	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TitleInquiries			取締役	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					NameInquiries			今井 裕二	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					Tel			06(6147)5481	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					DateOfGeneralShareholdersMeetingAsPlanned			2025年７月30日	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					AnnualSecuritiesReportFilingDateAsPlanned			2025年７月31日	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					SupplementalMaterialOfAnnualResults			有	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					ConveningBriefingOfAnnualResults			無	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					NoteToFractionProcessingMethod			(百万円未満切捨て)	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		売上高	NetSales	1456000000	JPY	1,456	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		売上高の増減率	ChangeInNetSales	0.375	Pure	37.5	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		営業利益	OperatingIncome	515000000	JPY	515	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		営業利益の増減率	ChangeInOperatingIncome	0.344	Pure	34.4	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		経常利益	OrdinaryIncome	496000000	JPY	496	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		経常利益の増減率	ChangeInOrdinaryIncome	0.274	Pure	27.4	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		当期純利益	NetIncome	334000000	JPY	334	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		当期純利益の増減率	ChangeInNetIncome	0.228	Pure	22.8	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		売上高	NetSales	1059000000	JPY	1,059	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		売上高の増減率	ChangeInNetSales	0.426	Pure	42.6	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		営業利益	OperatingIncome	383000000	JPY	383	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		営業利益の増減率	ChangeInOperatingIncome	0.523	Pure	52.3	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		経常利益	OrdinaryIncome	389000000	JPY	389	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		経常利益の増減率	ChangeInOrdinaryIncome	0.527	Pure	52.7	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		当期純利益	NetIncome	272000000	JPY	272	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		当期純利益の増減率	ChangeInNetIncome	0.480	Pure	48.0	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		1株当たり当期純利益	NetIncomePerShare	61.14	JPYPerShares	61.14	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		自己資本当期純利益率(ROE)	NetIncomeToShareholdersEquityRatio	0.233	Pure	23.3	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		総資産経常利益率(ROA)	OrdinaryIncomeToTotalAssetsRatio	0.245	Pure	24.5	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		売上高営業利益率	OperatingIncomeToNetSalesRatio	0.354	Pure	35.4	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		1株当たり当期純利益	NetIncomePerShare	50.51	JPYPerShares	50.51	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		自己資本当期純利益率(ROE)	NetIncomeToShareholdersEquityRatio	0.324	Pure	32.4	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		総資産経常利益率(ROA)	OrdinaryIncomeToTotalAssetsRatio	0.284	Pure	28.4	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		売上高営業利益率	OperatingIncomeToNetSalesRatio	0.362	Pure	36.2	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		経営成績の注記	NoteToOperatingResults			(注) １．潜在株式調整後１株当たり当期純利益については、潜在株式が存在しないため記載しておりません。２．当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行われたと仮定し、１株当たり当期純利益を算定しております。	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		総資産	TotalAssets	2552000000	JPY	2,552	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		純資産	NetAssets	1901000000	JPY	1,901	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		自己資本比率	CapitalAdequacyRatio	0.745	Pure	74.5	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		1株当たり純資産	NetAssetsPerShare	321.40	JPYPerShares	321.40	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		総資産	TotalAssets	1504000000	JPY	1,504	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		純資産	NetAssets	978000000	JPY	978	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		自己資本比率	CapitalAdequacyRatio	0.650	Pure	65.0	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		1株当たり純資産	NetAssetsPerShare	115.76	JPYPerShares	115.76	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		自己資本	OwnersEquity	1901000000	JPY	1,901	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		自己資本	OwnersEquity	978000000	JPY	978	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績			NoteToFinancialPositions			(注)１．当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行われたと仮定し、１株当たり純資産を算定しております。	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		営業キャッシュフロー	CashFlowsFromOperatingActivities	457000000	JPY	457	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		投資キャッシュフロー	CashFlowsFromInvestingActivities	-126000000	JPY	126	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		財務キャッシュフロー	CashFlowsFromFinancingActivities	702000000	JPY	702	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		現金及び現金同等物の期末残高	CashAndEquivalentsEndOfPeriod	1292000000	JPY	1,292	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		営業キャッシュフロー	CashFlowsFromOperatingActivities	496000000	JPY	496	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		投資キャッシュフロー	CashFlowsFromInvestingActivities	-463000000	JPY	463	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		財務キャッシュフロー	CashFlowsFromFinancingActivities	-123000000	JPY	123	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		現金及び現金同等物の期末残高	CashAndEquivalentsEndOfPeriod	257000000	JPY	257	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_YearEndMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_YearEndMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	NextYearDuration_SecondQuarterMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	NextYearDuration_YearEndMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	NextYearDuration_AnnualMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想		業績予想の見出し	TitleForForecasts			３．2026年４月期の業績予想（2025年５月１日～2026年４月30日）	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想		売上高	NetSales	1663000000	JPY	1,663	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想		売上高の増減率	ChangeInNetSales	0.143	Pure	14.3	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想		営業利益	OperatingIncome	553000000	JPY	553	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想		営業利益の増減率	ChangeInOperatingIncome	0.074	Pure	7.4	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想		経常利益	OrdinaryIncome	549000000	JPY	549	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想		経常利益の増減率	ChangeInOrdinaryIncome	0.108	Pure	10.8	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想		当期純利益	NetIncome	355000000	JPY	355	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想		当期純利益の増減率	ChangeInNetIncome	0.062	Pure	6.2	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期	単体	予想		1株当たり当期純利益	NetIncomePerShare	60.13	JPYPerShares	60.13	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		会計基準等の改正に伴う変更	ChangesBasedOnRevisionsOfAccountingStandard			無	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		それ以外の会計方針の変更	ChangesOtherThanOnesBasedOnRevisionsOfAccountingStandard			無	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		会計上の見積りの変更	ChangesInAccountingEstimates			無	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		修正再表示	RetrospectiveRestatement			無	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5914800	Shares	5,914,800	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5400000	Shares	5,400,000	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績		期中平均株式数	AverageNumberOfShares	5478719	Shares	5,478,719	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		前期	単体	実績		期中平均株式数	AverageNumberOfShares	5400000	Shares	5,400,000	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期	単体	実績			NoteToNumberOfIssuedAndOutstandingSharesCommonStock			(注) 当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行われたと仮定し、期末発行済株式数、期末自己株式数、期中平均株式数を算定しております。	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		来期				将来情報の利用に関する注意	NotesForUsingForecastedInformationAndOthers			本資料に記載されている業績見通し等の将来に関する記述は、当社が現在入手している情報及び合理的であると判断する一定の前提に基づいており、その達成を当社として約束する趣旨のものではありません。また、実際の業績等は様々な要因により大きく異なる可能性があります。	NextYearDuration	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TokyoStockExchangePrime			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TokyoStockExchangeStandard			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TokyoStockExchangeGrowth			true	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TokyoStockExchange1stSection			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TokyoStockExchange2ndSection			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TokyoStockExchangeMothers			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TokyoStockExchangeJASDAQ			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TokyoStockExchangePROMarket			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					TokyoStockExchangeOthers			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					NagoyaStockExchange1stSection			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					NagoyaStockExchange2ndSection			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					NagoyaStockExchangeCentrex			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					NagoyaStockExchangeOthers			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					SapporoStockExchangeEstablished			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					SapporoStockExchangeAmbitious			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					SapporoStockExchangeOthers			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					FukuokaStockExchangeEstablished			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					FukuokaStockExchangeQBoard			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					FukuokaStockExchangeOthers			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					JapanSecuritiesDealersAssociationGreenSheet			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					GeneralBusiness			true	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期					SpecificBusiness			false	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-06-12		当期				決算期末	FiscalYearEnd			2025-04-30	CurrentYearInstant	/disc/324A0/081220250612588320_tse-anedjpsm-324A0-202506123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計				書類名	DocumentName			第１四半期決算短信〔日本基準〕(非連結)	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計				提出日	FilingDate			2025年９月12日	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計				会社名	CompanyName			株式会社ブッキングリゾート	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					TokyoStockExchange			東	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計				証券コード	SecuritiesCode			324A0	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計				URL	URL			https://www.booking-resort.jp/	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計				代表者の役職	TitleRepresentative			代表取締役	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計				代表者名	NameRepresentative			坂根 正生	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					TitleInquiries			取締役	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					NameInquiries			今井 裕二	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					Tel			06(6147)5481	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					SupplementalMaterialOfResults			有	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					ConveningBriefingOfResults			無	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					NoteToFractionProcessingMethod			(百万円未満切捨て)	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		売上高	NetSales	382000000	JPY	382	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		営業利益	OperatingIncome	108000000	JPY	108	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		経常利益	OrdinaryIncome	110000000	JPY	110	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		当期純利益	NetIncome	79000000	JPY	79	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		1株当たり当期純利益	NetIncomePerShare	13.47	JPYPerShares	13.47	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		経営成績の注記	NoteToOperatingResults			(注) １．2025年４月期第１四半期については、四半期財務諸表を作成していないため、2025年４月期第１四半期の数値及び対前年同四半期増減率並びに2026年４月期第１四半期の対前年同四半期増減率は記載しておりません。２．潜在株式調整後１株当たり四半期純利益については、潜在株式が存在しないため記載しておりません。	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		総資産	TotalAssets	2552000000	JPY	2,552	CurrentAccumulatedQ1Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		純資産	NetAssets	1980000000	JPY	1,980	CurrentAccumulatedQ1Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		自己資本比率	CapitalAdequacyRatio	0.776	Pure	77.6	CurrentAccumulatedQ1Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		前期	単体	実績		総資産	TotalAssets	2552000000	JPY	2,552	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		前期	単体	実績		純資産	NetAssets	1901000000	JPY	1,901	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		前期	単体	実績		自己資本比率	CapitalAdequacyRatio	0.745	Pure	74.5	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		自己資本	OwnersEquity	1980000000	JPY	1,980	CurrentAccumulatedQ1Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		前期	単体	実績		自己資本	OwnersEquity	1901000000	JPY	1,901	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		前期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		前期	単体	実績	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_YearEndMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		前期	単体	実績	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_SecondQuarterMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_YearEndMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_AnnualMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	実績	合計	当四半期における配当予想の修正	CorrectionOfDividendForecastInThisQuarter			無	CurrentYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想		業績予想の見出し	TitleForForecasts			３．2026年４月期の業績予想（2025年５月１日～2026年４月30日）	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想		売上高	NetSales	1663000000	JPY	1,663	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想		売上高の増減率	ChangeInNetSales	0.143	Pure	14.3	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想		営業利益	OperatingIncome	553000000	JPY	553	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想		営業利益の増減率	ChangeInOperatingIncome	0.074	Pure	7.4	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想		経常利益	OrdinaryIncome	549000000	JPY	549	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想		経常利益の増減率	ChangeInOrdinaryIncome	0.108	Pure	10.8	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想		当期純利益	NetIncome	355000000	JPY	355	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想		当期純利益の増減率	ChangeInNetIncome	0.062	Pure	6.2	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想		1株当たり当期純利益	NetIncomePerShare	60.13	JPYPerShares	60.13	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期	単体	予想			CorrectionOfFinancialForecastInThisQuarter			無	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績			ApplyingOfSpecificAccountingOfTheQuarterlyFinancialStatements			無	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		会計基準等の改正に伴う変更	ChangesBasedOnRevisionsOfAccountingStandard			無	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		それ以外の会計方針の変更	ChangesOtherThanOnesBasedOnRevisionsOfAccountingStandard			無	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		会計上の見積りの変更	ChangesInAccountingEstimates			無	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		修正再表示	RetrospectiveRestatement			無	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5914800	Shares	5,914,800	CurrentAccumulatedQ1Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		前期	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5914800	Shares	5,914,800	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績		期中平均株式数	AverageNumberOfShares	5914800	Shares	5,914,800	CurrentAccumulatedQ1Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計	単体	実績			NoteToNumberOfIssuedAndOutstandingSharesCommonStock			(注) 当社は、2025年４月期第１四半期については、四半期財務諸表を作成していないため、2025年４月期第１四半期の期中平均株式数（四半期累計）の記載をしておりません。	CurrentAccumulatedQ1Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					ReviewOfAttachedQuarterlyFinancialStatementsByACertifiedPublicAccountantOrAnAuditFirm			無	CurrentAccumulatedQ1Duration	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期				将来情報の利用に関する注意	NotesForUsingForecastedInformationAndOthers			本資料に記載されている業績見通し等の将来に関する記述は、当社が現在入手している情報及び合理的であると判断する一定の前提に基づいており、その達成を当社として約束する趣旨のものではありません。また、実際の業績等は様々な要因により大きく異なる可能性があります。	CurrentYearDuration	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					TokyoStockExchangePrime			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					TokyoStockExchangeStandard			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					TokyoStockExchangeGrowth			true	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					TokyoStockExchangePROMarket			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					TokyoStockExchangeOthers			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					NagoyaStockExchange1stSection			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					NagoyaStockExchange2ndSection			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					NagoyaStockExchangeCentrex			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					NagoyaStockExchangeOthers			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					SapporoStockExchangeEstablished			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					SapporoStockExchangeAmbitious			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					SapporoStockExchangeOthers			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					FukuokaStockExchangeEstablished			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					FukuokaStockExchangeQBoard			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					FukuokaStockExchangeOthers			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計					JapanSecuritiesDealersAssociationGreenSheet			false	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期					GeneralBusiness			true	CurrentYearInstant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期					SpecificBusiness			false	CurrentYearInstant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期				決算期末	FiscalYearEnd			2026-04-30	CurrentYearInstant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-09-12		当期第1四半期累計				四半期	QuarterlyPeriod	1	Pure	1	CurrentAccumulatedQ1Instant	/disc/324A0/081220250912557685_tse-qnedjpsm-324A0-202509123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計				書類名	DocumentName			第２四半期（中間期）決算短信〔日本基準〕(非連結)	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計				提出日	FilingDate			2025年12月12日	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計				会社名	CompanyName			株式会社ブッキングリゾート	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					TokyoStockExchange			東	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計				証券コード	SecuritiesCode			324A0	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計				URL	URL			https://www.booking-resort.jp/	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計				代表者の役職	TitleRepresentative			代表取締役	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計				代表者名	NameRepresentative			坂根 正生	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					TitleInquiries			取締役	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					NameInquiries			今井 裕二	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					Tel			06(6147)5481	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					SemiAnnualStatementFilingDateAsPlanned			2025年12月12日	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					SupplementalMaterialOfResults			有	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					ConveningBriefingOfResults			無	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					NoteToFractionProcessingMethod			(百万円未満切捨て)	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		売上高	NetSales	969000000	JPY	969	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		売上高の増減率	ChangeInNetSales	0.141	Pure	14.1	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		営業利益	OperatingIncome	413000000	JPY	413	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		営業利益の増減率	ChangeInOperatingIncome	0.099	Pure	9.9	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		経常利益	OrdinaryIncome	417000000	JPY	417	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		経常利益の増減率	ChangeInOrdinaryIncome	0.108	Pure	10.8	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		当期純利益	NetIncome	292000000	JPY	292	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		当期純利益の増減率	ChangeInNetIncome	0.056	Pure	5.6	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期第2四半期累計	単体	実績		売上高	NetSales	849000000	JPY	849	PriorAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期第2四半期累計	単体	実績		営業利益	OperatingIncome	376000000	JPY	376	PriorAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期第2四半期累計	単体	実績		経常利益	OrdinaryIncome	376000000	JPY	376	PriorAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期第2四半期累計	単体	実績		当期純利益	NetIncome	277000000	JPY	277	PriorAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		1株当たり当期純利益	NetIncomePerShare	49.50	JPYPerShares	49.50	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期第2四半期累計	単体	実績		1株当たり当期純利益	NetIncomePerShare	51.35	JPYPerShares	51.35	PriorAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		経営成績の注記	NoteToOperatingResults			(注)１．2024年４月期中間期については、中間財務諸表を作成していないため、2025年４月期中間期の対前年中間期増減率は記載しておりません。２．潜在株式調整後１株当たり中間純利益については、潜在株式が存在しないため記載しておりません。３．当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行われたと仮定し、2025年４月期中間期の１株当たり中間純利益を算定しております。	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		総資産	TotalAssets	2867000000	JPY	2,867	CurrentAccumulatedQ2Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		純資産	NetAssets	2193000000	JPY	2,193	CurrentAccumulatedQ2Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		自己資本比率	CapitalAdequacyRatio	0.765	Pure	76.5	CurrentAccumulatedQ2Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期	単体	実績		総資産	TotalAssets	2552000000	JPY	2,552	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期	単体	実績		純資産	NetAssets	1901000000	JPY	1,901	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期	単体	実績		自己資本比率	CapitalAdequacyRatio	0.745	Pure	74.5	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		自己資本	OwnersEquity	2193000000	JPY	2,193	CurrentAccumulatedQ2Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期	単体	実績		自己資本	OwnersEquity	1901000000	JPY	1,901	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期	単体	実績	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_YearEndMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期	単体	実績	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_YearEndMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_AnnualMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	実績	合計	当四半期における配当予想の修正	CorrectionOfDividendForecastInThisQuarter			無	CurrentYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想		業績予想の見出し	TitleForForecasts			３．2026年４月期の業績予想（2025年５月１日～2026年４月30日）	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想		売上高	NetSales	1663000000	JPY	1,663	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想		売上高の増減率	ChangeInNetSales	0.143	Pure	14.3	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想		営業利益	OperatingIncome	553000000	JPY	553	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想		営業利益の増減率	ChangeInOperatingIncome	0.074	Pure	7.4	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想		経常利益	OrdinaryIncome	549000000	JPY	549	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想		経常利益の増減率	ChangeInOrdinaryIncome	0.108	Pure	10.8	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想		当期純利益	NetIncome	355000000	JPY	355	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想		当期純利益の増減率	ChangeInNetIncome	0.062	Pure	6.2	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想		1株当たり当期純利益	NetIncomePerShare	60.13	JPYPerShares	60.13	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期	単体	予想			CorrectionOfFinancialForecastInThisQuarter			無	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績			ApplyingOfSpecificAccountingOfTheSemiAnnualFinancialStatements			無	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		会計基準等の改正に伴う変更	ChangesBasedOnRevisionsOfAccountingStandard			無	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		それ以外の会計方針の変更	ChangesOtherThanOnesBasedOnRevisionsOfAccountingStandard			無	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		会計上の見積りの変更	ChangesInAccountingEstimates			無	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		修正再表示	RetrospectiveRestatement			無	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5914800	Shares	5,914,800	CurrentAccumulatedQ2Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5914800	Shares	5,914,800	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績		期中平均株式数	AverageNumberOfShares	5914800	Shares	5,914,800	CurrentAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		前期第2四半期累計	単体	実績		期中平均株式数	AverageNumberOfShares	5400000	Shares	5,400,000	PriorAccumulatedQ2Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計	単体	実績			NoteToNumberOfIssuedAndOutstandingSharesCommonStock			(注) 当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行なわれたと仮定し、2025年４月期中間期の期末発行済株式数、期末自己株式数、期中平均株式数を算定しております。	CurrentAccumulatedQ2Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期				将来情報の利用に関する注意	NotesForUsingForecastedInformationAndOthers			本資料に記載されている業績見通し等の将来に関する記述は、当社が現在入手している情報及び合理的であると判断する一定の前提に基づいており、その達成を当社として約束する趣旨のものではありません。また、実際の業績等は様々な要因により大きく異なる可能性があります。	CurrentYearDuration	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					TokyoStockExchangePrime			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					TokyoStockExchangeStandard			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					TokyoStockExchangeGrowth			true	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					TokyoStockExchangePROMarket			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					TokyoStockExchangeOthers			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					NagoyaStockExchange1stSection			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					NagoyaStockExchange2ndSection			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					NagoyaStockExchangeCentrex			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					NagoyaStockExchangeOthers			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					SapporoStockExchangeEstablished			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					SapporoStockExchangeAmbitious			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					SapporoStockExchangeOthers			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					FukuokaStockExchangeEstablished			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					FukuokaStockExchangeQBoard			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					FukuokaStockExchangeOthers			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計					JapanSecuritiesDealersAssociationGreenSheet			false	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期					GeneralBusiness			true	CurrentYearInstant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期					SpecificBusiness			false	CurrentYearInstant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期				決算期末	FiscalYearEnd			2026-04-30	CurrentYearInstant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2025-12-12		当期第2四半期累計				四半期	QuarterlyPeriod	2	Pure	2	CurrentAccumulatedQ2Instant	/disc/324A0/081220251212518991_tse-snedjpsy-324A0-202512123324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計				書類名	DocumentName			第３四半期決算短信〔日本基準〕(非連結)	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計				提出日	FilingDate			2026年３月13日	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計				会社名	CompanyName			株式会社ブッキングリゾート	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					TokyoStockExchange			東	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計				証券コード	SecuritiesCode			324A0	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計				URL	URL			https://www.booking-resort.jp/	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計				代表者の役職	TitleRepresentative			代表取締役	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計				代表者名	NameRepresentative			坂根 正生	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					TitleInquiries			取締役	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					NameInquiries			今井 裕二	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					Tel			06(6147)5481	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					SupplementalMaterialOfResults			有	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					ConveningBriefingOfResults			無	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					NoteToFractionProcessingMethod			(百万円未満切捨て)	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		売上高	NetSales	1331000000	JPY	1,331	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		売上高の増減率	ChangeInNetSales	0.162	Pure	16.2	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		営業利益	OperatingIncome	455000000	JPY	455	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		営業利益の増減率	ChangeInOperatingIncome	0.037	Pure	3.7	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		経常利益	OrdinaryIncome	460000000	JPY	460	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		経常利益の増減率	ChangeInOrdinaryIncome	0.060	Pure	6.0	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		当期純利益	NetIncome	328000000	JPY	328	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		当期純利益の増減率	ChangeInNetIncome	0.012	Pure	1.2	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期第3四半期累計	単体	実績		売上高	NetSales	1145000000	JPY	1,145	PriorAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期第3四半期累計	単体	実績		営業利益	OperatingIncome	438000000	JPY	438	PriorAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期第3四半期累計	単体	実績		経常利益	OrdinaryIncome	433000000	JPY	433	PriorAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期第3四半期累計	単体	実績		当期純利益	NetIncome	324000000	JPY	324	PriorAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		1株当たり当期純利益	NetIncomePerShare	55.48	JPYPerShares	55.48	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期第3四半期累計	単体	実績		1株当たり当期純利益	NetIncomePerShare	60.02	JPYPerShares	60.02	PriorAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		経営成績の注記	NoteToOperatingResults			(注) １．2024年４月期第３四半期については、四半期財務諸表を作成していないため、2025年４月期第３四半期の対前年同四半期増減率は記載しておりません。２．潜在株式調整後１株当たり四半期純利益については、潜在株式が存在しないため記載しておりません。３．当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行なわれたと仮定し、１株当たり四半期純利益を算定しております。	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		総資産	TotalAssets	2816000000	JPY	2,816	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		純資産	NetAssets	2229000000	JPY	2,229	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		自己資本比率	CapitalAdequacyRatio	0.792	Pure	79.2	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期	単体	実績		総資産	TotalAssets	2552000000	JPY	2,552	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期	単体	実績		純資産	NetAssets	1901000000	JPY	1,901	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期	単体	実績		自己資本比率	CapitalAdequacyRatio	0.745	Pure	74.5	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		自己資本	OwnersEquity	2229000000	JPY	2,229	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期	単体	実績		自己資本	OwnersEquity	1901000000	JPY	1,901	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期	単体	実績	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_YearEndMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期	単体	実績	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_YearEndMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_AnnualMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	実績	合計	当四半期における配当予想の修正	CorrectionOfDividendForecastInThisQuarter			無	CurrentYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想		業績予想の見出し	TitleForForecasts			３．2026年４月期の業績予想（2025年５月１日～2026年４月30日）	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想		売上高	NetSales	1663000000	JPY	1,663	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想		売上高の増減率	ChangeInNetSales	0.143	Pure	14.3	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想		営業利益	OperatingIncome	553000000	JPY	553	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想		営業利益の増減率	ChangeInOperatingIncome	0.074	Pure	7.4	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想		経常利益	OrdinaryIncome	549000000	JPY	549	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想		経常利益の増減率	ChangeInOrdinaryIncome	0.108	Pure	10.8	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想		当期純利益	NetIncome	355000000	JPY	355	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想		当期純利益の増減率	ChangeInNetIncome	0.062	Pure	6.2	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想		1株当たり当期純利益	NetIncomePerShare	60.13	JPYPerShares	60.13	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期	単体	予想			CorrectionOfFinancialForecastInThisQuarter			無	CurrentYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績			ApplyingOfSpecificAccountingOfTheQuarterlyFinancialStatements			無	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		会計基準等の改正に伴う変更	ChangesBasedOnRevisionsOfAccountingStandard			無	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		それ以外の会計方針の変更	ChangesOtherThanOnesBasedOnRevisionsOfAccountingStandard			無	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		会計上の見積りの変更	ChangesInAccountingEstimates			無	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		修正再表示	RetrospectiveRestatement			無	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5914800	Shares	5,914,800	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5914800	Shares	5,914,800	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績		期中平均株式数	AverageNumberOfShares	5914800	Shares	5,914,800	CurrentAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		前期第3四半期累計	単体	実績		期中平均株式数	AverageNumberOfShares	5400000	Shares	5,400,000	PriorAccumulatedQ3Duration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計	単体	実績			NoteToNumberOfIssuedAndOutstandingSharesCommonStock			(注) 当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行なわれたと仮定し、期末発行済株式数、期末自己株式数、期中平均株式数を算定しております。	CurrentAccumulatedQ3Instant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					ReviewOfAttachedQuarterlyFinancialStatementsByACertifiedPublicAccountantOrAnAuditFirm			無	CurrentAccumulatedQ3Duration	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期				将来情報の利用に関する注意	NotesForUsingForecastedInformationAndOthers			本資料に記載されている業績見通し等の将来に関する記述は、当社が現在入手している情報及び合理的であると判断する一定の前提に基づいており、その達成を当社として約束する趣旨のものではありません。また、実際の業績等は様々な要因により大きく異なる可能性があります。	CurrentYearDuration	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					TokyoStockExchangePrime			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					TokyoStockExchangeStandard			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					TokyoStockExchangeGrowth			true	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					TokyoStockExchangePROMarket			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					TokyoStockExchangeOthers			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					NagoyaStockExchange1stSection			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					NagoyaStockExchange2ndSection			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					NagoyaStockExchangeCentrex			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					NagoyaStockExchangeOthers			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					SapporoStockExchangeEstablished			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					SapporoStockExchangeAmbitious			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					SapporoStockExchangeOthers			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					FukuokaStockExchangeEstablished			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					FukuokaStockExchangeQBoard			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					FukuokaStockExchangeOthers			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計					JapanSecuritiesDealersAssociationGreenSheet			false	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期					GeneralBusiness			true	CurrentYearInstant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期					SpecificBusiness			false	CurrentYearInstant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期				決算期末	FiscalYearEnd			2026-04-30	CurrentYearInstant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-03-13		当期第3四半期累計				四半期	QuarterlyPeriod	3	Pure	3	CurrentAccumulatedQ3Instant	/disc/324A0/081220260313581595_tse-qnedjpsm-324A0-202603133324A0-ixbrl.htm
+2026-06-12		当期				書類名	DocumentName			決算短信〔日本基準〕(非連結)	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期				提出日	FilingDate			2026年６月12日	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期				会社名	CompanyName			株式会社ブッキングリゾート	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TokyoStockExchange			東	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期				証券コード	SecuritiesCode			324A0	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期				URL	URL			https://www.booking-resort.jp/	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期				代表者の役職	TitleRepresentative			代表取締役	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期				代表者名	NameRepresentative			坂根 正生	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TitleInquiries			取締役	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					NameInquiries			今井 裕二	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					Tel			06(6147)5481	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					DateOfGeneralShareholdersMeetingAsPlanned			2026年７月30日	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					AnnualSecuritiesReportFilingDateAsPlanned			2026年７月29日	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					SupplementalMaterialOfAnnualResults			有	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					ConveningBriefingOfAnnualResults			無	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					NoteToFractionProcessingMethod			(百万円未満切捨て)	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		売上高	NetSales	1719000000	JPY	1,719	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		売上高の増減率	ChangeInNetSales	0.181	Pure	18.1	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		営業利益	OperatingIncome	509000000	JPY	509	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		営業利益の増減率	ChangeInOperatingIncome	-0.011	Pure	1.1	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		経常利益	OrdinaryIncome	514000000	JPY	514	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		経常利益の増減率	ChangeInOrdinaryIncome	0.038	Pure	3.8	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		当期純利益	NetIncome	370000000	JPY	370	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		当期純利益の増減率	ChangeInNetIncome	0.107	Pure	10.7	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		売上高	NetSales	1456000000	JPY	1,456	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		売上高の増減率	ChangeInNetSales	0.375	Pure	37.5	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		営業利益	OperatingIncome	515000000	JPY	515	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		営業利益の増減率	ChangeInOperatingIncome	0.344	Pure	34.4	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		経常利益	OrdinaryIncome	496000000	JPY	496	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		経常利益の増減率	ChangeInOrdinaryIncome	0.274	Pure	27.4	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		当期純利益	NetIncome	334000000	JPY	334	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		当期純利益の増減率	ChangeInNetIncome	0.228	Pure	22.8	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		1株当たり当期純利益	NetIncomePerShare	63.36	JPYPerShares	63.36	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		自己資本当期純利益率(ROE)	NetIncomeToShareholdersEquityRatio	0.201	Pure	20.1	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		総資産経常利益率(ROA)	OrdinaryIncomeToTotalAssetsRatio	0.209	Pure	20.9	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		売上高営業利益率	OperatingIncomeToNetSalesRatio	0.296	Pure	29.6	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		1株当たり当期純利益	NetIncomePerShare	61.14	JPYPerShares	61.14	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		自己資本当期純利益率(ROE)	NetIncomeToShareholdersEquityRatio	0.233	Pure	23.3	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		総資産経常利益率(ROA)	OrdinaryIncomeToTotalAssetsRatio	0.245	Pure	24.5	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		売上高営業利益率	OperatingIncomeToNetSalesRatio	0.354	Pure	35.4	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		経営成績の注記	NoteToOperatingResults			(注) １．潜在株式調整後１株当たり当期純利益については、潜在株式が存在しないため記載しておりません。２．当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行われたと仮定し、１株当たり当期純利益を算定しております。	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		総資産	TotalAssets	2364000000	JPY	2,364	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		純資産	NetAssets	1781000000	JPY	1,781	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		自己資本比率	CapitalAdequacyRatio	0.753	Pure	75.3	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		1株当たり純資産	NetAssetsPerShare	328.99	JPYPerShares	328.99	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		総資産	TotalAssets	2552000000	JPY	2,552	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		純資産	NetAssets	1901000000	JPY	1,901	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		自己資本比率	CapitalAdequacyRatio	0.745	Pure	74.5	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		1株当たり純資産	NetAssetsPerShare	321.40	JPYPerShares	321.40	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		自己資本	OwnersEquity	1781000000	JPY	1,781	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		自己資本	OwnersEquity	1901000000	JPY	1,901	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績			NoteToFinancialPositions			(注)１．当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行われたと仮定し、１株当たり純資産を算定しております。	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		営業キャッシュフロー	CashFlowsFromOperatingActivities	333000000	JPY	333	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		投資キャッシュフロー	CashFlowsFromInvestingActivities	-395000000	JPY	395	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		財務キャッシュフロー	CashFlowsFromFinancingActivities	-571000000	JPY	571	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		現金及び現金同等物の期末残高	CashAndEquivalentsEndOfPeriod	659000000	JPY	659	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		営業キャッシュフロー	CashFlowsFromOperatingActivities	457000000	JPY	457	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		投資キャッシュフロー	CashFlowsFromInvestingActivities	-126000000	JPY	126	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		財務キャッシュフロー	CashFlowsFromFinancingActivities	702000000	JPY	702	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		現金及び現金同等物の期末残高	CashAndEquivalentsEndOfPeriod	1292000000	JPY	1,292	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_YearEndMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	PriorYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_SecondQuarterMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_YearEndMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	CurrentYearDuration_AnnualMember_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想	第2四半期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	NextYearDuration_SecondQuarterMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想	期末	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	NextYearDuration_YearEndMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想	合計	1株当たり配当金	DividendPerShare	0.00	JPYPerShares	0.00	NextYearDuration_AnnualMember_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想		業績予想の見出し	TitleForForecasts			３．2027年４月期の業績予想（2026年５月１日～2027年４月30日）	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想		売上高	NetSales	2200000000	JPY	2,200	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想		売上高の増減率	ChangeInNetSales	0.280	Pure	28.0	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想		営業利益	OperatingIncome	508000000	JPY	508	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想		営業利益の増減率	ChangeInOperatingIncome	-0.001	Pure	0.1	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想		経常利益	OrdinaryIncome	506000000	JPY	506	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想		経常利益の増減率	ChangeInOrdinaryIncome	-0.016	Pure	1.6	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想		当期純利益	NetIncome	375000000	JPY	375	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想		当期純利益の増減率	ChangeInNetIncome	0.012	Pure	1.2	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期	単体	予想		1株当たり当期純利益	NetIncomePerShare	69.32	JPYPerShares	69.32	NextYearDuration_NonConsolidatedMember_ForecastMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		会計基準等の改正に伴う変更	ChangesBasedOnRevisionsOfAccountingStandard			無	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		それ以外の会計方針の変更	ChangesOtherThanOnesBasedOnRevisionsOfAccountingStandard			無	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		会計上の見積りの変更	ChangesInAccountingEstimates			無	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		修正再表示	RetrospectiveRestatement			無	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5914800	Shares	5,914,800	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		期末発行済株式数(自己株式を含む)	NumberOfIssuedAndOutstandingSharesAtTheEndOfFiscalYearIncludingTreasuryStock	5914800	Shares	5,914,800	PriorYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		期末自己株式数	NumberOfTreasuryStockAtTheEndOfFiscalYear	500000	Shares	500,000	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績		期中平均株式数	AverageNumberOfShares	5853156	Shares	5,853,156	CurrentYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		前期	単体	実績		期中平均株式数	AverageNumberOfShares	5478719	Shares	5,478,719	PriorYearDuration_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期	単体	実績			NoteToNumberOfIssuedAndOutstandingSharesCommonStock			(注) 当社は、2024年９月８日付で普通株式１株につき5,000株の割合で株式分割を行っております。前事業年度の期首に当該株式分割が行われたと仮定し、期末発行済株式数、期末自己株式数、期中平均株式数を算定しております。	CurrentYearInstant_NonConsolidatedMember_ResultMember	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		来期				将来情報の利用に関する注意	NotesForUsingForecastedInformationAndOthers			本資料に記載されている業績見通し等の将来に関する記述は、当社が現在入手している情報及び合理的であると判断する一定の前提に基づいており、その達成を当社として約束する趣旨のものではありません。また、実際の業績等は様々な要因により大きく異なる可能性があります。	NextYearDuration	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TokyoStockExchangePrime			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TokyoStockExchangeStandard			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TokyoStockExchangeGrowth			true	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TokyoStockExchange1stSection			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TokyoStockExchange2ndSection			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TokyoStockExchangeMothers			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TokyoStockExchangeJASDAQ			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TokyoStockExchangePROMarket			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					TokyoStockExchangeOthers			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					NagoyaStockExchange1stSection			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					NagoyaStockExchange2ndSection			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					NagoyaStockExchangeCentrex			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					NagoyaStockExchangeOthers			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					SapporoStockExchangeEstablished			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					SapporoStockExchangeAmbitious			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					SapporoStockExchangeOthers			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					FukuokaStockExchangeEstablished			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					FukuokaStockExchangeQBoard			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					FukuokaStockExchangeOthers			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					JapanSecuritiesDealersAssociationGreenSheet			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					GeneralBusiness			true	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期					SpecificBusiness			false	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
+2026-06-12		当期				決算期末	FiscalYearEnd			2026-04-30	CurrentYearInstant	/disc/324A0/081220260612569600_tse-anedjpsm-324A0-202606123324A0-ixbrl.htm
